@@ -1,0 +1,53 @@
+[
+  {
+    "docType": "PROPOSAL", "version": 1, "placeholder": true, "createdBy": "u-admin", "createdAt": "2026-06-01T10:00:00+06:00",
+    "note": "Draft template. Replace with BRAC's real Project Proposal template.",
+    "sections": [
+      { "key": "background", "title": "Background", "guidance": "Explain where the request comes from and who it affects.", "factKeys": ["problem", "target_users"] },
+      { "key": "problem", "title": "Problem statement", "guidance": "State the problem in plain words, with its cost today.", "factKeys": ["problem"] },
+      { "key": "objectives", "title": "Objectives", "guidance": "List 2–4 measurable objectives.", "factKeys": ["objectives", "success_criteria"], "scopeSensitive": true },
+      { "key": "scope", "title": "Scope", "guidance": "What is in scope and what is not. Name the branches or regions.", "factKeys": ["scope_in", "scope_out", "coverage"], "scopeSensitive": true },
+      { "key": "deliverables", "title": "Deliverables", "guidance": "List what will be handed over.", "factKeys": ["deliverables"], "scopeSensitive": true },
+      { "key": "timeline_budget", "title": "Timeline and budget", "guidance": "Give the overall timeline, the go-live date, the budget and where the money comes from.", "factKeys": ["timeline", "go_live", "budget_total", "funding_source"], "scopeSensitive": true },
+      { "key": "risks", "title": "Risks", "guidance": "List the main risks and how to reduce them.", "factKeys": ["risks", "connectivity"] }
+    ]
+  },
+  {
+    "docType": "CHARTER", "version": 1, "placeholder": true, "createdBy": "u-admin", "createdAt": "2026-06-01T10:00:00+06:00",
+    "note": "Draft template. Replace with BRAC's real Project Charter template.",
+    "sections": [
+      { "key": "purpose", "title": "Purpose", "guidance": "Why the project exists, in one paragraph.", "factKeys": ["problem"] },
+      { "key": "objectives", "title": "Objectives and success criteria", "guidance": "Number each objective (OBJ-1, OBJ-2…) and give how success is measured.", "factKeys": ["objectives", "success_criteria"], "scopeSensitive": true },
+      { "key": "scope", "title": "Scope", "guidance": "In scope, out of scope, and coverage.", "factKeys": ["scope_in", "scope_out", "coverage"], "scopeSensitive": true },
+      { "key": "milestones", "title": "Deliverables and milestones", "guidance": "Deliverables with target dates.", "factKeys": ["deliverables", "timeline", "go_live"], "scopeSensitive": true },
+      { "key": "budget", "title": "Budget and funding", "guidance": "Budget split into one-off and running costs, and the funding source.", "factKeys": ["budget_total", "funding_source"], "scopeSensitive": true },
+      { "key": "governance", "title": "Governance and roles", "guidance": "Who decides, approves and signs.", "factKeys": ["target_users"] },
+      { "key": "risks", "title": "Risks, assumptions and constraints", "guidance": "Main risks, assumptions and constraints.", "factKeys": ["risks", "connectivity"] }
+    ]
+  },
+  {
+    "docType": "BRD", "version": 1, "placeholder": true, "createdBy": "u-admin", "createdAt": "2026-06-01T10:00:00+06:00",
+    "note": "Draft template. Replace with BRAC's real BRD template.",
+    "sections": [
+      { "key": "context", "title": "Business context", "guidance": "The business situation and the objectives from the Charter.", "factKeys": ["problem", "objectives"] },
+      { "key": "users", "title": "Users and stakeholders", "guidance": "Who uses the system, how many, and where.", "factKeys": ["target_users", "user_count", "coverage"] },
+      { "key": "current_process", "title": "Current process (as-is)", "guidance": "How the work is done today, step by step.", "factKeys": ["current_process"] },
+      { "key": "future_process", "title": "Future process (to-be)", "guidance": "How the work will be done with the new system, including approvals.", "factKeys": ["future_process", "approval_steps"] },
+      { "key": "requirements", "title": "Business requirements", "guidance": "Numbered requirements (BR-01, BR-02…), each linked to a Charter objective.", "factKeys": ["scope_in"] },
+      { "key": "reports", "title": "Reporting needs", "guidance": "Reports and lists managers need, and how often.", "factKeys": ["reports"] },
+      { "key": "constraints", "title": "Assumptions and constraints", "guidance": "Business assumptions and constraints.", "factKeys": ["risks", "connectivity"] }
+    ]
+  },
+  {
+    "docType": "SRS", "version": 1, "placeholder": true, "createdBy": "u-admin", "createdAt": "2026-06-01T10:00:00+06:00",
+    "note": "Draft template. Replace with BRAC's real SRS template.",
+    "sections": [
+      { "key": "introduction", "title": "Introduction", "guidance": "Purpose of the system and what this document covers.", "factKeys": ["problem", "scope_in"] },
+      { "key": "functional", "title": "Functional requirements", "guidance": "Numbered requirements (SR-01, SR-02…), each linked to a BRD requirement.", "factKeys": ["scope_in", "future_process"] },
+      { "key": "non_functional", "title": "Non-functional requirements", "guidance": "Performance, availability, offline behaviour, usability.", "factKeys": ["performance", "connectivity"] },
+      { "key": "integrations", "title": "Integrations", "guidance": "Systems to connect to and what data flows.", "factKeys": ["integrations"] },
+      { "key": "security", "title": "Security and data protection", "guidance": "Access control, encryption, data retention.", "factKeys": ["security"] },
+      { "key": "hosting", "title": "Hosting and devices", "guidance": "Where it runs and on which devices.", "factKeys": ["hosting", "devices"] }
+    ]
+  }
+]

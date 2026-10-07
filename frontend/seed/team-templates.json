@@ -1,0 +1,13 @@
+[
+  {
+    "id": "tt-mf-core",
+    "ownerId": "u-owner",
+    "name": "Microfinance core team",
+    "team": {
+      "PM": { "head": "u-pm", "deputy": "u-pmdep", "members": ["u-pm1", "u-pm2"] },
+      "TECH": { "head": "u-tech", "deputy": "u-techdep", "members": ["u-dev1", "u-dev2"], "sqa": ["u-sqa1", "u-sqa2"] },
+      "STAKEHOLDER": { "head": "u-sh", "deputy": "u-shdep", "members": ["u-st1", "u-st2"] },
+      "SPONSOR": { "head": "u-sp", "deputy": "u-spdep", "members": ["u-sp1"] }
+    }
+  }
+]

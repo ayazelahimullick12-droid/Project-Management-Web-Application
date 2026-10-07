@@ -1,0 +1,31 @@
+{
+  "id": "p-dash",
+  "slug": "officer-dashboard",
+  "name": "Loan Officer Performance Dashboard",
+  "description": "Dashboard for branch and area managers showing each loan officer's portfolio, collections and overdue loans.",
+  "summary": "Dashboard for branch and area managers with each loan officer's portfolio, collections, overdue loans and pending applications, refreshed every morning.",
+  "finished": true,
+  "finishedYear": 2025,
+  "department": "Microfinance Programme",
+  "ownerId": "u-owner",
+  "createdAt": "2025-02-10T10:00:00+06:00",
+  "team": {
+    "PM": { "head": "u-dilruba", "members": [] },
+    "TECH": { "head": "u-tech", "members": ["u-dev2"] },
+    "STAKEHOLDER": { "head": "u-sh", "members": [] },
+    "SPONSOR": { "head": "u-sp", "members": [] }
+  },
+  "away": [],
+  "intake": { "description": "Managers read several reports to follow each officer.", "analysed": true },
+  "facts": [],
+  "documents": [
+    { "type": "PROPOSAL", "file": "proposal.md", "versions": [ { "by": "u-dilruba", "kind": "manual", "message": "Final", "at": "2025-02-25T10:00:00+06:00" } ],
+      "chains": [ { "version": 1, "at": "2025-02-26T10:00:00+06:00", "status": "approved", "steps": [ { "s": "approved", "at": "2025-02-26T10:00:00+06:00" }, { "s": "approved", "at": "2025-02-27T10:00:00+06:00" }, { "s": "approved", "at": "2025-03-02T10:00:00+06:00" } ] } ] },
+    { "type": "CHARTER", "file": "charter.md", "versions": [ { "by": "u-dilruba", "kind": "manual", "message": "Final", "at": "2025-03-10T10:00:00+06:00" } ],
+      "chains": [ { "version": 1, "at": "2025-03-11T10:00:00+06:00", "status": "signed", "steps": [ { "s": "approved", "at": "2025-03-11T10:00:00+06:00" }, { "s": "approved", "at": "2025-03-12T10:00:00+06:00" }, { "s": "approved", "at": "2025-03-13T10:00:00+06:00" }, { "s": "approved", "at": "2025-03-16T10:00:00+06:00" } ] } ] },
+    { "type": "BRD", "file": "brd.md", "versions": [ { "by": "u-dilruba", "kind": "manual", "message": "Final", "at": "2025-04-07T10:00:00+06:00" } ],
+      "chains": [ { "version": 1, "at": "2025-04-08T10:00:00+06:00", "status": "signed", "steps": [ { "s": "approved", "at": "2025-04-08T10:00:00+06:00" }, { "s": "approved", "at": "2025-04-09T10:00:00+06:00" }, { "s": "approved", "at": "2025-04-10T10:00:00+06:00" }, { "s": "approved", "at": "2025-04-13T10:00:00+06:00" } ] } ] },
+    { "type": "SRS", "file": "srs.md", "versions": [ { "by": "u-tech", "kind": "manual", "message": "Final", "at": "2025-05-05T10:00:00+06:00" } ],
+      "chains": [ { "version": 1, "at": "2025-05-06T10:00:00+06:00", "status": "signed", "steps": [ { "s": "approved", "at": "2025-05-06T10:00:00+06:00" }, { "s": "approved", "at": "2025-05-07T10:00:00+06:00" }, { "s": "approved", "at": "2025-05-08T10:00:00+06:00" }, { "s": "approved", "at": "2025-05-11T10:00:00+06:00" } ] } ] }
+  ]
+}

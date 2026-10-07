@@ -1,0 +1,114 @@
+{
+  "uploadOcr": {
+    "pages": 3,
+    "text": "LOAN APPLICATION FORM (v4) — page 1 of 2\nBranch: ________  Field officer ID: ______\nMember name / NID number / Mobile / Village / Group\nLoan product: Dabi / Progoti  Amount requested (BDT): ______\nPurpose of loan · Monthly household income · Existing loans\nSignature of member · Signature of field officer · Branch manager approval\n\nFIELD OFFICER STAFFING — HR extract, September 2026\nDhaka division: 820 field officers · Mymensingh division: 630 field officers\nTotal: 1,450 field officers"
+  },
+  "extraction": [
+    { "key": "problem", "source": "description", "value": "Paper loan forms get lost or come back incomplete, so a loan takes about 9 working days from application to disbursement." },
+    { "key": "objectives", "source": "description", "value": "Let field officers complete loan applications on a tablet in the field and send them to the branch manager for approval the same day." },
+    { "key": "target_users", "source": "description", "value": "Field officers (enter applications) and branch managers (approve)." },
+    { "key": "user_count", "source": "description", "value": "About 1,200 field officers", "conflictFromUpload": "1,450 field officers (HR staffing extract, September 2026)" },
+    { "key": "coverage", "source": "description", "value": "Pilot in 120 branches in the Dhaka and Mymensingh divisions." },
+    { "key": "scope_in", "source": "description", "value": "Loan application entry on a tablet, borrower photo and national ID capture, offline storage and sync, branch manager approval." },
+    { "key": "go_live", "source": "description", "value": "Before July 2027 (start of the next fiscal year)." },
+    { "key": "connectivity", "source": "description", "value": "Many villages have weak or no mobile data; the app must work without the internet." }
+  ],
+  "rag": {
+    "matches": [
+      {
+        "projectId": "p-collect",
+        "score": 0.92,
+        "why": ["Both are tablet apps for field officers", "Both must work offline in villages with weak mobile data", "Same users: field officers and branch managers", "Same divisions (Dhaka, Mymensingh)"],
+        "sections": [
+          { "docType": "SRS", "sectionKey": "non_functional", "title": "Non-functional requirements", "excerpt": "The app works fully offline and syncs to the Collection Server every 30 minutes when a connection is available." },
+          { "docType": "CHARTER", "sectionKey": "risks", "title": "Risks, assumptions and constraints", "excerpt": "Field officers may resist moving from paper; run paper and app side by side for two weeks at 10 pilot branches." },
+          { "docType": "SRS", "sectionKey": "hosting", "title": "Hosting and devices", "excerpt": "Tablets are managed with TabSecure MDM so the app can be updated remotely and wiped if lost." }
+        ]
+      },
+      {
+        "projectId": "p-dash",
+        "score": 0.71,
+        "why": ["Same users (field officers and branch managers)", "Uses loan application and approval data", "Similar objective: faster loan processing"],
+        "sections": [
+          { "docType": "CHARTER", "sectionKey": "objectives", "title": "Objectives and success criteria", "excerpt": "Cut loan processing time from 7 working days to 2 working days for at least 90% of applications." },
+          { "docType": "BRD", "sectionKey": "reports", "title": "Reporting needs", "excerpt": "Branch managers need a daily list of pending loan applications and their age." }
+        ]
+      }
+    ],
+    "suggestions": [
+      {
+        "kind": "requirement", "factKey": "offline_sync", "factLabel": "Offline working and sync",
+        "text": "The app must work fully offline and sync automatically when a connection returns, showing the time of the last successful sync. Data syncs to the Collection Server every 30 minutes.",
+        "sourceProjectId": "p-collect", "sourceDocType": "SRS", "sectionTitle": "Non-functional requirements",
+        "highlights": ["Collection Server", "every 30 minutes"]
+      },
+      {
+        "kind": "risk", "factKey": "risks", "factLabel": "Key risks",
+        "text": "Field officers may resist moving from paper. Run paper and the app side by side for two weeks at 10 pilot branches, with a field champion in each branch.",
+        "sourceProjectId": "p-collect", "sourceDocType": "CHARTER", "sectionTitle": "Risks, assumptions and constraints",
+        "highlights": ["two weeks", "10 pilot branches"]
+      },
+      {
+        "kind": "objective", "factKey": "success_criteria", "factLabel": "Success criteria",
+        "text": "Cut loan processing time from 7 working days to 2 working days for at least 90% of applications in the pilot branches.",
+        "sourceProjectId": "p-dash", "sourceDocType": "CHARTER", "sectionTitle": "Objectives and success criteria",
+        "highlights": ["7 working days", "2 working days", "90%"]
+      },
+      {
+        "kind": "technical decision", "factKey": "device_management", "factLabel": "Device management",
+        "text": "Manage the tablets with the existing mobile device management service (TabSecure MDM) so the app can be updated remotely and wiped if a tablet is lost.",
+        "sourceProjectId": "p-collect", "sourceDocType": "SRS", "sectionTitle": "Hosting and devices",
+        "highlights": ["TabSecure MDM"]
+      },
+      {
+        "kind": "requirement", "factKey": "photo_location", "factLabel": "Photo and location capture",
+        "text": "Capture the member's photo and GPS location with each application, and refuse to submit when the location is older than 15 minutes.",
+        "sourceProjectId": "p-collect", "sourceDocType": "SRS", "sectionTitle": "Functional requirements",
+        "highlights": ["15 minutes"]
+      }
+    ]
+  },
+  "regen": {
+    "PROPOSAL:objectives": "1. **Faster loans:** bring the time from application to disbursement down from about 9 working days, meeting the success criteria below.\n2. **Complete applications:** the app checks every required field before an application can be submitted.\n3. **Same-day approval:** branch managers approve in the app on the day the application is entered.\n\n**Success criteria:** {{fact:success_criteria}}"
+  },
+  "requirements": {
+    "CHARTER": [
+      ["OBJ-1", "Reduce loan processing time in the pilot branches."],
+      ["OBJ-2", "Make every submitted loan application complete and checked."],
+      ["OBJ-3", "Let branch managers approve applications on the same day."]
+    ],
+    "BRD": [
+      ["BR-01", "Field officers can fill in a loan application on a tablet without an internet connection.", "OBJ-1"],
+      ["BR-02", "The app captures the member's photo and national ID with each application.", "OBJ-2"],
+      ["BR-03", "An application cannot be submitted while required fields are missing.", "OBJ-2"],
+      ["BR-04", "Branch managers approve or return applications in the app.", "OBJ-3"],
+      ["BR-05", "Loans above BDT 1 lakh go to the area manager for approval.", "OBJ-3"],
+      ["BR-06", "Managers see a daily list of pending applications per branch.", "OBJ-1"]
+    ],
+    "SRS": [
+      ["SR-01", "The app stores applications on the tablet when offline and syncs them when a connection returns.", "BR-01"],
+      ["SR-02", "The app shows the time of the last successful sync.", "BR-01"],
+      ["SR-03", "The app takes the member's photo and scans the national ID card with the tablet camera.", "BR-02"],
+      ["SR-04", "The app validates required fields and blocks submission until they are complete.", "BR-03"],
+      ["SR-05", "Branch managers see submitted applications and can approve or return them with a reason.", "BR-04"],
+      ["SR-06", "Applications above BDT 1 lakh are routed to the area manager after branch approval.", "BR-05"],
+      ["SR-07", "A dashboard lists pending applications per branch with their age in days.", "BR-06"],
+      ["SR-08", "Field officers can change the app language between Bangla and English.", null]
+    ]
+  },
+  "transcript": {
+    "segments": [
+      { "speaker": "u-pm", "raw": "আজকের মিটিং এর বিষয় পাইলোট শাকা নির্বাচন। আমরা কি একশো বিশটা শাকায় একসাথে শুরু করবো?", "corrected": "আজকের মিটিংয়ের বিষয় পাইলট শাখা নির্বাচন। আমরা কি একশো বিশটা শাখায় একসাথে শুরু করবো?" },
+      { "speaker": "u-sh", "raw": "আমার মনে হয় প্রথমে ময়মন সিংহের বিশটা শাকায় শুরু করা ভালো, তারপর বাকি একশো টা।", "corrected": "আমার মনে হয় প্রথমে ময়মনসিংহের বিশটা শাখায় শুরু করা ভালো, তারপর বাকি একশোটা।" },
+      { "speaker": "u-tech", "raw": "অফলাইন সিঙ্ক এর জন্য আমাদের আরো দুই সপ্তা টেস্টিং লাগবে।", "corrected": "অফলাইন সিঙ্কের জন্য আমাদের আরও দুই সপ্তাহ টেস্টিং লাগবে।" },
+      { "speaker": "u-sp", "raw": "বাজেট এক কোটি আশি লাক এর মধ্যে থাকতে হবে।", "corrected": "বাজেট এক কোটি আশি লাখের মধ্যে থাকতে হবে।" },
+      { "speaker": "u-pm", "raw": "ঠিক আছে, তাহলে শাকা ব্যাবস্থাপক এক লাখ টাকা পর্যন্ত লোন অনুমোদন করবেন।", "corrected": "ঠিক আছে, তাহলে শাখা ব্যবস্থাপক এক লাখ টাকা পর্যন্ত লোন অনুমোদন করবেন।" }
+    ],
+    "decisions": [
+      { "text": "Start the pilot in 20 branches in Mymensingh, then extend to the remaining 100 branches.", "factKey": "coverage" },
+      { "text": "Allow two extra weeks of testing for offline sync.", "factKey": "timeline" },
+      { "text": "Branch managers approve loans up to BDT 1 lakh in the app.", "factKey": "approval_steps" },
+      { "text": "Keep the total budget within BDT 1.8 crore.", "factKey": "budget_total" }
+    ]
+  }
+}

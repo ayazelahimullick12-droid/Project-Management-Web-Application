@@ -1,0 +1,30 @@
+[
+  { "id": "u-admin", "name": "Farhana Kabir", "email": "farhana.kabir@brac.example", "title": "System Administrator", "department": "Technology Unit", "isAdmin": true },
+  { "id": "u-owner", "name": "Imran Chowdhury", "email": "imran.chowdhury@brac.example", "title": "Head of Technology", "department": "Microfinance Programme" },
+
+  { "id": "u-pm", "name": "Nusrat Jahan", "email": "nusrat.jahan@brac.example", "title": "Project Manager", "department": "Technology Unit" },
+  { "id": "u-pmdep", "name": "Sadia Islam", "email": "sadia.islam@brac.example", "title": "Senior Business Analyst", "department": "Technology Unit" },
+  { "id": "u-pm1", "name": "Rafiq Hasan", "email": "rafiq.hasan@brac.example", "title": "Business Analyst", "department": "Technology Unit" },
+  { "id": "u-pm2", "name": "Mehnaz Akter", "email": "mehnaz.akter@brac.example", "title": "Business Analyst", "department": "Technology Unit" },
+
+  { "id": "u-tech", "name": "Arif Rahman", "email": "arif.rahman@brac.example", "title": "Tech Lead", "department": "Technology Unit" },
+  { "id": "u-techdep", "name": "Kamrul Hossain", "email": "kamrul.hossain@brac.example", "title": "Senior Software Engineer", "department": "Technology Unit" },
+  { "id": "u-dev1", "name": "Shuvo Das", "email": "shuvo.das@brac.example", "title": "Software Engineer", "department": "Technology Unit" },
+  { "id": "u-dev2", "name": "Nabila Sultana", "email": "nabila.sultana@brac.example", "title": "Software Engineer", "department": "Technology Unit" },
+  { "id": "u-sqa1", "name": "Tania Ferdous", "email": "tania.ferdous@brac.example", "title": "SQA Engineer", "department": "Technology Unit" },
+  { "id": "u-sqa2", "name": "Mahmud Karim", "email": "mahmud.karim@brac.example", "title": "SQA Engineer", "department": "Technology Unit" },
+
+  { "id": "u-sh", "name": "Rokeya Begum", "email": "rokeya.begum@brac.example", "title": "Head of Microfinance Operations", "department": "Microfinance Programme" },
+  { "id": "u-shdep", "name": "Jahid Hasan", "email": "jahid.hasan@brac.example", "title": "Deputy Head of Operations", "department": "Microfinance Programme" },
+  { "id": "u-st1", "name": "Shirin Akhter", "email": "shirin.akhter@brac.example", "title": "Regional Manager, Mymensingh", "department": "Microfinance Programme" },
+  { "id": "u-st2", "name": "Habib Ullah", "email": "habib.ullah@brac.example", "title": "Branch Manager, Gazipur", "department": "Microfinance Programme" },
+
+  { "id": "u-sp", "name": "Selim Reza", "email": "selim.reza@brac.example", "title": "Director, Finance", "department": "Finance" },
+  { "id": "u-spdep", "name": "Laila Nasrin", "email": "laila.nasrin@brac.example", "title": "Senior Manager, Finance", "department": "Finance" },
+  { "id": "u-sp1", "name": "Grace Mwangi", "email": "grace.mwangi@partner.example", "title": "Programme Officer", "department": "Partner Foundation (external)", "external": true },
+
+  { "id": "u-mithila", "name": "Mithila Sarker", "email": "mithila.sarker@brac.example", "title": "Project Manager", "department": "Technology Unit" },
+  { "id": "u-anwar", "name": "Anwar Hossain", "email": "anwar.hossain@brac.example", "title": "Software Architect", "department": "Technology Unit" },
+  { "id": "u-dilruba", "name": "Dilruba Yasmin", "email": "dilruba.yasmin@brac.example", "title": "Project Manager", "department": "Technology Unit" },
+  { "id": "u-rashed", "name": "Rashed Kabir", "email": "rashed.kabir@brac.example", "title": "Former Tech Lead", "department": "Technology Unit", "deactivated": true }
+]

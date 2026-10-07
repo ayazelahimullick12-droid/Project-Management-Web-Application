@@ -1,0 +1,31 @@
+{
+  "id": "p-collect",
+  "slug": "collection-tracker",
+  "name": "Field Collection Tracker",
+  "description": "Tablet app for field officers to record weekly loan collections offline and sync them to the branch.",
+  "summary": "Tablet app for field officers to record weekly loan collections at courtyard meetings, offline, syncing to the branch the same day. Piloted in 80 branches in Dhaka and Mymensingh.",
+  "finished": true,
+  "finishedYear": 2024,
+  "department": "Microfinance Programme",
+  "ownerId": "u-owner",
+  "createdAt": "2023-11-05T10:00:00+06:00",
+  "team": {
+    "PM": { "head": "u-mithila", "members": [] },
+    "TECH": { "head": "u-anwar", "members": ["u-rashed", "u-dev1"] },
+    "STAKEHOLDER": { "head": "u-st1", "members": ["u-st2"] },
+    "SPONSOR": { "head": "u-sp", "members": [] }
+  },
+  "away": [],
+  "intake": { "description": "Paper collection registers are slow and error-prone.", "analysed": true },
+  "facts": [],
+  "documents": [
+    { "type": "PROPOSAL", "file": "proposal.md", "versions": [ { "by": "u-mithila", "kind": "manual", "message": "Final", "at": "2023-11-20T10:00:00+06:00" } ],
+      "chains": [ { "version": 1, "at": "2023-11-21T10:00:00+06:00", "status": "approved", "steps": [ { "s": "approved", "at": "2023-11-21T10:00:00+06:00" }, { "s": "approved", "at": "2023-11-22T10:00:00+06:00" }, { "s": "approved", "at": "2023-11-23T10:00:00+06:00" } ] } ] },
+    { "type": "CHARTER", "file": "charter.md", "versions": [ { "by": "u-mithila", "kind": "manual", "message": "Final", "at": "2023-12-04T10:00:00+06:00" } ],
+      "chains": [ { "version": 1, "at": "2023-12-05T10:00:00+06:00", "status": "signed", "steps": [ { "s": "approved", "at": "2023-12-05T10:00:00+06:00" }, { "s": "approved", "at": "2023-12-06T10:00:00+06:00" }, { "s": "approved", "at": "2023-12-07T10:00:00+06:00" }, { "s": "approved", "at": "2023-12-10T10:00:00+06:00" } ] } ] },
+    { "type": "BRD", "file": "brd.md", "versions": [ { "by": "u-mithila", "kind": "manual", "message": "Final", "at": "2024-01-15T10:00:00+06:00" } ],
+      "chains": [ { "version": 1, "at": "2024-01-16T10:00:00+06:00", "status": "signed", "steps": [ { "s": "approved", "at": "2024-01-16T10:00:00+06:00" }, { "s": "approved", "at": "2024-01-17T10:00:00+06:00" }, { "s": "approved", "at": "2024-01-18T10:00:00+06:00" }, { "s": "approved", "at": "2024-01-21T10:00:00+06:00" } ] } ] },
+    { "type": "SRS", "file": "srs.md", "versions": [ { "by": "u-anwar", "kind": "manual", "message": "Final", "at": "2024-02-12T10:00:00+06:00" } ],
+      "chains": [ { "version": 1, "at": "2024-02-13T10:00:00+06:00", "status": "signed", "steps": [ { "s": "approved", "at": "2024-02-13T10:00:00+06:00" }, { "s": "approved", "at": "2024-02-14T10:00:00+06:00" }, { "s": "approved", "at": "2024-02-15T10:00:00+06:00" }, { "s": "approved", "at": "2024-02-18T10:00:00+06:00" } ] } ] }
+  ]
+}

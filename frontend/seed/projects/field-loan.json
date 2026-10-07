@@ -1,0 +1,26 @@
+{
+  "id": "p-loan",
+  "slug": "field-loan",
+  "name": "Field Loan Application App",
+  "description": "A tablet app so field officers can fill in and submit loan applications in the field instead of on paper.",
+  "ownerId": "u-owner",
+  "createdAt": "2026-10-06T11:30:00+06:00",
+  "team": {
+    "PM": { "head": "u-pm", "deputy": "u-pmdep", "members": ["u-pm1", "u-pm2"] },
+    "TECH": { "head": "u-tech", "deputy": "u-techdep", "members": ["u-dev1", "u-dev2"], "sqa": ["u-sqa1", "u-sqa2"] },
+    "STAKEHOLDER": { "head": "u-sh", "deputy": "u-shdep", "members": ["u-st1", "u-st2"] },
+    "SPONSOR": { "head": "u-sp", "deputy": "u-spdep", "members": ["u-sp1"] }
+  },
+  "away": [],
+  "intake": {
+    "descriptionBy": "u-st1",
+    "description": "Our field officers fill in paper loan application forms in members' homes and at courtyard meetings, then carry them back to the branch. Forms get lost or come back incomplete, and the branch has to send officers back to collect missing details. A loan currently takes about 9 working days from application to disbursement.\n\nWe want a simple tablet app so officers can fill in the application on the spot, take the borrower's photo and national ID, and send it to the branch manager for approval. Many villages have weak or no mobile data, so it must work without the internet.\n\nWe have about 1,200 field officers across the Dhaka and Mymensingh divisions. We would like to pilot in 120 branches and go live before the start of the next fiscal year in July 2027.",
+    "analysed": false
+  },
+  "facts": [],
+  "messages": [
+    { "chat": "project", "by": null, "at": "2026-10-06T11:30:00+06:00", "body": "Project created by Imran Chowdhury. Welcome to the team!" },
+    { "chat": "project", "by": "u-st1", "at": "2026-10-06T12:10:00+06:00", "body": "I have written our description in the Intake page. I will also upload a scan of the current paper form." },
+    { "chat": "project", "by": "u-pm", "at": "2026-10-06T12:25:00+06:00", "body": "Thanks Shirin. Once the form is uploaded I will run the intake analysis." }
+  ]
+}

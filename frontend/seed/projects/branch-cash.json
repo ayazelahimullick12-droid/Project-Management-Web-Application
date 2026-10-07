@@ -1,0 +1,151 @@
+{
+  "id": "p-cash",
+  "slug": "branch-cash",
+  "name": "Branch Cash Reconciliation",
+  "description": "Reconcile each branch's cash automatically every day and flag differences the same evening.",
+  "ownerId": "u-owner",
+  "createdAt": "2026-08-18T10:00:00+06:00",
+  "team": {
+    "PM": { "head": "u-pm", "deputy": "u-pmdep", "members": ["u-pm1", "u-pm2"] },
+    "TECH": { "head": "u-tech", "deputy": "u-techdep", "members": ["u-dev1", "u-dev2"], "sqa": ["u-sqa1", "u-sqa2"] },
+    "STAKEHOLDER": { "head": "u-sh", "deputy": "u-shdep", "members": ["u-st1", "u-st2"] },
+    "SPONSOR": { "head": "u-sp", "deputy": "u-spdep", "members": ["u-sp1"] }
+  },
+  "away": [
+    { "userId": "u-sh", "from": "2026-10-06T00:00:00+06:00", "to": "2026-10-12T23:59:00+06:00", "setBy": "u-sh" }
+  ],
+  "intake": {
+    "descriptionBy": "u-st2",
+    "description": "Every evening our branch accountants count the vault and copy the day's transactions from core banking printouts into an Excel sheet. The sheet goes to the area office the next morning. Differences are often found days later and are hard to trace. We want the system to do the matching every day and show us the differences the same evening.",
+    "analysed": true
+  },
+  "facts": [
+    { "key": "problem", "source": "description", "value": "Branches reconcile daily cash by hand in Excel; differences are found days later and are hard to trace." },
+    { "key": "objectives", "source": "description", "value": "Reconcile each branch's cash automatically every day and flag differences the same evening." },
+    { "key": "target_users", "source": "answer", "value": "Branch accountants (daily close), branch managers (review), area managers (follow-up)." },
+    { "key": "user_count", "source": "answer", "value": "About 2,300 branches; one accountant and one manager each." },
+    { "key": "coverage", "source": "answer", "value": "All microfinance branches, division by division starting with Dhaka." },
+    { "key": "scope_in", "source": "answer", "value": "Daily cash count entry, automatic matching with core banking, difference flags, manager review, area manager follow-up." },
+    { "key": "scope_out", "source": "answer", "value": "Bank deposits, payroll and the core banking system itself." },
+    { "key": "deliverables", "source": "answer", "value": "Web app for branches, matching service, area manager dashboard, training material." },
+    { "key": "timeline", "source": "answer", "value": "Eight months: November 2026 to June 2027." },
+    { "key": "go_live", "source": "answer", "value": "Dhaka division by April 2027; all divisions by June 2027." },
+    { "key": "budget_total", "source": "answer", "value": "BDT 2.4 crore" },
+    { "key": "funding_source", "source": "answer", "value": "Microfinance Programme operations budget" },
+    { "key": "success_criteria", "source": "answer", "value": "95% of branches close the day with no unexplained difference; differences traced within 2 working days." },
+    { "key": "risks", "source": "answer", "value": "Core banking data arrives late; accountants keep using Excel in parallel." },
+    { "key": "connectivity", "source": "answer", "value": "Branches have stable broadband; some use a 4G backup." },
+    { "key": "current_process", "source": "answer", "value": "The accountant counts the vault at 5:00 pm, copies transactions from core banking printouts into Excel and emails the sheet to the area office next morning." },
+    { "key": "future_process", "source": "answer", "value": "The accountant enters the vault count in the app by 5:00 pm; the app matches it with core banking and flags differences; the branch manager signs off the same evening." },
+    { "key": "approval_steps", "source": "answer", "value": "Branch manager signs off the daily close; write-offs up to BDT 5,000 by the area manager; above that, Internal Audit." },
+    { "key": "reports", "source": "answer", "value": "Daily close status per branch; weekly differences by area; monthly aged differences." }
+  ],
+  "factSheets": [
+    { "number": 1, "note": "Confirmed after the intake rounds", "at": "2026-08-27T15:10:00+06:00", "confirmedBy": "u-sh" },
+    { "number": 2, "note": "Business processes round closed", "at": "2026-09-21T12:00:00+06:00", "by": "u-pm" }
+  ],
+  "rounds": [
+    { "id": "r-cash-1", "purpose": "intake", "number": 1, "status": "closed", "startedAt": "2026-08-19T10:00:00+06:00", "closedAt": "2026-08-22T16:00:00+06:00" },
+    { "id": "r-cash-2", "purpose": "intake", "number": 2, "status": "closed", "startedAt": "2026-08-24T10:00:00+06:00", "closedAt": "2026-08-26T12:00:00+06:00" },
+    { "id": "r-cash-3", "purpose": "brd_business", "number": 1, "status": "closed", "startedAt": "2026-09-16T10:00:00+06:00", "closedAt": "2026-09-21T11:30:00+06:00" }
+  ],
+  "questions": [
+    { "round": "r-cash-1", "factKey": "budget_total", "team": "SPONSOR", "createdAt": "2026-08-19T10:05:00+06:00", "answer": "BDT 2.4 crore", "answeredBy": "u-sp", "answeredAt": "2026-08-20T11:00:00+06:00" },
+    { "round": "r-cash-1", "factKey": "scope_out", "team": "STAKEHOLDER", "createdAt": "2026-08-19T10:05:00+06:00", "answer": "Bank deposits, payroll and the core banking system itself.", "answeredBy": "u-st2", "answeredAt": "2026-08-19T15:40:00+06:00" },
+    { "round": "r-cash-3", "factKey": "current_process", "team": "STAKEHOLDER", "createdAt": "2026-09-16T10:05:00+06:00", "answer": "The accountant counts the vault at 5:00 pm, copies transactions from core banking printouts into Excel and emails the sheet to the area office next morning.", "answeredBy": "u-st2", "answeredAt": "2026-09-17T12:20:00+06:00" }
+  ],
+  "documents": [
+    {
+      "type": "PROPOSAL",
+      "file": "proposal.md",
+      "versions": [
+        { "by": null, "kind": "ai_draft", "message": "First draft generated by AI from Fact Sheet v1", "at": "2026-08-27T16:00:00+06:00" },
+        { "by": "u-pm1", "kind": "manual", "message": "Added Internal Audit for large differences", "at": "2026-08-31T11:20:00+06:00",
+          "changes": { "objectives": "1. Reconcile each branch's cash automatically every day against core banking data.\n2. Flag differences on the same evening so they can be traced while the day is fresh.\n3. Give area managers one view of all open differences in their area, with large differences passed to Internal Audit." } }
+      ],
+      "chains": [
+        { "version": 1, "at": "2026-08-28T10:00:00+06:00", "status": "changes_requested",
+          "steps": [ { "s": "approved", "at": "2026-08-28T10:05:00+06:00" }, { "s": "approved", "at": "2026-08-28T15:30:00+06:00" }, { "s": "changes_requested", "at": "2026-08-30T11:00:00+06:00", "comment": "Please add how large differences reach Internal Audit." } ] },
+        { "version": 2, "at": "2026-08-31T12:00:00+06:00", "status": "approved",
+          "steps": [ { "s": "approved", "at": "2026-08-31T12:02:00+06:00" }, { "s": "approved", "at": "2026-08-31T16:10:00+06:00" }, { "s": "approved", "at": "2026-09-01T10:30:00+06:00" } ] }
+      ]
+    },
+    {
+      "type": "CHARTER",
+      "file": "charter.md",
+      "versions": [
+        { "by": null, "kind": "ai_draft", "message": "First draft generated by AI from Fact Sheet v1 and Proposal v2", "at": "2026-09-01T14:00:00+06:00" },
+        { "by": "u-pm2", "kind": "manual", "message": "Split budget into one-off and running costs", "at": "2026-09-10T10:40:00+06:00",
+          "scopeCheck": { "flagged": true, "sectionTitles": ["Budget and funding"], "reason": "The edit changes the Budget and funding section.", "decision": "normal", "decidedBy": "u-pm" },
+          "changes": { "budget": "- **Total budget:** BDT 2.4 crore.\n- **One-off costs:** BDT 1.9 crore (development, training, rollout).\n- **Running costs:** BDT 50 lakh per year (hosting, support).\n- **Funding source:** Microfinance Programme operations budget." } }
+      ],
+      "chains": [
+        { "version": 1, "at": "2026-09-02T10:00:00+06:00", "status": "changes_requested",
+          "steps": [ { "s": "approved", "at": "2026-09-02T10:01:00+06:00" }, { "s": "approved", "at": "2026-09-03T11:45:00+06:00" }, { "s": "approved", "at": "2026-09-06T10:20:00+06:00" }, { "s": "changes_requested", "at": "2026-09-08T16:00:00+06:00", "comment": "Split the budget into one-off and running costs before I sign." } ] },
+        { "version": 2, "at": "2026-09-10T11:00:00+06:00", "status": "signed",
+          "steps": [ { "s": "approved", "at": "2026-09-10T11:02:00+06:00" }, { "s": "approved", "at": "2026-09-10T15:00:00+06:00" }, { "s": "approved", "at": "2026-09-13T10:15:00+06:00" }, { "s": "approved", "at": "2026-09-14T12:30:00+06:00" } ] }
+      ]
+    },
+    {
+      "type": "BRD",
+      "file": "brd.md",
+      "versions": [
+        { "by": null, "kind": "ai_draft", "message": "First draft generated by AI from Fact Sheet v2 and Charter v2", "at": "2026-09-21T15:00:00+06:00" },
+        { "by": "u-pm1", "kind": "manual", "message": "WhatsApp channel, split deposits in BR-03", "at": "2026-09-28T12:10:00+06:00",
+          "changes": {
+            "current_process": "The branch accountant counts the vault at 5:00 pm, copies the day's collections and disbursements from core banking printouts into Excel, and sends the sheet to the area office the next morning by email or WhatsApp. The area office checks the sheets by hand once a week.",
+            "requirements": "- **BR-01:** Accountants enter the daily vault count by denomination. *(OBJ-1)*\n- **BR-02:** The app matches the count with the day's core banking transactions. *(OBJ-1)*\n- **BR-03:** Differences are flagged with the transactions most likely to explain them, including deposits split across two days. *(OBJ-2)*\n- **BR-04:** Branch managers sign off the daily close. *(OBJ-1)*\n- **BR-05:** Area managers see and follow up all open differences in their area. *(OBJ-3)*",
+            "reports": "- Daily close status per branch.\n- Weekly differences by area.\n- Monthly aged differences, grouped by the reason recorded."
+          } },
+        { "by": "u-pm2", "kind": "ai_regen", "message": "Regenerated the future process with the new cut-off time", "at": "2026-10-05T11:30:00+06:00",
+          "regenerated": ["future_process"],
+          "changes": {
+            "future_process": "The branch accountant enters the vault count in the app by **4:30 pm**, so the branch manager has time to review before closing. The app pulls the day's transactions from core banking, matches them with the count and flags any difference with the most likely explanation. The branch manager reviews and signs off the close the same evening. The area manager follows up every open difference until it is explained, and passes differences above BDT 5,000 to Internal Audit."
+          } }
+      ],
+      "chains": [
+        { "version": 2, "at": "2026-09-29T10:00:00+06:00", "status": "changes_requested",
+          "steps": [ { "s": "approved", "at": "2026-09-29T10:03:00+06:00" }, { "s": "changes_requested", "at": "2026-10-01T14:20:00+06:00", "comment": "The future process does not say when the accountant must finish. Core banking closes the day at 6 pm, so the count must be in earlier." } ] },
+        { "version": 3, "at": "2026-10-05T12:00:00+06:00", "status": "in_progress",
+          "steps": [ { "s": "approved", "at": "2026-10-05T12:05:00+06:00" }, { "s": "approved", "at": "2026-10-06T15:00:00+06:00" }, { "s": "pending", "at": "2026-10-06T15:00:00+06:00" }, { "s": "waiting" } ] }
+      ]
+    }
+  ],
+  "comments": [
+    { "doc": "BRD", "version": 1, "section": "current_process", "quote": "emails the sheet to the area office the next morning", "body": "Some branches send it by WhatsApp, not email.", "by": "u-st1", "at": "2026-09-22T10:15:00+06:00",
+      "status": "resolved", "resolvedHow": "ticked", "resolvedBy": "u-pm1", "resolvedOnVersion": 2,
+      "replies": [ { "by": "u-pm1", "at": "2026-09-22T11:00:00+06:00", "body": "Thanks, I will mention both." } ] },
+    { "doc": "BRD", "version": 1, "section": "requirements", "quote": "Differences are flagged with the transactions most likely to explain them.", "body": "Matching must handle deposits split across two days, or we will get false differences every Thursday.", "by": "u-dev1", "at": "2026-09-23T14:30:00+06:00",
+      "status": "resolved", "resolvedHow": "confirmed", "resolvedBy": "u-dev2", "resolvedOnVersion": 2, "pendingReason": "text_edited" },
+    { "doc": "BRD", "version": 2, "section": "reports", "quote": "Monthly aged differences", "body": "Can we group the monthly report by the reason recorded? Finance needs that.", "by": "u-sp", "at": "2026-09-29T15:00:00+06:00",
+      "status": "resolved", "resolvedHow": "ticked", "resolvedBy": "u-pm1", "resolvedOnVersion": 3, "mentions": ["u-pm1"] },
+    { "doc": "BRD", "version": 3, "section": "reports", "quote": "Weekly differences by area.", "body": "Can area managers also get this by email every Monday morning? @Rafiq Hasan", "by": "u-st2", "at": "2026-10-06T16:40:00+06:00",
+      "status": "open", "mentions": ["u-pm1"] }
+  ],
+  "suggestions": [
+    { "doc": "BRD", "version": 3, "section": "constraints", "quote": "Core banking data arrives late on busy days.", "proposed": "Core banking data may arrive after 6:00 pm on month-end and other busy days.", "by": "u-spdep", "at": "2026-10-06T17:05:00+06:00", "status": "open" }
+  ],
+  "factUpdates": [
+    { "doc": "BRD", "version": 3, "factKey": "future_process", "oldValue": "The accountant enters the vault count in the app by 5:00 pm; the app matches it with core banking and flags differences; the branch manager signs off the same evening.", "newValue": "The accountant enters the vault count in the app by 4:30 pm; the app matches it with core banking and flags differences; the branch manager signs off the same evening.", "excerpt": "enters the vault count in the app by 4:30 pm", "at": "2026-10-05T11:31:00+06:00" }
+  ],
+  "messages": [
+    { "chat": "project", "by": null, "at": "2026-08-18T10:00:00+06:00", "body": "Project created by Imran Chowdhury." },
+    { "chat": "project", "by": "u-pm", "at": "2026-09-21T15:05:00+06:00", "body": "The BRD first draft is ready. Please review and comment in the document, not here." },
+    { "chat": "project", "by": "u-st2", "at": "2026-10-02T10:20:00+06:00", "body": "From the field: core banking closes the day at 6 pm, so accountants should finish the count by 4:30 pm.", "decisionBy": "u-st2" },
+    { "chat": "project", "by": "u-tech", "at": "2026-10-02T10:45:00+06:00", "body": "Agreed, 4:30 gives the matching service enough time before 6." },
+    { "chat": "doc:BRD", "by": "u-pm2", "at": "2026-10-05T11:35:00+06:00", "body": "Version 3 is up with the new cut-off time. Sending it for approval now." },
+    { "chat": "doc:BRD", "by": "u-shdep", "at": "2026-10-06T16:00:00+06:00", "body": "Rokeya apa is away this week, I am covering her approvals." }
+  ],
+  "transcript": {
+    "chat": "doc:BRD", "by": "u-pm", "at": "2026-10-04T15:00:00+06:00", "kind": "video",
+    "segments": [
+      { "speaker": "u-pm", "raw": "আজকে আমরা কাট অফ টাইম নিয়ে কথা বলবো। চারটা ত্রিশ কি সব শাকার জন্য ঠিক আছে?", "corrected": "আজকে আমরা কাট-অফ টাইম নিয়ে কথা বলবো। সাড়ে চারটা কি সব শাখার জন্য ঠিক আছে?" },
+      { "speaker": "u-st2", "raw": "হাট এর দিনে কালেকশন বেশি হয়, তখন পাঁচটা লাগতে পারে।", "corrected": "হাটের দিনে কালেকশন বেশি হয়, তখন পাঁচটা লাগতে পারে।" },
+      { "speaker": "u-tech", "raw": "হাটের দিনে আমরা পাঁচটা পর্যন্ত সময় দিতে পারি, ম্যাচিং সার্ভিস তাও সময় মতো শেষ হবে।", "corrected": "হাটের দিনে আমরা পাঁচটা পর্যন্ত সময় দিতে পারি, ম্যাচিং সার্ভিস তাও সময়মতো শেষ হবে।" }
+    ],
+    "decisions": [
+      { "text": "On weekly market (haat) days, the cut-off for the vault count is 5:00 pm instead of 4:30 pm.", "factKey": "future_process" },
+      { "text": "The matching service must finish before core banking closes at 6:00 pm.", "factKey": "performance" }
+    ]
+  }
+}

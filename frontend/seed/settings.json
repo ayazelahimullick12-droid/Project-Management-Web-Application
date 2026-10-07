@@ -1,0 +1,17 @@
+{
+  "seedNow": "2026-10-07T10:00:00+06:00",
+  "settings": {
+    "workDays": [0, 1, 2, 3, 4],
+    "workStart": 9,
+    "workEnd": 17,
+    "reminderHours": 4,
+    "lockIdleMinutes": 60,
+    "qaRoundLimit": 3,
+    "ragTopK": 5,
+    "ragDuplicateThreshold": 0.9,
+    "signoffBlocking": ["Critical", "High"],
+    "defectDuplicateThreshold": 0.5,
+    "aiSpeed": "normal",
+    "holidays": ["2026-12-16", "2027-02-21", "2027-03-26"]
+  }
+}

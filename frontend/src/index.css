@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+/* Fallback values; the real values come from src/theme/brand.ts (applyBrand). */
+:root {
+  --brand-primary: #D10074;
+  --brand-accent: #EC008C;
+  --brand-primary-soft: #FCE7F3;
+  --brand-ink: #27281C;
+  --brand-green: #008945;
+  --brand-green-soft: #E6F4EC;
+  --brand-canvas: #F6F6F6;
+  --brand-line: #E3E3DE;
+  --brand-muted: #6B6C63;
+  --brand-font: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+@theme inline {
+  --color-brand: var(--brand-primary);
+  --color-brand-bright: var(--brand-accent);
+  --color-brand-soft: var(--brand-primary-soft);
+  --color-ink: var(--brand-ink);
+  --color-leaf: var(--brand-green);
+  --color-leaf-soft: var(--brand-green-soft);
+  --color-canvas: var(--brand-canvas);
+  --color-line: var(--brand-line);
+  --color-muted: var(--brand-muted);
+  --font-sans: var(--brand-font);
+}
+
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: var(--brand-canvas);
+  color: var(--brand-ink);
+  font-family: var(--brand-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Page titles echo BRAC's light, uppercase headings */
+.page-title { font-weight: 300; letter-spacing: 0.01em; text-transform: uppercase; }
+
+/* Rendered Markdown (documents, summaries, transcripts) */
+.md { line-height: 1.6; font-size: 0.95rem; }
+.md p { margin: 0 0 0.7em; }
+.md ul, .md ol { margin: 0 0 0.7em 1.3em; }
+.md ul { list-style: disc; }
+.md ol { list-style: decimal; }
+.md li { margin: 0.15em 0; }
+.md h1, .md h2, .md h3, .md h4 { font-weight: 600; margin: 0.9em 0 0.4em; }
+.md h3 { font-size: 1rem; }
+.md table { border-collapse: collapse; margin: 0.4em 0 0.9em; font-size: 0.88rem; }
+.md th, .md td { border: 1px solid var(--brand-line); padding: 4px 8px; text-align: left; vertical-align: top; }
+.md th { background: #fafaf7; }
+.md strong { font-weight: 600; }
+.md code { background: #f1f1ec; padding: 0 4px; border-radius: 3px; font-size: 0.85em; }
+.md > :last-child { margin-bottom: 0; }
+
+/* Comment and suggestion highlights in the document view */
+mark.hl-comment { background: #fde7f3; color: inherit; border-bottom: 2px solid var(--brand-primary); cursor: pointer; border-radius: 2px; }
+mark.hl-comment.hl-active { background: #f9c6e2; }
+mark.hl-suggest { background: #e3f3ea; color: inherit; border-bottom: 2px dashed var(--brand-green); cursor: pointer; border-radius: 2px; }
+
+/* Word diffs */
+.diff-add { background: #d9f2e2; color: #0b4d2a; border-radius: 2px; }
+.diff-del { background: #fde2e2; color: #8a1c1c; text-decoration: line-through; border-radius: 2px; }
+
+/* TipTap editor */
+.tiptap { outline: none; min-height: 3rem; }
+.tiptap p { margin: 0 0 0.7em; }
+.tiptap ul { list-style: disc; margin-left: 1.3em; }
+.tiptap ol { list-style: decimal; margin-left: 1.3em; }
+.tiptap h3 { font-weight: 600; }
+
+/* Old-project detail highlights in RAG suggestions */
+.old-detail { background: #fff3c4; border-bottom: 2px solid #d4a106; border-radius: 2px; padding: 0 2px; }
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; }
+  .print-page { box-shadow: none !important; margin: 0 !important; }
+  .page-break { break-before: page; }
+}
