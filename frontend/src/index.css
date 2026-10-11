@@ -36,8 +36,8 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Page titles echo BRAC's light, uppercase headings */
-.page-title { font-weight: 300; letter-spacing: 0.01em; text-transform: uppercase; }
+/* Page titles: sentence case, like most work apps */
+.page-title { font-weight: 600; letter-spacing: -0.01em; }
 
 /* Rendered Markdown (documents, summaries, transcripts) */
 .md { line-height: 1.6; font-size: 0.95rem; }

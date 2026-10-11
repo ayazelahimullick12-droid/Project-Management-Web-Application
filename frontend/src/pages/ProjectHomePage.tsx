@@ -1,155 +1,203 @@
 /**
- * Project home: stage tracker, document cards ("Waiting on name since time"), open items and team.
- * SPEC.md "Dashboard" (per project) and BUILD_SPEC "Project home".
+ * Project overview: the next step first, then documents and testing as a simple list, then only
+ * the items that need attention. SPEC.md "Dashboard" (per project). Layout idea from Linear's
+ * project page.
  */
-import { Archive, ArrowRight, Crown, FileText, FlaskConical, Plane } from 'lucide-react'
-import { Link, useParams } from 'react-router-dom'
+import { Archive, ArrowRight, FileText, FlaskConical, MessageSquare, MoreHorizontal } from 'lucide-react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { clsx } from 'clsx'
 import { api } from '../api'
 import { useApi, useNow } from '../api/hooks'
-import { DOC_LABEL } from '../rules/pipeline'
+import { DOC_LABEL, STAGES, STAGE_LABEL } from '../rules/pipeline'
 import { TEAM_LABEL } from '../rules/permissions'
 import { DocStatusChip } from '../components/status'
-import { StageTracker } from '../components/StageTracker'
-import { ago, fmtDate } from '../components/format'
-import { Avatar, Badge, Card, ErrorBox, LinkButton, Loading, Note, PageHeader } from '../components/ui'
+import { ago, duration, fmtDate } from '../components/format'
+import { Avatar, Dot, ErrorBox, LinkButton, Loading, MenuButton, Note } from '../components/ui'
+
+const NEXT_STYLE = {
+  action: 'border-brand/30 bg-brand-soft/40',
+  waiting: 'border-sky-200 bg-sky-50/60',
+  done: 'border-green-200 bg-leaf-soft/50',
+  problem: 'border-red-200 bg-red-50/60',
+} as const
 
 export function ProjectHomePage() {
   const { pid = '' } = useParams()
   const now = useNow()
+  const navigate = useNavigate()
   const { data, isLoading, error } = useApi(['project', pid], () => api.projects.getProject(pid))
   if (isLoading) return <Loading />
   if (error || !data) return <ErrorBox error={error} />
   const { summary, me } = data
   const p = summary.project
+  const next = summary.next
+  const at = STAGES.indexOf(summary.stage)
   const docLink = (type: string) => (type === 'SQA_SIGNOFF' ? `/projects/${pid}/testing/SQA?tab=signoff` : type === 'UAT_SIGNOFF' ? `/projects/${pid}/testing/UAT?tab=signoff` : `/projects/${pid}/docs/${type}`)
   const nameOf = (id?: string) => data.members.find((m) => m.member.userId === id)?.name ?? '—'
+  const attention = data.openItems.filter((o) => o.count > 0)
+  const heads = data.members.filter((m) => m.member.isHead)
 
   return (
-    <div>
-      <PageHeader
-        eyebrow={summary.myRole}
-        title={p.name}
-        subtitle={`${p.description} · Owner: ${data.ownerName} · Created ${fmtDate(p.createdAt)}`}
-        actions={me.canManageTeam && <LinkButton to={`/projects/${pid}/team`}>Manage team</LinkButton>}
-      />
+    <div className="space-y-8">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="page-title text-[24px]">{p.name}</h1>
+          <p className="mt-1 max-w-2xl text-sm text-muted">{p.description}</p>
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted">
+            <span>
+              {summary.myRole} · Owner {data.ownerName} · started {fmtDate(p.createdAt)}
+            </span>
+            <span className="flex -space-x-1.5">
+              {heads.map((m) => (
+                <span key={m.member.userId} className="rounded-full ring-2 ring-white" title={`${m.name} — ${m.role}`}>
+                  <Avatar name={m.name} id={m.member.userId} size={24} />
+                </span>
+              ))}
+            </span>
+          </div>
+        </div>
+        <MenuButton
+          label={<MoreHorizontal className="h-4 w-4" />}
+          items={[
+            { label: 'Team and roles', onClick: () => navigate(`/projects/${pid}/team`) },
+            { label: 'Audit log', onClick: () => navigate(`/projects/${pid}/audit`) },
+            { label: 'Project chat', onClick: () => navigate(`/projects/${pid}/chat`) },
+          ]}
+        />
+      </div>
+
       {p.status === 'archived' && (
-        <Note tone="gray" icon={<Archive className="h-4 w-4" />} className="mb-4">
+        <Note tone="gray" icon={<Archive className="h-4 w-4" />}>
           Archived on {fmtDate(p.archivedAt)}. The project is read-only.
         </Note>
       )}
-      {p.finished && (
-        <Note tone="green" className="mb-4">
-          Finished project ({p.finishedYear ?? p.legacy?.year}). Its signed documents are indexed so the RAG agent can suggest from them.
-        </Note>
-      )}
-      <div className="mb-6 rounded-lg bg-white p-4 ring-1 ring-line">
-        <div className="mb-2 text-xs font-medium text-muted">Stage</div>
-        <StageTracker stage={summary.stage} />
-        {summary.stage === 'INTAKE' && (
-          <div className="mt-3 text-sm">
-            Next: the stakeholders give their information on the <Link className="font-medium text-brand" to={`/projects/${pid}/intake`}>Intake page</Link>, then the Q/A agent builds the Fact Sheet.
-          </div>
-        )}
-        {summary.stage === 'COMPLETE' && !p.finished && (
-          <div className="mt-3 text-sm">
-            Documentation complete. {me.isOwner && p.status === 'active' && <Link className="font-medium text-brand" to={`/projects/${pid}/team`}>The Owner may archive the project.</Link>}
-          </div>
-        )}
+
+      {/* Stage */}
+      <div>
+        <div className="flex gap-1">
+          {STAGES.map((s, i) => (
+            <div key={s} className="flex-1">
+              <div className={clsx('h-1.5 rounded-full', summary.stage === 'COMPLETE' || i < at ? 'bg-leaf' : i === at ? 'bg-brand' : 'bg-black/10')} />
+              <div className={clsx('mt-1.5 truncate text-[11px]', i === at && summary.stage !== 'COMPLETE' ? 'font-semibold text-ink' : 'text-muted')}>{STAGE_LABEL[s]}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1.7fr_1fr]">
-        <div>
-          <h2 className="mb-3 text-sm font-semibold">Documents and sign-offs</h2>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {summary.docs.map((d) => (
-              <Link key={d.type} to={docLink(d.type)} className="rounded-lg bg-white p-4 ring-1 ring-line transition hover:ring-brand">
-                <div className="mb-2 flex items-center gap-2">
-                  {d.type.endsWith('SIGNOFF') ? <FlaskConical className="h-4 w-4 text-muted" /> : <FileText className="h-4 w-4 text-muted" />}
-                  <span className="font-medium">{DOC_LABEL[d.type]}</span>
-                  {d.versionNumber && <span className="text-xs text-muted">v{d.versionNumber}</span>}
-                  <ArrowRight className="ml-auto h-4 w-4 text-muted" />
-                </div>
-                <DocStatusChip status={d.status} />
-                {d.status.waitingOn && (
-                  <div className="mt-2 text-xs text-muted">
-                    Waiting on <b className="text-ink">{nameOf(d.status.waitingOn)}</b> since {ago(d.status.since, now)}
-                  </div>
-                )}
-                {d.status.key === 'out_of_sync' && <div className="mt-2 text-xs text-red-700">An earlier document changed. Re-approval needed, in order.</div>}
-                {(d.openComments > 0 || d.pendingComments > 0) && (
-                  <div className="mt-2 flex gap-2 text-xs">
-                    {d.openComments > 0 && <Badge tone="magenta">{d.openComments} open comments</Badge>}
-                    {d.pendingComments > 0 && <Badge tone="amber">{d.pendingComments} pending check</Badge>}
-                  </div>
-                )}
-              </Link>
-            ))}
-          </div>
-
-          <h2 className="mt-6 mb-3 text-sm font-semibold">Testing</h2>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {(['SQA', 'UAT'] as const).map((stage) => {
-              const t = data.testing[stage]
-              return (
-                <Link key={stage} to={`/projects/${pid}/testing/${stage}`} className="rounded-lg bg-white p-4 ring-1 ring-line hover:ring-brand">
-                  <div className="mb-2 flex items-center gap-2 font-medium">{stage} <Badge tone={t.status === 'Signed off' ? 'green' : t.status === 'Not started' ? 'gray' : 'blue'}>{t.status}</Badge></div>
-                  {t.tests ? (
-                    <>
-                      <div className="mb-1 h-2 overflow-hidden rounded bg-canvas">
-                        <div className="h-full bg-leaf" style={{ width: `${(t.passed / t.tests) * 100}%` }} />
-                      </div>
-                      <div className="text-xs text-muted">
-                        {t.passed} of {t.tests} test cases passing · {t.run} run · {t.defectsOpen} unresolved defects
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-xs text-muted">Not started. {stage === 'SQA' ? 'Starts after the SRS is signed.' : 'Starts after SQA is signed off.'}</div>
-                  )}
-                </Link>
-              )
-            })}
+      {/* Next step */}
+      <Link to={next.link} className={clsx('flex flex-wrap items-center gap-4 rounded-xl border px-5 py-4 transition hover:shadow-sm', NEXT_STYLE[next.tone])}>
+        <div className="min-w-0 flex-1">
+          <div className="text-[11px] font-semibold tracking-wide text-muted uppercase">{next.tone === 'done' ? 'Status' : 'Next step'}</div>
+          <div className="mt-0.5 text-base font-semibold">{next.title}</div>
+          <div className="mt-0.5 text-sm text-muted">
+            {next.waitingOnName ? (
+              <>
+                Waiting on <b className="font-medium text-ink">{next.waitingOnName}</b>
+                {next.coveringName && <> (Away; {next.coveringName} is covering)</>}
+                {next.since && <> for {duration(now.getTime() - new Date(next.since).getTime())}</>}
+                {' '}· reminded every 4 working hours
+              </>
+            ) : (
+              next.detail
+            )}
           </div>
         </div>
+        <span className="inline-flex items-center gap-1 text-sm font-medium text-brand">
+          {next.action ?? 'Open'} <ArrowRight className="h-4 w-4" />
+        </span>
+      </Link>
 
-        <div className="space-y-4">
-          <Card title="Open items">
-            <ul className="space-y-1.5 text-sm">
-              {data.openItems.map((o) => (
-                <li key={o.label} className="flex items-center justify-between">
-                  <Link to={o.link} className={o.count ? 'hover:text-brand' : 'text-muted'}>
-                    {o.label}
-                  </Link>
-                  <Badge tone={o.count ? 'magenta' : 'gray'}>{o.count}</Badge>
-                </li>
-              ))}
-            </ul>
-          </Card>
-          <Card title="Team" actions={<Link to={`/projects/${pid}/team`} className="text-xs font-medium text-brand">All members</Link>}>
-            <div className="space-y-3">
-              {(['PM', 'TECH', 'STAKEHOLDER', 'SPONSOR'] as const).map((team) => (
-                <div key={team}>
-                  <div className="mb-1 text-[11px] font-semibold text-muted uppercase">{TEAM_LABEL[team]}</div>
-                  {data.members
-                    .filter((m) => m.member.team === team && (m.member.isHead || m.member.isDeputy))
-                    .map((m) => (
-                      <div key={m.member.userId} className="flex items-center gap-2 py-0.5 text-sm">
-                        <Avatar name={m.name} id={m.member.userId} size={22} />
-                        <span className="flex-1 truncate">{m.name}</span>
-                        {m.member.isHead && <Crown className="h-3.5 w-3.5 text-brand" />}
-                        {m.member.isDeputy && <span className="text-[11px] text-muted">deputy</span>}
-                        {m.away && (
-                          <Badge tone="amber">
-                            <Plane className="h-3 w-3" /> Away until {fmtDate(m.awayUntil)}
-                          </Badge>
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="space-y-8">
+          <section>
+            <h2 className="mb-2 text-sm font-semibold">Documents</h2>
+            <ul className="divide-y divide-line/70 overflow-hidden rounded-xl border border-line/80 bg-white">
+              {summary.docs.map((d) => {
+                const signoff = d.type.endsWith('SIGNOFF')
+                const testing = signoff ? data.testing[d.type === 'SQA_SIGNOFF' ? 'SQA' : 'UAT'] : undefined
+                return (
+                  <li key={d.type}>
+                    <Link to={docLink(d.type)} className="grid items-center gap-x-4 gap-y-1 px-4 py-3 hover:bg-canvas sm:grid-cols-[minmax(0,180px)_minmax(0,1fr)_auto]">
+                      <span className="flex items-center gap-2 text-sm font-medium">
+                        {signoff ? <FlaskConical className="h-4 w-4 text-muted" /> : <FileText className="h-4 w-4 text-muted" />}
+                        {DOC_LABEL[d.type]}
+                        {d.versionNumber && <span className="text-xs font-normal text-muted">v{d.versionNumber}</span>}
+                      </span>
+                      <span className="min-w-0 truncate text-xs text-muted">
+                        {d.status.key === 'not_started' && testing && testing.status !== 'Not started' ? (
+                          <Dot tone="blue">{testing.status}</Dot>
+                        ) : (
+                          <DocStatusChip status={d.status} />
                         )}
-                      </div>
-                    ))}
-                  <div className="text-[11px] text-muted">{data.members.filter((m) => m.member.team === team).length} members</div>
-                </div>
-              ))}
-            </div>
-          </Card>
+                        {d.status.waitingOn && <span className="ml-2">{nameOf(d.status.waitingOn)} · {ago(d.status.since, now)}</span>}
+                        {testing && testing.tests > 0 && <span className="ml-2">{testing.passed}/{testing.tests} passing · {testing.defectsOpen} open defects</span>}
+                      </span>
+                      <span className="flex items-center gap-3 text-xs text-muted">
+                        {d.openComments + d.pendingComments > 0 && (
+                          <span className="inline-flex items-center gap-1">
+                            <MessageSquare className="h-3.5 w-3.5" /> {d.openComments + d.pendingComments}
+                          </span>
+                        )}
+                        <ArrowRight className="h-4 w-4" />
+                      </span>
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          </section>
         </div>
+
+        <aside className="space-y-8">
+          <section>
+            <h2 className="mb-2 text-sm font-semibold">Needs attention</h2>
+            {attention.length ? (
+              <ul className="space-y-1">
+                {attention.map((o) => (
+                  <li key={o.label}>
+                    <Link to={o.link} className="flex items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-black/[0.04]">
+                      {o.label}
+                      <span className="rounded-full bg-brand px-1.5 text-[11px] font-semibold text-white">{o.count}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted">Nothing open.</p>
+            )}
+          </section>
+          <section>
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-sm font-semibold">Team</h2>
+              <Link to={`/projects/${pid}/team`} className="text-xs font-medium text-brand">
+                {me.canManageTeam ? 'Manage' : 'All members'}
+              </Link>
+            </div>
+            <ul className="space-y-2">
+              {(['PM', 'TECH', 'STAKEHOLDER', 'SPONSOR'] as const).map((team) => {
+                const head = data.members.find((m) => m.member.team === team && m.member.isHead)
+                const n = data.members.filter((m) => m.member.team === team).length
+                return (
+                  <li key={team} className="flex items-center gap-2 text-sm">
+                    {head && <Avatar name={head.name} id={head.member.userId} size={24} />}
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate">{head?.name ?? '—'}</span>
+                      <span className="block text-[11px] text-muted">
+                        {TEAM_LABEL[team]} head · {n} member{n === 1 ? '' : 's'}
+                        {head?.away && ' · Away'}
+                      </span>
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+          </section>
+          {me.isOwner && summary.stage === 'COMPLETE' && p.status === 'active' && !p.finished && (
+            <LinkButton to={`/projects/${pid}/team`} variant="secondary" size="sm">
+              <Archive className="h-3.5 w-3.5" /> Archive project
+            </LinkButton>
+          )}
+        </aside>
       </div>
     </div>
   )

@@ -54,3 +54,12 @@ One line each: the decision, then the reason.
 - “A defect you watch changed status” is in-app only — per `SPEC_SQA_UAT.md`.
 - Decision and Fact Sheet update notifications are sent once, without reminders — the spec lists reminders for approvals, signatures and questions.
 - The time-travel control is in the clock menu for everyone — convenient for demos; in the real app it is Admin-only in development mode.
+
+## Layout (streamlining, 11 October 2026)
+
+- Prototype explanations ("In the real app…" notes, open-question markers) are hidden by default and switched on in the clock menu — the app should look like the product; reviewers can still see every note.
+- "My questions" and "My tests" are tabs of one **My work** page, with approvals and other waiting items — one place for everything waiting on a person (spec inboxes are kept as tabs).
+- Change requests and Decisions share one sidebar entry; Team and Audit log share another — fewer sidebar items, linked by a switch at the top of each page.
+- Each project shows one computed **next step** (who must act, since when) above the document list — answers "what happens now?" without reading every card.
+- On a document, the main action (Edit, Send for approval, Approve, Approve and sign) sits in the header; downloads and rarer actions are behind "…"; comments and the approval list share a side rail.
+- The defect board hides the outcome columns (Rejected, Duplicate, Deferred, Change request) until "Show…" is clicked — they are rarely needed while triaging.

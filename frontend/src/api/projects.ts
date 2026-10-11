@@ -10,7 +10,7 @@ import { newId } from '../demo/ids'
 import { getSessionUserId, setSessionUserId } from '../demo/session'
 import { reassign } from '../rules/approval'
 import { blockingCounts } from '../rules/comments'
-import { actAsHead, can, HEAD_LABEL, headOf, isAway, isDeveloper, isOwner, isSqa, memberOf, roleLabel, TEAM_LABEL } from '../rules/permissions'
+import { actAsHead, can, HEAD_LABEL, headOf, headRecipient, isAway, isDeveloper, isOwner, isSqa, memberOf, roleLabel, TEAM_LABEL } from '../rules/permissions'
 import { docOf, docStatus, factSheetConfirmed, projectStage, STAGES, type DocStatus } from '../rules/pipeline'
 import { UNRESOLVED } from '../rules/testing'
 import { act, ApiError, ensure, fail, me, nameOf, pipelineCtx, projectOf, read } from './core'
@@ -79,6 +79,20 @@ export interface ProjectSummary {
   pendingDecisions: number
   openDefects: number
   myRole: string
+  next: NextStep
+}
+
+/** The one thing that should happen next in a project, and who is responsible. */
+export interface NextStep {
+  title: string
+  detail?: string
+  link: string
+  action?: string
+  waitingOn?: ID
+  waitingOnName?: string
+  coveringName?: string
+  since?: string
+  tone: 'action' | 'waiting' | 'done' | 'problem'
 }
 
 function visibleProjects(s: DemoState, userId: ID): Project[] {
@@ -86,7 +100,7 @@ function visibleProjects(s: DemoState, userId: ID): Project[] {
   return s.projects.filter((p) => user?.isAdmin || isOwner(p, userId) || memberOf(p, userId))
 }
 
-export function summarize(s: DemoState, p: Project, userId: ID): ProjectSummary {
+export function summarize(s: DemoState, p: Project, userId: ID, t: Date): ProjectSummary {
   const ctx = pipelineCtx(s, p.id)
   const docs: DocCard[] = (['PROPOSAL', 'CHARTER', 'BRD', 'SRS', 'SQA_SIGNOFF', 'UAT_SIGNOFF'] as const).map((type) => {
     const doc = docOf(ctx, type)
@@ -110,7 +124,62 @@ export function summarize(s: DemoState, p: Project, userId: ID): ProjectSummary 
     pendingDecisions: s.decisions.filter((d) => d.projectId === p.id && d.status === 'pending').length,
     openDefects: s.defects.filter((d) => d.projectId === p.id && UNRESOLVED.includes(d.status)).length,
     myRole: roleLabel(p, userId),
+    next: nextStep(s, p, projectStage(ctx), docs, t),
   }
+}
+
+const DOC_NAME: Record<string, string> = { PROPOSAL: 'Proposal', CHARTER: 'Charter', BRD: 'BRD', SRS: 'SRS', SQA_SIGNOFF: 'SQA sign-off', UAT_SIGNOFF: 'UAT sign-off' }
+const STAGE_DOC: Record<string, DocCard['type']> = { PROPOSAL: 'PROPOSAL', CHARTER: 'CHARTER', BRD: 'BRD', SRS: 'SRS', SQA: 'SQA_SIGNOFF', UAT: 'UAT_SIGNOFF' }
+
+/** What should happen next, from the project's stage and the status of its current document. */
+function nextStep(s: DemoState, p: Project, stage: ReturnType<typeof projectStage>, docs: DocCard[], t: Date): NextStep {
+  const base = `/projects/${p.id}`
+  if (p.status === 'archived') return { title: 'Archived', detail: 'The project is read-only.', link: base, tone: 'done' }
+  if (stage === 'COMPLETE') return { title: 'Documentation complete', detail: p.finished ? 'All four documents are signed.' : 'UAT is signed off. The Owner may archive the project.', link: base, tone: 'done' }
+  const waiting = (headId: ID, title: string, link: string, since?: string, detail?: string): NextStep => {
+    const r = headRecipient(p, headId, t)
+    return { title, detail, link, waitingOn: headId, waitingOnName: nameOf(s, headId), coveringName: r.forUserId ? nameOf(s, r.to) : undefined, since, tone: 'waiting' }
+  }
+  if (stage === 'INTAKE') {
+    const intake = `${base}/intake`
+    const openRound = s.rounds.find((r) => r.projectId === p.id && r.status === 'open' && r.purpose === 'intake')
+    const run = s.ragRuns.find((r) => r.id === p.intake.ragRunId)
+    const conflictsN = p.facts.filter((f) => f.status === 'conflicting').length
+    if (!p.intake.description.trim()) return { title: 'Stakeholders describe what they need', detail: 'Write the request and upload any forms or reports.', link: intake, action: 'Open intake', tone: 'action' }
+    if (!p.intake.analysed) return { title: 'Run the intake analysis', detail: 'The Q/A agent reads the description and files and extracts the facts (PM team).', link: intake, action: 'Open intake', tone: 'action' }
+    if (run?.duplicate && !p.intake.duplicateAck) return { title: 'Check a possible duplicate project', detail: `A finished project matches ${Math.round(run.duplicate.score * 100)}%. The PM must acknowledge it.`, link: `${intake}?tab=rag`, action: 'Review', tone: 'problem' }
+    if (openRound) {
+      const n = s.questions.filter((q) => q.roundId === openRound.id && !q.answeredAt).length
+      return n
+        ? { title: `${n} Q/A question${n > 1 ? 's' : ''} waiting for answers`, detail: 'Stakeholders, sponsors and the tech team answer them in My work.', link: `${intake}?tab=questions`, action: 'See questions', tone: 'waiting', since: openRound.startedAt }
+        : { title: 'All questions answered: close the round', detail: 'The PM closes the round and checks again.', link: `${intake}?tab=questions`, action: 'See questions', tone: 'action' }
+    }
+    if (conflictsN) return { title: `Settle ${conflictsN} conflicting fact${conflictsN > 1 ? 's' : ''}`, detail: 'Two sources disagree; the PM picks the value.', link: `${intake}?tab=facts`, action: 'Open Fact Sheet', tone: 'problem' }
+    if (p.intake.confirmRequestedAt) return waiting(headOf(p, 'STAKEHOLDER')!.userId, 'Stakeholder head confirms the Fact Sheet', `${intake}?tab=facts`, p.intake.confirmRequestedAt)
+    return { title: 'Complete the Fact Sheet', detail: 'Ask the Q/A questions for missing fields, then send it to the stakeholder head.', link: `${intake}?tab=questions`, action: 'Open intake', tone: 'action' }
+  }
+  const type = STAGE_DOC[stage]
+  const card = docs.find((d) => d.type === type)!
+  const name = DOC_NAME[type]
+  const link = type.endsWith('SIGNOFF') ? `${base}/testing/${stage}?tab=signoff` : `${base}/docs/${type}`
+  if (card.status.key === 'in_review' && card.status.waitingOn) return waiting(card.status.waitingOn, `${card.status.waitingRole} reviews the ${name}`, link, card.status.since)
+  if (card.status.key === 'changes_requested') return { title: `PM team updates the ${name}`, detail: 'Changes were requested. A new version restarts the approval chain (a minor correction resumes it).', link, action: `Open ${name}`, tone: 'action', since: card.status.since }
+  if (card.status.key === 'out_of_sync') return { title: `Re-approve the ${name}`, detail: 'An earlier document changed. Documents are re-approved in order.', link, action: `Open ${name}`, tone: 'problem' }
+  if (stage === 'SQA' || stage === 'UAT') {
+    const tests = s.testCases.filter((x) => x.projectId === p.id && x.stage === stage).length
+    const open = s.defects.filter((d) => d.projectId === p.id && d.stage === stage && UNRESOLVED.includes(d.status)).length
+    return tests
+      ? { title: `${stage} testing in progress`, detail: `${tests} test cases · ${open} unresolved defect${open === 1 ? '' : 's'}`, link: `${base}/testing/${stage}`, action: `Open ${stage}`, tone: 'action' }
+      : { title: `Prepare the ${stage} test cases`, detail: stage === 'SQA' ? 'SQA tests come from the signed SRS.' : 'UAT tests come from the signed BRD.', link: `${base}/testing/${stage}`, action: `Open ${stage}`, tone: 'action' }
+  }
+  if (card.status.key === 'not_started') {
+    const round = type === 'BRD' ? 'brd_business' : type === 'SRS' ? 'srs_technical' : undefined
+    if (round && !s.rounds.some((r) => r.projectId === p.id && r.purpose === round && r.status === 'closed'))
+      return { title: type === 'BRD' ? 'Business processes Q/A round' : 'Technical Q/A round (tech team)', detail: `Needed before the ${name} is drafted.`, link: `${base}/intake`, action: 'Open intake', tone: 'action' }
+    return { title: `Generate the ${name}`, detail: 'The AI drafts it section by section from the Fact Sheet (PM team).', link, action: `Open ${name}`, tone: 'action' }
+  }
+  const c = card.openComments + card.pendingComments
+  return { title: `Review the ${name} and send it for approval`, detail: c ? `${c} comment${c > 1 ? 's' : ''} to resolve first.` : 'Comment and edit; then the PM sends it for approval.', link, action: `Open ${name}`, tone: 'action' }
 }
 
 export interface Dashboard {
@@ -126,7 +195,7 @@ export async function dashboard(): Promise<Dashboard> {
   return read((s, t) => {
     const user = me(s)
     const projects = visibleProjects(s, user.id)
-    const all = projects.map((p) => summarize(s, p, user.id))
+    const all = projects.map((p) => summarize(s, p, user.id, t))
     const items = waitingItems(s, t).map((i) => ({ ...i, projectName: projectOf(s, i.projectId).name, waitingOnName: nameOf(s, i.waitingOn) }))
     const visibleIds = new Set(projects.map((p) => p.id))
     const portfolio = !!user.isAdmin || s.projects.some((p) => p.ownerId === user.id)
@@ -169,7 +238,7 @@ export async function getProject(pid: ID): Promise<ProjectView> {
     const user = me(s)
     const p = projectOf(s, pid)
     ensure(can.view(p, user))
-    const summary = summarize(s, p, user.id)
+    const summary = summarize(s, p, user.id, t)
     const m = memberOf(p, user.id)
     const testing = {} as ProjectView['testing']
     for (const stage of ['SQA', 'UAT'] as TestStage[]) {

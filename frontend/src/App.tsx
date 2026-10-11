@@ -16,14 +16,13 @@ import { NewProjectPage } from './pages/NewProjectPage'
 import { ProjectHomePage } from './pages/ProjectHomePage'
 import { TeamPage } from './pages/TeamPage'
 import { IntakePage } from './pages/intake/IntakePage'
-import { MyQuestionsPage } from './pages/MyQuestionsPage'
+import { MyWorkPage } from './pages/MyWorkPage'
 import { DocumentPage } from './pages/document/DocumentPage'
 import { ChangesPage } from './pages/ChangesPage'
 import { DecisionsPage } from './pages/DecisionsPage'
 import { ChatPage, MessagesPage } from './pages/chat/ChatPage'
 import { TestingPage } from './pages/testing/TestingPage'
 import { DefectPage } from './pages/testing/DefectPage'
-import { MyTestsPage } from './pages/MyTestsPage'
 import { NotificationsPage, MailboxPage } from './pages/NotificationsPage'
 import { AdminPage } from './pages/AdminPage'
 import { AuditPage } from './pages/AuditPage'
@@ -76,8 +75,9 @@ export function App() {
               <Route path="/projects/:pid/testing/:stage" element={<TestingPage />} />
               <Route path="/projects/:pid/defects/:defectId" element={<DefectPage />} />
               <Route path="/projects/:pid/audit" element={<AuditPage />} />
-              <Route path="/inbox/questions" element={<MyQuestionsPage />} />
-              <Route path="/inbox/tests" element={<MyTestsPage />} />
+              <Route path="/my-work" element={<MyWorkPage />} />
+              <Route path="/inbox/questions" element={<Navigate to="/my-work?tab=questions" replace />} />
+              <Route path="/inbox/tests" element={<Navigate to="/my-work?tab=tests" replace />} />
               <Route path="/notifications" element={<NotificationsPage />} />
               <Route path="/mailbox" element={<MailboxPage />} />
               <Route path="/messages" element={<MessagesPage />} />

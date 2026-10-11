@@ -1,7 +1,7 @@
 /** Consistent status chips across documents, facts, approvals, tests and defects. */
 import type { DefectStatus, FactStatus, Severity, TestResult } from '../types'
 import type { StatusKey } from '../rules/pipeline'
-import { Badge, type Tone } from './ui'
+import { Badge, Dot, type Tone } from './ui'
 
 const DOC_TONE: Record<StatusKey, Tone> = {
   not_started: 'gray',
@@ -14,12 +14,12 @@ const DOC_TONE: Record<StatusKey, Tone> = {
 }
 
 export function DocStatusChip({ status }: { status: { key: StatusKey; label: string } }) {
-  return <Badge tone={DOC_TONE[status.key]}>{status.label}</Badge>
+  return <Dot tone={DOC_TONE[status.key]}>{status.label}</Dot>
 }
 
 const FACT_TONE: Record<FactStatus, Tone> = { filled: 'green', missing: 'gray', assumed: 'amber', conflicting: 'red' }
 export function FactChip({ status }: { status: FactStatus }) {
-  return <Badge tone={FACT_TONE[status]}>{status}</Badge>
+  return <Dot tone={FACT_TONE[status]}>{status}</Dot>
 }
 
 const SEV_TONE: Record<Severity, Tone> = { Critical: 'red', High: 'amber', Medium: 'blue', Low: 'gray' }
@@ -41,13 +41,13 @@ const DEF_TONE: Record<DefectStatus, Tone> = {
   'Change request': 'gray',
 }
 export function DefectStatusChip({ status }: { status: DefectStatus }) {
-  return <Badge tone={DEF_TONE[status]}>{status}</Badge>
+  return <Dot tone={DEF_TONE[status]}>{status}</Dot>
 }
 
 const RES: Record<TestResult, [Tone, string]> = { pass: ['green', 'Pass'], fail: ['red', 'Fail'], blocked: ['amber', 'Blocked'], not_run: ['gray', 'Not run'] }
 export function ResultChip({ result }: { result: TestResult | undefined }) {
   const [tone, label] = RES[result ?? 'not_run']
-  return <Badge tone={tone}>{label}</Badge>
+  return <Dot tone={tone}>{label}</Dot>
 }
 
 export function StepStatusChip({ status }: { status: string }) {
@@ -60,5 +60,5 @@ export function StepStatusChip({ status }: { status: string }) {
     carried_over: ['green', 'Carried over'],
   }
   const [tone, label] = map[status] ?? ['gray', status]
-  return <Badge tone={tone}>{label}</Badge>
+  return <Dot tone={tone}>{label}</Dot>
 }

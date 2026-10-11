@@ -3,11 +3,14 @@ import { CircleHelp } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { openQuestion } from '../demo/openQuestions'
+import { usePrefs } from './prefs'
 
+/** Shown only when prototype notes are on (Demo menu → Show prototype notes). */
 export function OpenQuestion({ id }: { id: string }) {
   const q = openQuestion(id)
   const [open, setOpen] = useState(false)
-  if (!q) return null
+  const { showNotes } = usePrefs()
+  if (!q || !showNotes) return null
   return (
     <span className="relative inline-block align-middle no-print">
       <button type="button" onClick={() => setOpen(!open)} className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800 ring-1 ring-amber-200 hover:bg-amber-100">

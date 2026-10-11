@@ -365,6 +365,8 @@ function Defects({ d }: { d: TData }) {
   const [view, setView] = useState<'board' | 'list'>('board')
   const [filter, setFilter] = useState<'all' | 'mine' | 'raised' | 'retest' | 'untriaged'>('all')
   const [severity, setSeverity] = useState<Severity | ''>('')
+  const [showOutcomes, setShowOutcomes] = useState(false)
+  const outcomeCount = d.defects.filter((x) => OUTCOMES.includes(x.status)).length
   const [raising, setRaising] = useState(false)
   const [moving, setMoving] = useState<{ defect: DefectRow; to: DefectStatus } | null>(null)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
@@ -403,12 +405,17 @@ function Defects({ d }: { d: TData }) {
           <option value="">All severities</option>
           {d.severities.map((s) => <option key={s}>{s}</option>)}
         </Select>
+        {view === 'board' && (
+          <button onClick={() => setShowOutcomes(!showOutcomes)} className={clsx('rounded-full px-2.5 py-1 text-xs ring-1', showOutcomes ? 'bg-brand-soft text-brand ring-brand' : 'bg-white ring-line')}>
+            {showOutcomes ? 'Hide' : 'Show'} rejected, duplicate, deferred ({outcomeCount})
+          </button>
+        )}
         {d.stage === 'SQA' && <OpenQuestion id="sqa-visible" />}
       </div>
       {view === 'board' ? (
         <DndContext sensors={sensors} onDragEnd={onDragEnd}>
           <div className="flex gap-3 overflow-x-auto pb-3">
-            {[...BOARD_COLUMNS, ...OUTCOMES].map((col) => {
+            {(showOutcomes ? [...BOARD_COLUMNS, ...OUTCOMES] : BOARD_COLUMNS).map((col) => {
               const items = list.filter((x) => x.status === col)
               if (OUTCOMES.includes(col) && !items.length) return <Column key={col} status={col} can={false}><div className="px-1 text-[11px] text-muted">PM only. Drop here with a reason.</div></Column>
               return (

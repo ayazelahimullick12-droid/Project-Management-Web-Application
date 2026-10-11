@@ -4,6 +4,7 @@ import { api } from '../api'
 import { useApi } from '../api/hooks'
 import { fmtDateTime } from '../components/format'
 import { Card, ErrorBox, Loading, PageHeader, Table, Td } from '../components/ui'
+import { SubNav, teamNav } from '../components/SubNav'
 
 export function AuditPage() {
   const { pid = '' } = useParams()
@@ -13,6 +14,7 @@ export function AuditPage() {
   return (
     <div>
       <PageHeader eyebrow={<Link to={`/projects/${pid}`}>{project?.summary.project.name}</Link>} title="Audit log" subtitle="Logins, roles, uploads, answers, confirmations, versions, AI generations, locks, comments, suggestions, approvals, signatures (with fingerprints), change requests, archive." />
+      <SubNav items={teamNav(pid)} />
       {error ? (
         <ErrorBox error={error} />
       ) : (

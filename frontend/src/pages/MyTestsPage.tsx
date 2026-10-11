@@ -9,7 +9,7 @@ import { fmtDateTime } from '../components/format'
 import { Badge, Button, Card, EmptyState, Loading, PageHeader, Table, Td } from '../components/ui'
 import { RecordResultModal } from './testing/DefectForms'
 
-export function MyTestsPage() {
+export function MyTestsPage({ embedded }: { embedded?: boolean } = {}) {
   const { data, isLoading } = useApi(['my-tests'], api.testing.myTests)
   const [running, setRunning] = useState<NonNullable<typeof data>[number] | null>(null)
   if (isLoading) return <Loading />
@@ -17,7 +17,7 @@ export function MyTestsPage() {
   const done = (data ?? []).filter((e) => e.result !== 'not_run')
   return (
     <div>
-      <PageHeader title="My tests" subtitle="Test cases assigned to you. Record Pass, Fail (with a defect) or Blocked (with a reason)." />
+      {!embedded && <PageHeader title="My tests" subtitle="Test cases assigned to you. Record Pass, Fail (with a defect) or Blocked (with a reason)." />}
       {open.length ? (
         <Card title={`To run (${open.length})`} padded={false} className="mb-6">
           <Table head={['Test', 'Project', 'Run', 'Build', '']}>

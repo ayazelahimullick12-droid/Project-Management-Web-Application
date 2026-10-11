@@ -133,10 +133,12 @@ export function OverviewTab({ data, goTo }: { data: IntakeData; goTo: (t: string
           <div className="space-y-3">
             {p.intake.analysed ? (
               <Note tone="green">Facts extracted. {data.facts.filter((f) => f.status !== 'missing').length} of {data.facts.length} fields have a value. See the Fact Sheet tab.</Note>
-            ) : (
-              <Guarded variant="primary" check={data.perms.pmTeam ? (p.intake.description ? { ok: true } : { ok: false, reason: 'Waiting for the stakeholders’ description.' }) : { ok: false, reason: 'The PM team runs the analysis.' }} onClick={() => analyse.run(p.id)}>
+            ) : data.perms.pmTeam ? (
+              <Guarded variant="primary" check={p.intake.description ? { ok: true } : { ok: false, reason: 'Waiting for the stakeholders’ description.' }} onClick={() => analyse.run(p.id)}>
                 <Play className="h-4 w-4" /> Run intake analysis
               </Guarded>
+            ) : (
+              <p className="text-sm text-muted">Waiting for the PM team to run it.</p>
             )}
             {p.intake.analysed && data.perms.pmTeam && (
               <Button size="sm" variant="ghost" onClick={() => analyse.run(p.id)}>

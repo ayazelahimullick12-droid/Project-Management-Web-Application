@@ -26,9 +26,9 @@ Every feature and rule in `SPEC.md` and `SPEC_SQA_UAT.md`, and where to see it i
 
 ## Q/A agent and the Fact Sheet
 
-- [x] Inputs: description, uploads with OCR, RAG items, answers, transcripts and chat decisions — Loan → Intake; Decisions
+- [x] Inputs: description, uploads with OCR, RAG items, answers, transcripts and chat decisions — Loan → Intake; Changes & decisions → Decisions
 - [x] Required-fields checklist from all four templates; filled, missing, assumed, conflicting — Intake → Fact Sheet (“Needed by” column)
-- [x] Routing: business → stakeholders, funding → sponsors, technical → tech team — Intake → Q/A questions; My questions
+- [x] Routing: business → stakeholders, funding → sponsors, technical → tech team — Intake → Q/A questions; My work → Q/A questions
 - [x] “Unknown” stored as an assumption with an agreed default — answer funding source as Unknown
 - [x] Conflicts flagged; the PM settles — Loan (number of users) → Settle
 - [x] Round limit; PM decides ask again or proceed with gaps logged — Intake → Q/A questions (limit in Admin → Settings)
@@ -101,21 +101,21 @@ Every feature and rule in `SPEC.md` and `SPEC_SQA_UAT.md`, and where to see it i
 
 ## Chat and meetings
 
-- [x] Project chat, chat per document, direct messages — Chats & calls; Direct messages
+- [x] Project chat, chat per document, direct messages — project Chat; Messages
 - [~] Voice and video calls with screen sharing — simulated call screen (own camera and screen share work) `[e]` LiveKit
 - [x] Transcription switched on by the starter; banner for everyone — call screen
 - [~] BanglaASR transcript, LLM correction, raw kept — pre-written Bangla transcript with Raw/Corrected toggle `[e]`
 - [x] Audio upload as a transcript source — Chats → Meeting audio
-- [x] Decisions from transcripts and “Mark as decision”; PM confirms into the Fact Sheet or starts a change request — Decisions
+- [x] Decisions from transcripts and “Mark as decision”; PM confirms into the Fact Sheet or starts a change request — Changes & decisions → Decisions
 
 ## Notifications, dashboard and archive
 
 - [x] In-app + email (Mailbox) for every event in the table — Notifications, Mailbox
 - [x] Working hours Sunday–Thursday 9–17, set by the Admin; holidays — Admin → Settings
 - [x] Reminders only in working hours; deputy receives them while the head is Away
-- [x] Per-project dashboard: stage, document statuses with “Waiting on name since”, open comments, pending check, unanswered questions — Project home, Dashboard
-- [x] Portfolio view for the Owner and Admin, stalled items sorted by waiting time — Dashboard (Imran or Farhana)
-- [x] Archive: read-only, leaves the active dashboard — Team → Archive; Archived projects
+- [x] Per-project dashboard: stage, document statuses with “Waiting on name since”, open comments, pending check, unanswered questions — Project overview (next step and document list), Home
+- [x] Portfolio view for the Owner and Admin, stalled items sorted by waiting time — Home → Stalled across the portfolio (Imran or Farhana)
+- [x] Archive: read-only, leaves the active dashboard — Team → Archive; Help & prototype → Archived & finished
 
 ## Technical decisions and security
 
@@ -125,7 +125,7 @@ Every feature and rule in `SPEC.md` and `SPEC_SQA_UAT.md`, and where to see it i
 
 ## Open items
 
-- [x] All open items from both spec files, with the assumption used — Open questions page and markers on the screens
+- [x] All open items from both spec files, with the assumption used — Open questions page; markers on the screens when Show prototype notes is on
 
 ---
 
@@ -141,7 +141,7 @@ Every feature and rule in `SPEC.md` and `SPEC_SQA_UAT.md`, and where to see it i
 - [x] Test case list confirmed by the tech head (SQA) / stakeholder head (UAT) — Test cases tab
 - [x] Builds: register, claimed fixes, available to SQA at once, Release to UAT only after an SQA run and with no open Critical/High SQA defects — Savings → Builds
 - [x] Fixes during UAT go through SQA first (“Fix works” / “Still fails”) — Savings → Builds (UAT-4 in build 1.1)
-- [x] Test runs, My tests inbox, Pass / Fail (must link a defect) / Blocked (reason), files — My tests
+- [x] Test runs, My tests inbox, Pass / Fail (must link a defect) / Blocked (reason), files — My work → Tests
 - [x] Defects: fields, severity, status flow, outcomes (Rejected, Duplicate, Deferred — Medium/Low only, Change request) — Savings → Defects
 - [x] Board with drag and drop (only allowed moves), list with filters and saved shortcuts, defect page with comments, @tags, files, history, watchers — Savings → Defects
 - [x] AI defect writer; possible duplicates — Raise a defect / record a Fail
@@ -150,5 +150,5 @@ Every feature and rule in `SPEC.md` and `SPEC_SQA_UAT.md`, and where to see it i
 - [x] Request changes on a report → regenerate → chain restarts
 - [x] Changes during testing: linked tests Needs review (reset), sign-offs Out of sync, re-done in order — after a change request or a requirement edit
 - [x] Notifications and reminders for tests, builds, defects, retests, list confirmation, sign-offs — Notifications
-- [x] Dashboard: SQA/UAT status, progress and defects; untriaged defects and retests in stalled items — Project home, Dashboard
+- [x] Dashboard: SQA/UAT status, progress and defects; untriaged defects and retests in stalled items — Project overview, Home
 - [x] Audit log entries for builds, results, defect changes, Not testable, sign-offs — Audit log

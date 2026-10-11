@@ -7,7 +7,7 @@ import { fmtDateTime } from '../components/format'
 import { Badge, Button, Card, EmptyState, Loading, PageHeader } from '../components/ui'
 import { AnswerBox } from './intake/QuestionsTab'
 
-export function MyQuestionsPage() {
+export function MyQuestionsPage({ embedded }: { embedded?: boolean } = {}) {
   const { data, isLoading } = useApi(['my-questions'], api.intake.myQuestions)
   const [answering, setAnswering] = useState<string | null>(null)
   if (isLoading) return <Loading />
@@ -15,7 +15,7 @@ export function MyQuestionsPage() {
   const done = (data ?? []).filter((q) => !q.open)
   return (
     <div>
-      <PageHeader title="My questions" subtitle="Questions the Q/A agent routed to you. “Unknown” is a valid answer. Unanswered questions are reminded every 4 working hours." />
+      {!embedded && <PageHeader title="My questions" subtitle="Questions the Q/A agent routed to you. “Unknown” is a valid answer. Unanswered questions are reminded every 4 working hours." />}
       {open.length ? (
         <div className="mb-6 space-y-3">
           {open.map((q) => (

@@ -4,7 +4,7 @@
  */
 import { clsx } from 'clsx'
 import { X } from 'lucide-react'
-import { useEffect, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
+import { useEffect, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useSearchParams } from 'react-router-dom'
 import { initials } from './format'
@@ -65,14 +65,35 @@ export function LinkButton({ to, children, variant = 'secondary', size = 'md', c
 export type Tone = 'gray' | 'magenta' | 'green' | 'amber' | 'red' | 'blue' | 'violet' | 'dark'
 
 const TONE: Record<Tone, string> = {
-  gray: 'bg-gray-100 text-gray-700 ring-gray-200',
-  magenta: 'bg-brand-soft text-brand ring-pink-200',
-  green: 'bg-leaf-soft text-leaf ring-green-200',
-  amber: 'bg-amber-50 text-amber-800 ring-amber-200',
-  red: 'bg-red-50 text-red-700 ring-red-200',
-  blue: 'bg-sky-50 text-sky-800 ring-sky-200',
-  violet: 'bg-violet-50 text-violet-700 ring-violet-200',
+  gray: 'bg-black/[0.05] text-ink/70 ring-transparent',
+  magenta: 'bg-brand-soft text-brand ring-transparent',
+  green: 'bg-leaf-soft text-leaf ring-transparent',
+  amber: 'bg-amber-50 text-amber-800 ring-transparent',
+  red: 'bg-red-50 text-red-700 ring-transparent',
+  blue: 'bg-sky-50 text-sky-800 ring-transparent',
+  violet: 'bg-violet-50 text-violet-700 ring-transparent',
   dark: 'bg-ink text-white ring-ink',
+}
+
+const DOT: Record<Tone, string> = {
+  gray: 'bg-gray-400',
+  magenta: 'bg-brand',
+  green: 'bg-leaf',
+  amber: 'bg-amber-500',
+  red: 'bg-red-500',
+  blue: 'bg-sky-500',
+  violet: 'bg-violet-500',
+  dark: 'bg-ink',
+}
+
+/** A status shown as a coloured dot and a label (quieter than a filled pill). */
+export function Dot({ tone = 'gray', children, className, title }: { tone?: Tone; children: ReactNode; className?: string; title?: string }) {
+  return (
+    <span title={title} className={clsx('inline-flex items-center gap-1.5 text-xs whitespace-nowrap text-ink/80', className)}>
+      <span className={clsx('h-2 w-2 shrink-0 rounded-full', DOT[tone])} />
+      {children}
+    </span>
+  )
 }
 
 export function Badge({ tone = 'gray', children, className, title }: { tone?: Tone; children: ReactNode; className?: string; title?: string }) {
@@ -87,9 +108,9 @@ export function Badge({ tone = 'gray', children, className, title }: { tone?: To
 
 export function Card({ title, actions, children, className, padded = true, subtitle }: { title?: ReactNode; subtitle?: ReactNode; actions?: ReactNode; children?: ReactNode; className?: string; padded?: boolean }) {
   return (
-    <section className={clsx('rounded-lg bg-white ring-1 ring-line', className)}>
+    <section className={clsx('rounded-xl border border-line/80 bg-white', className)}>
       {(title || actions) && (
-        <header className="flex flex-wrap items-start justify-between gap-2 border-b border-line px-4 py-3">
+        <header className={clsx('flex flex-wrap items-start justify-between gap-2 px-4 pt-3.5', padded ? 'pb-0' : 'border-b border-line/70 pb-3')}>
           <div>
             {title && <h2 className="text-sm font-semibold">{title}</h2>}
             {subtitle && <p className="mt-0.5 text-xs text-muted">{subtitle}</p>}
@@ -104,10 +125,10 @@ export function Card({ title, actions, children, className, padded = true, subti
 
 export function PageHeader({ title, subtitle, actions, eyebrow }: { title: ReactNode; subtitle?: ReactNode; actions?: ReactNode; eyebrow?: ReactNode }) {
   return (
-    <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-      <div>
-        {eyebrow && <div className="mb-1 text-xs font-medium text-brand">{eyebrow}</div>}
-        <h1 className="page-title text-2xl">{title}</h1>
+    <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+      <div className="min-w-0">
+        {eyebrow && <div className="mb-1 text-xs text-muted [&_a]:hover:text-brand">{eyebrow}</div>}
+        <h1 className="page-title text-[22px] leading-tight">{title}</h1>
         {subtitle && <p className="mt-1 max-w-3xl text-sm text-muted">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -285,4 +306,57 @@ export function Table({ head, children, className }: { head: ReactNode[]; childr
 
 export function Td({ children, className }: { children?: ReactNode; className?: string }) {
   return <td className={clsx('px-3 py-2 align-top', className)}>{children}</td>
+}
+
+/** A compact switch between views (like a segmented control). */
+export function Segmented({ options, value, onChange }: { options: { id: string; label: ReactNode; hidden?: boolean }[]; value: string; onChange: (id: string) => void }) {
+  return (
+    <div className="inline-flex rounded-lg bg-black/[0.05] p-0.5">
+      {options
+        .filter((o) => !o.hidden)
+        .map((o) => (
+          <button key={o.id} type="button" onClick={() => onChange(o.id)} className={clsx('rounded-md px-3 py-1 text-sm', value === o.id ? 'bg-white font-medium shadow-sm' : 'text-muted hover:text-ink')}>
+            {o.label}
+          </button>
+        ))}
+    </div>
+  )
+}
+
+/** A small menu that opens from a button (for secondary actions, behind "…"). */
+export function MenuButton({ label, items, align = 'right' }: { label: ReactNode; items: ({ label: ReactNode; onClick?: () => void; href?: string; danger?: boolean; hidden?: boolean } | 'divider')[]; align?: 'left' | 'right' }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const close = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [open])
+  return (
+    <div className="relative" ref={ref}>
+      <button type="button" onClick={() => setOpen(!open)} className="inline-flex items-center gap-1.5 rounded-md bg-white px-2.5 py-2 text-sm ring-1 ring-line hover:bg-canvas">
+        {label}
+      </button>
+      {open && (
+        <div className={clsx('absolute top-11 z-30 min-w-52 rounded-lg bg-white py-1 shadow-xl ring-1 ring-line', align === 'right' ? 'right-0' : 'left-0')}>
+          {items.map((it, i) =>
+            it === 'divider' ? (
+              <div key={i} className="my-1 border-t border-line" />
+            ) : it.hidden ? null : it.href ? (
+              <a key={i} href={it.href} target="_blank" rel="noreferrer" className="block px-3 py-1.5 text-sm hover:bg-canvas" onClick={() => setOpen(false)}>
+                {it.label}
+              </a>
+            ) : (
+              <button key={i} type="button" className={clsx('block w-full px-3 py-1.5 text-left text-sm hover:bg-canvas', it.danger && 'text-red-700')} onClick={() => { setOpen(false); it.onClick?.() }}>
+                {it.label}
+              </button>
+            ),
+          )}
+        </div>
+      )}
+    </div>
+  )
 }

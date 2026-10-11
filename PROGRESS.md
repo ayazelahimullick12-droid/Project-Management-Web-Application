@@ -56,3 +56,11 @@ Then follow `frontend/DEMO.md`.
 - Review with BRAC using the Open questions page; replace the placeholder templates and colours.
 - When ready: build the FastAPI backend (`BUILD_PROMPT.md`, `BUILD_PROMPT_SQA_UAT.md`) and move
   `frontend/src/rules/` into it.
+
+## 11 October 2026 — streamlined layout
+
+- New shell: Home, My work, Inbox, Messages, then projects (only the open one expanded); help and prototype pages grouped at the bottom; Ctrl+K quick switcher.
+- Home leads with "Waiting on you" (grouped) and each project's next step; the project page leads with one next-step card and a simple document list.
+- Document page: one main action in the header, a Google Docs-style page, and a rail with Comments and a GitHub-style reviewer list.
+- Statuses shown as small coloured dots; sentence-case titles; prototype notes off by default (clock menu → Show prototype notes).
+- Checked again: 65 rule tests pass, production build passes, every page renders for each role.

@@ -12,6 +12,7 @@ import { SideBySide } from '../components/Diff'
 import { fmtDateTime } from '../components/format'
 import { Badge, Button, Card, Checkbox, EmptyState, ErrorBox, Field, Input, Loading, Modal, Note, PageHeader, Textarea } from '../components/ui'
 import { AnswerBox } from './intake/QuestionsTab'
+import { SubNav, changesNav } from '../components/SubNav'
 
 const STEPS = ['questions', 'impact_review', 'regenerating', 'reapproval', 'closed'] as const
 
@@ -38,6 +39,7 @@ export function ChangesPage() {
         subtitle="A scope change: the Q/A agent asks only about what changed, the Fact Sheet is updated, affected sections are regenerated, and the pipeline restarts from the Proposal."
         actions={data.pm && data.project.status === 'active' && <Button variant="primary" onClick={() => setCreating(true)}><Plus className="h-4 w-4" /> New change request</Button>}
       />
+      <SubNav items={changesNav(pid)} />
       {pendingUpdates.length > 0 && (
         <Card title="Fact Sheet updates proposed from edits" subtitle="When a manual edit changes a fact, the AI proposes a matching Fact Sheet update. A PM team member accepts or rejects it." className="mb-6">
           <ul className="space-y-3">

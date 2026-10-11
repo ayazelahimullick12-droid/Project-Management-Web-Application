@@ -13,6 +13,7 @@ import { TEAM_LABEL } from '../rules/permissions'
 import { fmtDate } from '../components/format'
 import { OpenQuestion } from '../components/OpenQuestion'
 import { Avatar, Badge, Button, Card, ErrorBox, Field, Input, Loading, Modal, Note, PageHeader, Select } from '../components/ui'
+import { SubNav, teamNav } from '../components/SubNav'
 
 export function TeamPage() {
   const { pid = '' } = useParams()
@@ -46,6 +47,7 @@ export function TeamPage() {
   return (
     <div>
       <PageHeader title="Team" subtitle="Four teams, one head each, one deputy per head. One person can hold only one role in a project." actions={<OpenQuestion id="sqa-team" />} />
+      <SubNav items={teamNav(pid)} />
       {!canManage && <Note className="mb-4">Only the Project Owner ({data.ownerName}) can change the team. Heads can mark themselves Away.</Note>}
       <div className="grid gap-4 md:grid-cols-2">
         {TEAMS.map((team) => (

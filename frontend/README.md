@@ -30,12 +30,21 @@ copy of the dummy data in their own browser.
 
 ## Using it
 
+- **Home** shows what is waiting on you and each project's next step; **My work** lists your
+  approvals, Q/A questions and tests in one place; **Inbox** holds notifications.
+- **Ctrl+K** (or the search box) jumps to any project, document or page.
 - **Switch user** from the top-right menu. Each browser tab can be a different person, so two
   windows side by side can show the edit lock and the live read-only view.
 - **Demo controls** (the clock in the top bar): move time forward to see reminders and the 1-hour
-  edit-lock timeout, change the AI speed, or **Reset demo data**.
-- **Mailbox** (left menu) shows every email the app would send, including signing codes.
-- **Open questions** and **How the real app works** explain what is assumed and what is simulated.
+  edit-lock timeout, change the AI speed, **Reset demo data**, and **Show prototype notes**
+  (off by default; turn it on for spec reviews to see the "In the real app…" notes and
+  open-question markers).
+- **Help & prototype** (bottom of the sidebar): the Mailbox (every email the app would send,
+  including signing codes), Open questions, and How the real app works.
+
+The layout borrows familiar patterns: a Linear-style sidebar and quick switcher, an Asana-style
+"My work" list, a Google Docs-style document page with a comments rail, GitHub-style reviewers,
+and a Jira-style defect board.
 - `DEMO.md` is a 20-minute walkthrough script.
 
 ## How the code is organised

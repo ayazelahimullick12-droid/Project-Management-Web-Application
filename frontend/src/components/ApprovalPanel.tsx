@@ -128,11 +128,19 @@ function SignatureRecord({ sig }: { sig: ApprovalProps['signatures'][number] }) 
   )
 }
 
-export function ApprovalPanel(props: ApprovalProps) {
+/** Who may send the version: hide the button for people who could never send it. */
+function sendVisible(send: Check): boolean {
+  return send.ok || !/^Only (the Project Manager|an SQA)/.test(send.reason ?? '')
+}
+
+/**
+ * The approval buttons: Approve / Approve and Sign / Request changes, Send for approval and
+ * Declare a minor correction. `row` is for a page header (one main button), `stack` for a panel.
+ */
+export function ApprovalActions(props: ApprovalProps & { layout?: 'row' | 'stack' }) {
   const [requesting, setRequesting] = useState(false)
   const [comment, setComment] = useState('')
   const [signing, setSigning] = useState(false)
-  const [history, setHistory] = useState(false)
   const send = useAction(api.documents.sendForApproval, { success: 'Sent for approval. The first approver was notified.' })
   const approve = useAction(api.documents.approve, { success: 'Approved. The next approver was notified.' })
   const request = useAction(api.documents.requestChanges, { success: 'Changes requested. The PM team was notified.', onDone: () => setRequesting(false) })
@@ -140,124 +148,52 @@ export function ApprovalPanel(props: ApprovalProps) {
   const cfg = CHAIN_CONFIG[props.docType]
   const chain = props.activeChain?.status === 'in_progress' ? props.activeChain : undefined
   const current = chain?.steps.find((s) => s.status === 'pending')
-  const shown = chain ?? props.activeChain ?? props.lastChain
+  const row = props.layout === 'row'
+  const deputy = props.act.actingFor ? ' (as deputy)' : ''
+
+  const buttons: React.ReactNode[] = []
+  if (chain && props.act.ok && current) {
+    buttons.push(
+      current.sign ? (
+        <Button key="sign" variant="success" onClick={() => setSigning(true)}>
+          <FileSignature className="h-4 w-4" /> Approve and sign{deputy}
+        </Button>
+      ) : (
+        <Button key="approve" variant="success" onClick={() => approve.run(props.docId)}>
+          <BadgeCheck className="h-4 w-4" /> Approve{deputy}
+        </Button>
+      ),
+      <Button key="request" onClick={() => { setComment(''); setRequesting(true) }}>
+        <Undo2 className="h-4 w-4" /> Request changes
+      </Button>,
+    )
+  }
+  if (!chain && props.minor.requested && props.minor.ok)
+    buttons.push(
+      <Button key="minor" variant="primary" onClick={() => minor.run(props.docId)}>
+        Declare minor correction
+      </Button>,
+    )
+  if (!chain && sendVisible(props.send)) {
+    const label = props.outOfSync && props.frozen ? 'Send for re-approval' : 'Send for approval'
+    buttons.push(
+      row ? (
+        <Button key="send" variant={props.minor.requested && props.minor.ok ? 'secondary' : 'primary'} disabled={!props.send.ok} why={props.send.reason} onClick={() => send.run(props.docId)}>
+          <Send className="h-4 w-4" /> {label}
+        </Button>
+      ) : (
+        <Guarded key="send" variant="primary" check={props.send} onClick={() => send.run(props.docId)}>
+          <Send className="h-4 w-4" /> {label}
+        </Guarded>
+      ),
+    )
+  }
 
   return (
-    <Card
-      title={
-        <span className="flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4" /> Approval
-        </span>
-      }
-      subtitle={`${cfg.steps.length > 1 ? 'In order: ' : 'By the '}${cfg.steps.map((r) => (r === 'PM' ? 'PM' : ROLE_LABEL[r].toLowerCase()) + (cfg.signs && r === 'SPONSOR_HEAD' ? ' (signs)' : '')).join(' → ')}`}
-      actions={props.docType === 'UAT_SIGNOFF' ? <OpenQuestion id="uat-chain" /> : props.docType === 'SQA_SIGNOFF' ? <OpenQuestion id="sqa-approver" /> : undefined}
-    >
-      {shown ? (
-        <div className="mb-3">
-          <div className="mb-2 flex items-center gap-2 text-xs text-muted">
-            Version {shown.versionNumber} · started by {shown.startedByName} {fmtDateTime(shown.startedAt)}
-            {shown.reapproval && <Badge tone="blue">re-approval</Badge>}
-            {shown.minorCorrectionOf && <Badge tone="violet">minor correction</Badge>}
-            {shown.status === 'cancelled' && <Badge>cancelled: {shown.cancelReason}</Badge>}
-          </div>
-          <ol className="space-y-2">
-            {shown.steps.map((s, i) => (
-              <li key={i} className="flex items-start gap-2">
-                {s.status === 'approved' || s.status === 'carried_over' ? <BadgeCheck className="mt-0.5 h-4 w-4 text-leaf" /> : s.status === 'pending' ? <CircleDot className="mt-0.5 h-4 w-4 text-sky-600" /> : s.status === 'changes_requested' ? <Undo2 className="mt-0.5 h-4 w-4 text-amber-600" /> : <CircleDashed className="mt-0.5 h-4 w-4 text-muted" />}
-                <div className="min-w-0 flex-1 text-sm">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="font-medium">{s.roleLabel}</span>
-                    {s.sign && <Badge tone="magenta">signs</Badge>}
-                    <StepStatusChip status={s.status} />
-                  </div>
-                  <div className="text-xs text-muted">
-                    {s.assigneeName}
-                    {s.actedByName && s.actedByName !== s.assigneeName && <> · acted by {s.actedByName}</>}
-                    {s.actingForName && <> (deputy for {s.actingForName})</>}
-                    {s.actedAt && <> · {fmtDateTime(s.actedAt)}</>}
-                    {s.status === 'pending' && s.deputyCovering && <> · {s.assigneeName} is Away, so {s.deputyCovering} is covering</>}
-                  </div>
-                  {s.comment && <div className="mt-1 rounded bg-amber-50 px-2 py-1 text-xs text-amber-900">“{s.comment}”</div>}
-                  {s.sign && s.status === 'pending' && <OpenQuestion id="deputy-sign" />}
-                </div>
-              </li>
-            ))}
-          </ol>
-        </div>
-      ) : (
-        <p className="mb-3 text-sm text-muted">Not sent for approval yet.</p>
-      )}
-
-      <div className="flex flex-col gap-2">
-        {chain && props.act.ok && current && !current.sign && (
-          <div className="flex flex-wrap gap-2">
-            <Button variant="success" onClick={() => approve.run(props.docId)}>
-              <BadgeCheck className="h-4 w-4" /> Approve{props.act.actingFor ? ' (as deputy)' : ''}
-            </Button>
-            <Button onClick={() => { setComment(''); setRequesting(true) }}>
-              <Undo2 className="h-4 w-4" /> Request changes
-            </Button>
-          </div>
-        )}
-        {chain && props.act.ok && current?.sign && (
-          <div className="flex flex-wrap gap-2">
-            <Button variant="success" onClick={() => setSigning(true)}>
-              <FileSignature className="h-4 w-4" /> Approve and Sign{props.act.actingFor ? ' (as deputy)' : ''}
-            </Button>
-            <Button onClick={() => { setComment(''); setRequesting(true) }}>
-              <Undo2 className="h-4 w-4" /> Request changes
-            </Button>
-          </div>
-        )}
-        {chain && !props.act.ok && props.act.reason && <p className="text-xs text-muted">{props.act.reason}</p>}
-        {!chain && (
-          <Guarded variant="primary" check={props.send} onClick={() => send.run(props.docId)}>
-            <Send className="h-4 w-4" /> {props.outOfSync && props.frozen ? 'Send for re-approval (unchanged)' : 'Send for approval'}
-          </Guarded>
-        )}
-        {!chain && props.minor.requested && (
-          <div className="rounded-md bg-canvas p-2.5">
-            <div className="mb-1 text-xs font-medium">Minor correction</div>
-            <p className="mb-2 text-xs text-muted">For a small fix after Request changes: earlier approvals carry over and the chain resumes at the person who asked. Not allowed if the edit touches objectives, deliverables, budget or timeline.</p>
-            <Guarded size="sm" check={props.minor} onClick={() => minor.run(props.docId)}>
-              Declare a minor correction
-            </Guarded>
-            {props.compareLink && (
-              <Link to={props.compareLink} className="mt-1 block text-xs font-medium text-brand hover:underline">
-                Compare with the version that was reviewed
-              </Link>
-            )}
-          </div>
-        )}
-      </div>
-
-      {props.signatures.length > 0 && (
-        <div className="mt-4 space-y-2">
-          {props.signatures.map((s) => (
-            <SignatureRecord key={s.id} sig={s} />
-          ))}
-        </div>
-      )}
-
-      {props.chains.length > 1 && (
-        <div className="mt-4 border-t border-line pt-3">
-          <button onClick={() => setHistory(!history)} className="flex items-center gap-1.5 text-xs font-medium text-muted hover:text-ink">
-            <History className="h-3.5 w-3.5" /> Approval history ({props.chains.length} chains)
-          </button>
-          {history && (
-            <ul className="mt-2 space-y-1.5 text-xs">
-              {[...props.chains].reverse().map((c) => (
-                <li key={c.id} className="rounded bg-canvas px-2 py-1.5">
-                  <b>v{c.versionNumber}</b> · {c.status.replace('_', ' ')} · {fmtDateTime(c.startedAt)}
-                  {c.cancelReason && <span className="text-muted"> ({c.cancelReason})</span>}
-                  <div className="text-muted">{c.steps.filter((s) => s.actedAt).map((s) => `${s.roleLabel}: ${s.status.replace('_', ' ')} by ${s.actedByName}`).join(' · ') || 'No actions'}</div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-
+    <>
+      {buttons.length > 0 && <div className={row ? 'flex flex-wrap items-center gap-2' : 'flex flex-wrap gap-2'}>{buttons}</div>}
+      {!row && chain && !props.act.ok && props.act.reason && <p className="mt-2 text-xs text-muted">{props.act.reason}</p>}
+      {!row && !chain && props.minor.requested && !props.minor.ok && props.minor.reason && <p className="mt-2 text-xs text-muted">Minor correction: {props.minor.reason}</p>}
       <Modal
         open={requesting}
         onClose={() => setRequesting(false)}
@@ -272,6 +208,101 @@ export function ApprovalPanel(props: ApprovalProps) {
         <Textarea rows={4} value={comment} onChange={(e) => setComment(e.target.value)} placeholder="What needs to change?" autoFocus />
       </Modal>
       {signing && <SignModal docId={props.docId} onClose={() => setSigning(false)} />}
+    </>
+  )
+}
+
+/** Reviewers in order with their status (like GitHub's reviewers list), then signatures and history. */
+export function ApprovalTimeline(props: ApprovalProps) {
+  const [history, setHistory] = useState(false)
+  const cfg = CHAIN_CONFIG[props.docType]
+  const chain = props.activeChain?.status === 'in_progress' ? props.activeChain : undefined
+  const shown = chain ?? props.activeChain ?? props.lastChain
+  return (
+    <div>
+      <div className="mb-3 flex items-center gap-2 text-xs text-muted">
+        <ShieldCheck className="h-3.5 w-3.5" />
+        {cfg.steps.map((r) => (r === 'PM' ? 'PM' : ROLE_LABEL[r].replace(' head', ''))).join(' → ')}
+        {cfg.signs && ' · sponsor signs'}
+        {props.docType === 'UAT_SIGNOFF' && <OpenQuestion id="uat-chain" />}
+        {props.docType === 'SQA_SIGNOFF' && <OpenQuestion id="sqa-approver" />}
+      </div>
+      {shown ? (
+        <>
+          <ol className="space-y-3">
+            {shown.steps.map((s, i) => (
+              <li key={i} className="flex items-start gap-2.5">
+                {s.status === 'approved' || s.status === 'carried_over' ? <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-leaf" /> : s.status === 'pending' ? <CircleDot className="mt-0.5 h-4 w-4 shrink-0 text-sky-600" /> : s.status === 'changes_requested' ? <Undo2 className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" /> : <CircleDashed className="mt-0.5 h-4 w-4 shrink-0 text-black/25" />}
+                <div className="min-w-0 flex-1 text-sm">
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+                    <span className="font-medium">{s.actedByName ?? s.assigneeName}</span>
+                    <StepStatusChip status={s.status} />
+                  </div>
+                  <div className="text-xs text-muted">
+                    {s.roleLabel}
+                    {s.sign && ' · signs'}
+                    {s.actingForName && ` · deputy for ${s.actingForName}`}
+                    {s.actedAt && ` · ${fmtDateTime(s.actedAt)}`}
+                    {s.status === 'pending' && s.deputyCovering && ` · Away; ${s.deputyCovering} is covering`}
+                  </div>
+                  {s.comment && <div className="mt-1 rounded-md bg-amber-50 px-2 py-1 text-xs text-amber-900">“{s.comment}”</div>}
+                  {s.sign && s.status === 'pending' && <OpenQuestion id="deputy-sign" />}
+                </div>
+              </li>
+            ))}
+          </ol>
+          <div className="mt-3 flex flex-wrap gap-1.5 text-[11px] text-muted">
+            Version {shown.versionNumber} · sent by {shown.startedByName} {fmtDateTime(shown.startedAt)}
+            {shown.reapproval && <Badge tone="blue">re-approval</Badge>}
+            {shown.minorCorrectionOf && <Badge tone="violet">minor correction</Badge>}
+            {shown.status === 'cancelled' && <Badge>cancelled: {shown.cancelReason}</Badge>}
+          </div>
+        </>
+      ) : (
+        <p className="text-sm text-muted">Not sent for approval yet.</p>
+      )}
+      {props.minor.requested && props.compareLink && (
+        <Link to={props.compareLink} className="mt-3 block text-xs font-medium text-brand hover:underline">
+          Compare with the version that was reviewed
+        </Link>
+      )}
+      {props.signatures.length > 0 && (
+        <div className="mt-4 space-y-2">
+          {props.signatures.map((s) => (
+            <SignatureRecord key={s.id} sig={s} />
+          ))}
+        </div>
+      )}
+      {props.chains.length > 1 && (
+        <div className="mt-4 border-t border-line pt-3">
+          <button onClick={() => setHistory(!history)} className="flex items-center gap-1.5 text-xs font-medium text-muted hover:text-ink">
+            <History className="h-3.5 w-3.5" /> Earlier approval rounds ({props.chains.length - 1})
+          </button>
+          {history && (
+            <ul className="mt-2 space-y-1.5 text-xs">
+              {[...props.chains].reverse().slice(1).map((c) => (
+                <li key={c.id} className="rounded-md bg-canvas px-2 py-1.5">
+                  <b>v{c.versionNumber}</b> · {c.status.replace('_', ' ')} · {fmtDateTime(c.startedAt)}
+                  {c.cancelReason && <span className="text-muted"> ({c.cancelReason})</span>}
+                  <div className="text-muted">{c.steps.filter((s) => s.actedAt).map((s) => `${s.roleLabel}: ${s.status.replace('_', ' ')} by ${s.actedByName}`).join(' · ') || 'No actions'}</div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Both together, in a card (used for the SQA and UAT sign-off reports). */
+export function ApprovalPanel(props: ApprovalProps) {
+  return (
+    <Card title="Approval">
+      <div className="space-y-4">
+        <ApprovalTimeline {...props} />
+        <ApprovalActions {...props} layout="stack" />
+      </div>
     </Card>
   )
 }

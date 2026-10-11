@@ -11,6 +11,7 @@ import { useAction, useApi } from '../api/hooks'
 import { AiBadge, AiNote } from '../components/ai'
 import { fmtDateTime } from '../components/format'
 import { Badge, Button, Card, EmptyState, ErrorBox, Field, Loading, Modal, Note, PageHeader, Select, Textarea } from '../components/ui'
+import { SubNav, changesNav } from '../components/SubNav'
 
 export function DecisionsPage() {
   const { pid = '' } = useParams()
@@ -27,6 +28,7 @@ export function DecisionsPage() {
   return (
     <div>
       <PageHeader eyebrow={<Link to={`/projects/${pid}`}>{data.project.name}</Link>} title="Decisions" subtitle="Candidate decisions from meetings and chats. Nothing enters the Fact Sheet until the PM confirms it." />
+      <SubNav items={changesNav(pid)} />
       {!data.pm && <Note className="mb-4">Only the PM confirms or dismisses decisions. Any member can mark a chat message as a decision.</Note>}
       <div className="space-y-3">
         {pending.map((d) => (

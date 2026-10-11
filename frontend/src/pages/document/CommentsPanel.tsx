@@ -8,7 +8,7 @@ import { clsx } from 'clsx'
 import { api } from '../../api'
 import { useAction, useNow } from '../../api/hooks'
 import { ago, fmtDateTime } from '../../components/format'
-import { Avatar, Badge, Button, Card, Checkbox, Field, Modal, Note, Textarea } from '../../components/ui'
+import { Avatar, Badge, Button, Checkbox, Field, Modal, Note, Textarea } from '../../components/ui'
 import type { Selection } from './Reader'
 
 type DocData = Awaited<ReturnType<typeof api.documents.getDocument>>
@@ -82,7 +82,7 @@ export function CommentsPanel({ data, activeId, onActivate, onGeneral }: { data:
   const decidedSugs = data.suggestions.filter((s) => s.status !== 'open')
 
   const card = (c: (typeof data.comments)[number]) => (
-    <li key={c.id} id={`c-${c.id}`} className={clsx('rounded-md p-2.5 ring-1', activeId === c.id ? 'bg-brand-soft/60 ring-brand' : 'bg-white ring-line')} onClick={() => onActivate(c.id)}>
+    <li key={c.id} id={`c-${c.id}`} className={clsx('rounded-lg border p-3', activeId === c.id ? 'border-brand/40 bg-brand-soft/40' : 'border-line/80 bg-white')} onClick={() => onActivate(c.id)}>
       <div className="mb-1 flex items-center gap-1.5">
         <Avatar name={c.authorName} id={c.authorId} size={20} />
         <span className="text-xs font-medium">{c.authorName}</span>
@@ -140,29 +140,24 @@ export function CommentsPanel({ data, activeId, onActivate, onGeneral }: { data:
   )
 
   return (
-    <Card
-      title={
-        <span className="flex items-center gap-2">
-          <MessageSquare className="h-4 w-4" /> Comments
-          {open.length > 0 && <Badge tone="magenta">{open.length} open</Badge>}
-          {pending.length > 0 && <Badge tone="amber">{pending.length} pending check</Badge>}
+    <div>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <span className="flex items-center gap-2 text-xs text-muted">
+          <MessageSquare className="h-3.5 w-3.5" />
+          {open.length + pending.length ? `${open.length} open${pending.length ? ` · ${pending.length} pending check` : ''}` : 'No open comments'}
         </span>
-      }
-      actions={
-        data.perms.comment.ok && (
+        {data.perms.comment.ok && (
           <Button size="sm" variant="ghost" onClick={onGeneral}>
-            + General
+            + Comment
           </Button>
-        )
-      }
-    >
-      {!data.perms.comment.ok && data.perms.comment.reason && <Note className="mb-2 !text-xs">{data.perms.comment.reason}</Note>}
-      {data.perms.comment.ok && <p className="mb-2 text-[11px] text-muted">Select text in the document to comment or suggest wording.</p>}
+        )}
+      </div>
+      {!data.perms.comment.ok && data.perms.comment.reason && <Note className="mb-3 !text-xs">{data.perms.comment.reason}</Note>}
+      {data.perms.comment.ok && !open.length && !pending.length && <p className="mb-2 text-xs text-muted">Select text in the document to comment or suggest new wording.</p>}
       <ul className="space-y-2">
         {pending.map(card)}
         {open.map(card)}
       </ul>
-      {!open.length && !pending.length && <p className="text-sm text-muted">No open comments.</p>}
 
       {(sugs.length > 0 || decidedSugs.length > 0) && (
         <div className="mt-4 border-t border-line pt-3">
@@ -215,6 +210,6 @@ export function CommentsPanel({ data, activeId, onActivate, onGeneral }: { data:
           )}
         </div>
       )}
-    </Card>
+    </div>
   )
 }

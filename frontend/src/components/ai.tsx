@@ -8,22 +8,25 @@ import { Link } from 'react-router-dom'
 import { AI_AGENTS, SECURITY_NOTE } from '../demo/explanations'
 import { api } from '../api'
 import { useApi, useSessionUserId } from '../api/hooks'
-import { Badge, Spinner } from './ui'
+import { usePrefs } from './prefs'
+import { Spinner } from './ui'
 
-export function AiBadge({ label = 'AI-generated (simulated)' }: { label?: string }) {
+/** A quiet label on anything the AI produced, until a person confirms it. */
+export function AiBadge({ label = 'AI' }: { label?: string }) {
   return (
-    <Badge tone="violet" title="Produced by the simulated AI. A person must check it.">
+    <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap text-violet-700" title="Produced by the AI (simulated in this prototype). A person must check it.">
       <Sparkles className="h-3 w-3" />
       {label}
-    </Badge>
+    </span>
   )
 }
 
-/** "In the real app…" explanation for one agent. */
+/** "In the real app…" explanation for one agent. Shown only when prototype notes are on (Demo menu). */
 export function AiNote({ agent, compact }: { agent: string; compact?: boolean }) {
   const [open, setOpen] = useState(!compact)
+  const { showNotes } = usePrefs()
   const a = AI_AGENTS[agent]
-  if (!a) return null
+  if (!a || !showNotes) return null
   return (
     <div className="rounded-md bg-violet-50/70 px-3 py-2 text-xs text-violet-950 ring-1 ring-violet-200">
       <button type="button" className="flex w-full items-center gap-1.5 text-left font-medium" onClick={() => setOpen(!open)}>
