@@ -232,7 +232,7 @@ export function ApprovalTimeline(props: ApprovalProps) {
           <ol className="space-y-3">
             {shown.steps.map((s, i) => (
               <li key={i} className="flex items-start gap-2.5">
-                {s.status === 'approved' || s.status === 'carried_over' ? <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-leaf" /> : s.status === 'pending' ? <CircleDot className="mt-0.5 h-4 w-4 shrink-0 text-sky-600" /> : s.status === 'changes_requested' ? <Undo2 className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" /> : <CircleDashed className="mt-0.5 h-4 w-4 shrink-0 text-black/25" />}
+                {s.status === 'approved' || s.status === 'carried_over' ? <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-leaf" /> : s.status === 'pending' ? <CircleDot className="mt-0.5 h-4 w-4 shrink-0 text-sky-600" /> : s.status === 'changes_requested' ? <Undo2 className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" /> : <CircleDashed className="mt-0.5 h-4 w-4 shrink-0 text-ink/25" />}
                 <div className="min-w-0 flex-1 text-sm">
                   <div className="flex flex-wrap items-baseline justify-between gap-x-2">
                     <span className="font-medium">{s.actedByName ?? s.assigneeName}</span>

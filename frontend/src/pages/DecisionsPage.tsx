@@ -36,7 +36,7 @@ export function DecisionsPage() {
             <div className="mb-1 flex flex-wrap items-center gap-2 text-xs text-muted">
               {d.ai ? <AiBadge label="AI candidate from a transcript" /> : <Badge tone="blue">Marked by {d.markedByName}</Badge>}
               <span>{d.chatTitle} · {fmtDateTime(d.createdAt)}</span>
-              <Link to={`/projects/${pid}/chat/${d.chatId}`} className="text-brand">open chat</Link>
+              <Link to={`/messages/${d.chatId}`} className="text-brand">open chat</Link>
             </div>
             <div className="text-sm font-medium">“{d.text}”</div>
             {data.pm && data.project.status === 'active' && (

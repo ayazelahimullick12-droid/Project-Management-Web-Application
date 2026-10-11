@@ -51,10 +51,10 @@ export function Reader({ sections, highlights, canAnnotate, onAnnotate, activeId
     <div ref={box} className="relative" onMouseUp={onMouseUp}>
       {toolbar && (
         <div className="absolute z-20 flex -translate-x-1/2 -translate-y-full gap-1 rounded-md bg-ink p-1 shadow-lg no-print" style={{ left: toolbar.x, top: toolbar.y }} onMouseDown={(e) => e.preventDefault()}>
-          <button className="flex items-center gap-1 rounded px-2 py-1 text-xs text-white hover:bg-white/15" onClick={() => { onAnnotate('comment', toolbar.sel); setToolbar(null) }}>
+          <button className="flex items-center gap-1 rounded px-2 py-1 text-xs text-canvas hover:bg-canvas/15" onClick={() => { onAnnotate('comment', toolbar.sel); setToolbar(null) }}>
             <MessageSquarePlus className="h-3.5 w-3.5" /> Comment
           </button>
-          <button className="flex items-center gap-1 rounded px-2 py-1 text-xs text-white hover:bg-white/15" onClick={() => { onAnnotate('suggest', toolbar.sel); setToolbar(null) }}>
+          <button className="flex items-center gap-1 rounded px-2 py-1 text-xs text-canvas hover:bg-canvas/15" onClick={() => { onAnnotate('suggest', toolbar.sel); setToolbar(null) }}>
             <PenLine className="h-3.5 w-3.5" /> Suggest wording
           </button>
         </div>

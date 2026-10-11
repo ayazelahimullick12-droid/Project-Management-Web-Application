@@ -19,7 +19,7 @@ const PAGES: Item[] = [
   { label: 'Home', hint: 'Page', to: '/' },
   { label: 'My work', hint: 'Approvals, questions and tests waiting on you', to: '/my-work' },
   { label: 'Inbox', hint: 'Notifications', to: '/notifications' },
-  { label: 'Messages', hint: 'Direct messages', to: '/messages' },
+  { label: 'Messages', hint: 'Project channels and direct messages', to: '/messages' },
   { label: 'New project', hint: 'Page', to: '/projects/new' },
   { label: 'Mailbox', hint: 'Emails the app would send', to: '/mailbox' },
   { label: 'Admin', hint: 'Templates, users, settings', to: '/admin' },
@@ -38,7 +38,7 @@ const PROJECT_PAGES: [string, string][] = [
   ['SQA', '/testing/SQA'],
   ['UAT', '/testing/UAT'],
   ['Changes & decisions', '/changes'],
-  ['Chat', '/chat'],
+  ['Project chat', '/chat'],
   ['Team', '/team'],
 ]
 
@@ -75,7 +75,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
   }
   return createPortal(
     <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/30 p-4 pt-[12vh] no-print" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="w-full max-w-xl overflow-hidden rounded-xl bg-white shadow-2xl ring-1 ring-line">
+      <div className="w-full max-w-xl overflow-hidden rounded-xl bg-surface shadow-2xl ring-1 ring-line">
         <div className="flex items-center gap-2 border-b border-line px-4">
           <Search className="h-4 w-4 text-muted" />
           <input

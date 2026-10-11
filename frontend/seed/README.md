@@ -10,6 +10,7 @@ When any file here changes, every browser resets to the new data on its next loa
 | `catalog.json` | The required-fields checklist: every fact the templates need, its category, which Q/A round asks for it, the question, a sample answer and the default for “Unknown” |
 | `templates.json` | Draft templates for the four documents (sections, AI guidance, required facts, scope-sensitive flag). Replace with BRAC’s real templates. |
 | `team-templates.json` | Saved teams for the new project wizard |
+| `messages.json` | Direct (one-to-one) messages, and where people last read a chat — later messages show as unread |
 | `projects/*.json` | One file per demo project (see below) |
 | `docs/<project>/*.md` | Document text for seeded projects |
 | `ai/<project>.json` and `ai/<project>/*.md` | Pre-written AI results (facts, RAG matches, drafts, transcript, requirements) |
@@ -48,7 +49,9 @@ The main parts (see `branch-cash.json` for a full example):
   `{ "s": "approved", "at": "…" }`; add `"by"` and `"for"` when a deputy acted).
 - `comments` and `suggestions`: anchored by document type, version number, section key and the
   quoted text.
-- `messages`: `chat` is `project` or `doc:BRD`; add `decisionBy` to mark a message as a decision.
+- `messages`: `chat` is `project` or `doc:BRD`; add `decisionBy` to mark a message as a decision,
+  and `reactions` (for example `{ "👍": ["u-pm", "u-tech"] }`) for emoji reactions. Write
+  `@Full Name` to mention someone.
 - `testing`: test cases, builds, runs (`[testKey, result, tester, [defectKeys]]`) and defects.
 
 Dates are written in Bangladesh time (`+06:00`). The loader shifts them by whole weeks so the demo

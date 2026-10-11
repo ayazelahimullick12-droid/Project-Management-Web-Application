@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Dark mode is switched by a "dark" class on <html> (set from the user's choice or the system). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Fallback values; the real values come from src/theme/brand.ts (applyBrand). */
 :root {
   --brand-primary: #D10074;
@@ -8,10 +11,12 @@
   --brand-ink: #27281C;
   --brand-green: #008945;
   --brand-green-soft: #E6F4EC;
-  --brand-canvas: #F6F6F6;
-  --brand-line: #E3E3DE;
+  --brand-canvas: #F5F5F3;
+  --surface: #FFFFFF;
+  --surface-2: #FAFAF8;
+  --brand-line: #E6E6E1;
   --brand-muted: #6B6C63;
-  --brand-font: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --brand-font: "Inter Variable", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
 @theme inline {
@@ -22,9 +27,31 @@
   --color-leaf: var(--brand-green);
   --color-leaf-soft: var(--brand-green-soft);
   --color-canvas: var(--brand-canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
   --color-line: var(--brand-line);
   --color-muted: var(--brand-muted);
   --font-sans: var(--brand-font);
+}
+
+/*
+ * Dark mode: Tailwind's light tints (red-50, amber-200…) become translucent tints and its dark
+ * text shades become light ones, so status colours keep working everywhere without per-screen
+ * changes. These rules are unlayered, so they win over Tailwind's defaults.
+ */
+.dark {
+  color-scheme: dark;
+  --color-red-50: rgb(239 68 68 / 0.12); --color-red-100: rgb(239 68 68 / 0.18); --color-red-200: rgb(239 68 68 / 0.3); --color-red-300: rgb(239 68 68 / 0.45);
+  --color-red-600: #f87171; --color-red-700: #fca5a5; --color-red-800: #fca5a5; --color-red-900: #fecaca;
+  --color-amber-50: rgb(245 158 11 / 0.12); --color-amber-100: rgb(245 158 11 / 0.18); --color-amber-200: rgb(245 158 11 / 0.3);
+  --color-amber-600: #fbbf24; --color-amber-700: #fcd34d; --color-amber-800: #fcd34d; --color-amber-900: #fde68a;
+  --color-sky-50: rgb(14 165 233 / 0.12); --color-sky-100: rgb(14 165 233 / 0.18); --color-sky-200: rgb(14 165 233 / 0.3);
+  --color-sky-600: #38bdf8; --color-sky-700: #7dd3fc; --color-sky-800: #7dd3fc; --color-sky-900: #bae6fd;
+  --color-violet-50: rgb(139 92 246 / 0.14); --color-violet-100: rgb(139 92 246 / 0.2); --color-violet-200: rgb(139 92 246 / 0.32);
+  --color-violet-600: #a78bfa; --color-violet-700: #c4b5fd; --color-violet-800: #c4b5fd; --color-violet-900: #ddd6fe; --color-violet-950: #ede9fe;
+  --color-green-50: rgb(34 197 94 / 0.12); --color-green-200: rgb(34 197 94 / 0.3); --color-green-300: #86efac;
+  --color-pink-200: rgb(236 72 153 / 0.3);
+  --color-gray-100: rgb(255 255 255 / 0.08); --color-gray-200: rgb(255 255 255 / 0.12); --color-gray-400: #8a8a84; --color-gray-700: #d4d4ce;
 }
 
 html, body, #root { height: 100%; }
@@ -33,14 +60,24 @@ body {
   background: var(--brand-canvas);
   color: var(--brand-ink);
   font-family: var(--brand-font);
+  font-feature-settings: "cv11", "ss01";
   -webkit-font-smoothing: antialiased;
 }
+::selection { background: color-mix(in srgb, var(--brand-primary) 22%, transparent); }
 
-/* Page titles: sentence case, like most work apps */
-.page-title { font-weight: 600; letter-spacing: -0.01em; }
+/* Page titles: sentence case, tight tracking, like most current work apps */
+.page-title { font-weight: 650; letter-spacing: -0.02em; }
+
+/* Soft elevation used by cards and panels */
+.shadow-soft { box-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 4px 16px -8px rgb(0 0 0 / 0.08); }
+.dark .shadow-soft { box-shadow: 0 0 0 1px rgb(255 255 255 / 0.02); }
+
+/* AI accent: a soft violet-to-magenta gradient */
+.ai-gradient { background: linear-gradient(135deg, rgb(139 92 246 / 0.12), rgb(236 0 140 / 0.10)); }
+.ai-text { background: linear-gradient(90deg, #7c3aed, #d10074); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
 /* Rendered Markdown (documents, summaries, transcripts) */
-.md { line-height: 1.6; font-size: 0.95rem; }
+.md { line-height: 1.65; font-size: 0.95rem; }
 .md p { margin: 0 0 0.7em; }
 .md ul, .md ol { margin: 0 0 0.7em 1.3em; }
 .md ul { list-style: disc; }
@@ -50,19 +87,24 @@ body {
 .md h3 { font-size: 1rem; }
 .md table { border-collapse: collapse; margin: 0.4em 0 0.9em; font-size: 0.88rem; }
 .md th, .md td { border: 1px solid var(--brand-line); padding: 4px 8px; text-align: left; vertical-align: top; }
-.md th { background: #fafaf7; }
+.md th { background: var(--surface-2); }
 .md strong { font-weight: 600; }
-.md code { background: #f1f1ec; padding: 0 4px; border-radius: 3px; font-size: 0.85em; }
+.md code { background: color-mix(in srgb, var(--brand-ink) 8%, transparent); padding: 0 4px; border-radius: 4px; font-size: 0.85em; }
 .md > :last-child { margin-bottom: 0; }
 
 /* Comment and suggestion highlights in the document view */
 mark.hl-comment { background: #fde7f3; color: inherit; border-bottom: 2px solid var(--brand-primary); cursor: pointer; border-radius: 2px; }
 mark.hl-comment.hl-active { background: #f9c6e2; }
 mark.hl-suggest { background: #e3f3ea; color: inherit; border-bottom: 2px dashed var(--brand-green); cursor: pointer; border-radius: 2px; }
+.dark mark.hl-comment { background: rgb(232 57 154 / 0.18); }
+.dark mark.hl-comment.hl-active { background: rgb(232 57 154 / 0.32); }
+.dark mark.hl-suggest { background: rgb(34 163 95 / 0.18); }
 
 /* Word diffs */
 .diff-add { background: #d9f2e2; color: #0b4d2a; border-radius: 2px; }
 .diff-del { background: #fde2e2; color: #8a1c1c; text-decoration: line-through; border-radius: 2px; }
+.dark .diff-add { background: rgb(34 197 94 / 0.18); color: #86efac; }
+.dark .diff-del { background: rgb(239 68 68 / 0.18); color: #fca5a5; }
 
 /* TipTap editor */
 .tiptap { outline: none; min-height: 3rem; }
@@ -73,6 +115,10 @@ mark.hl-suggest { background: #e3f3ea; color: inherit; border-bottom: 2px dashed
 
 /* Old-project detail highlights in RAG suggestions */
 .old-detail { background: #fff3c4; border-bottom: 2px solid #d4a106; border-radius: 2px; padding: 0 2px; }
+.dark .old-detail { background: rgb(245 158 11 / 0.2); }
+
+/* Thin scrollbars */
+* { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--brand-ink) 18%, transparent) transparent; }
 
 @media print {
   .no-print { display: none !important; }

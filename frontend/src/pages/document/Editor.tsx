@@ -44,7 +44,7 @@ function RichSection({ initial, onChange }: { initial: string; onChange: (md: st
   })
   if (!editor) return null
   const btn = (active: boolean, onClick: () => void, icon: React.ReactNode, label: string) => (
-    <button type="button" title={label} onMouseDown={(e) => e.preventDefault()} onClick={onClick} className={`rounded p-1 ${active ? 'bg-brand-soft text-brand' : 'text-muted hover:bg-black/5'}`}>
+    <button type="button" title={label} onMouseDown={(e) => e.preventDefault()} onClick={onClick} className={`rounded p-1 ${active ? 'bg-brand-soft text-brand' : 'text-muted hover:bg-ink/5'}`}>
       {icon}
     </button>
   )
@@ -173,7 +173,7 @@ export function DocEditor({ docId, draft, onStop }: { docId: string; draft: Draf
         </Field>
         <div className="mb-3 flex flex-wrap gap-1.5">
           {['Make this shorter and clearer', 'Add more detail', 'Use simpler words for field staff'].map((x) => (
-            <button key={x} className="rounded-full bg-canvas px-2 py-0.5 text-xs ring-1 ring-line hover:bg-white" onClick={() => setPrompt(x)}>
+            <button key={x} className="rounded-full bg-canvas px-2 py-0.5 text-xs ring-1 ring-line hover:bg-surface" onClick={() => setPrompt(x)}>
               {x}
             </button>
           ))}

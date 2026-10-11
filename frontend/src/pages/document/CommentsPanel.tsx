@@ -82,7 +82,7 @@ export function CommentsPanel({ data, activeId, onActivate, onGeneral }: { data:
   const decidedSugs = data.suggestions.filter((s) => s.status !== 'open')
 
   const card = (c: (typeof data.comments)[number]) => (
-    <li key={c.id} id={`c-${c.id}`} className={clsx('rounded-lg border p-3', activeId === c.id ? 'border-brand/40 bg-brand-soft/40' : 'border-line/80 bg-white')} onClick={() => onActivate(c.id)}>
+    <li key={c.id} id={`c-${c.id}`} className={clsx('rounded-lg border p-3', activeId === c.id ? 'border-brand/40 bg-brand-soft/40' : 'border-line/80 bg-surface')} onClick={() => onActivate(c.id)}>
       <div className="mb-1 flex items-center gap-1.5">
         <Avatar name={c.authorName} id={c.authorId} size={20} />
         <span className="text-xs font-medium">{c.authorName}</span>
@@ -166,7 +166,7 @@ export function CommentsPanel({ data, activeId, onActivate, onGeneral }: { data:
           </div>
           <ul className="space-y-2">
             {sugs.map((s) => (
-              <li key={s.id} className="rounded-md bg-white p-2.5 ring-1 ring-green-200" onClick={() => onActivate(s.id)}>
+              <li key={s.id} className="rounded-md bg-surface p-2.5 ring-1 ring-green-200" onClick={() => onActivate(s.id)}>
                 <div className="mb-1 text-[11px] text-muted">
                   {s.authorName} · {sectionTitle(s.sectionId)} · {fmtDateTime(s.createdAt)}
                 </div>

@@ -9,6 +9,7 @@ import { AiBadge, AiNote } from '../../components/ai'
 import { Markdown } from '../../components/Markdown'
 import { OpenQuestion } from '../../components/OpenQuestion'
 import { fmtDate } from '../../components/format'
+import { openChat } from '../../components/chat/dock'
 import { Avatar, Badge, Button, Card, EmptyState, Input, Loading, Modal, Note } from '../../components/ui'
 import type { IntakeData } from './IntakePage'
 
@@ -60,7 +61,7 @@ function SuggestionCard({ g, pid, active }: { g: NonNullable<IntakeData['rag']>[
   const decide = useAction(api.intake.decideSuggestion, { success: (r) => (r === undefined ? 'Done.' : 'Done.') })
   const pending = g.highlights.filter((h) => h.status === 'pending').length
   return (
-    <div className="rounded-lg bg-white p-4 ring-1 ring-line">
+    <div className="rounded-xl bg-surface p-4 ring-1 ring-line">
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <Badge tone="blue">{g.kind}</Badge>
         <span className="text-xs text-muted">
@@ -132,7 +133,7 @@ export function RagTab({ data }: { data: IntakeData }) {
   const p = data.project
   const [viewing, setViewing] = useState<{ pastId: string; docId: string } | null>(null)
   const ack = useAction(api.intake.acknowledgeDuplicate, { success: 'Warning acknowledged and logged.' })
-  const dm = useAction(api.chat.startRagDm, { onDone: (id) => navigate(`/messages/${id}`) })
+  const dm = useAction(api.chat.startRagDm, { onDone: (id) => openChat(id, navigate) }) // opens in the chat dock, so the PM stays on this page
   const rag = data.rag
   if (!rag) return <EmptyState title="No search yet">The RAG agent runs once, right after the intake analysis. Results are visible to the PM team only.</EmptyState>
   const dup = rag.run.duplicate

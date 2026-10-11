@@ -101,11 +101,11 @@ Every feature and rule in `SPEC.md` and `SPEC_SQA_UAT.md`, and where to see it i
 
 ## Chat and meetings
 
-- [x] Project chat, chat per document, direct messages — project Chat; Messages
+- [x] Project chat, chat per document, direct messages — chat dock (bottom right, every page); Messages page; Discuss on the project overview and documents
 - [~] Voice and video calls with screen sharing — simulated call screen (own camera and screen share work) `[e]` LiveKit
 - [x] Transcription switched on by the starter; banner for everyone — call screen
 - [~] BanglaASR transcript, LLM correction, raw kept — pre-written Bangla transcript with Raw/Corrected toggle `[e]`
-- [x] Audio upload as a transcript source — Chats → Meeting audio
+- [x] Audio upload as a transcript source — a project or document chat → audio button in the message box
 - [x] Decisions from transcripts and “Mark as decision”; PM confirms into the Fact Sheet or starts a change request — Changes & decisions → Decisions
 
 ## Notifications, dashboard and archive

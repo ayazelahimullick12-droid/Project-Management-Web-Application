@@ -1,0 +1,36 @@
+{
+  "_help": "Direct (one-to-one) messages, and where people last read a chat. Messages after someone's lastRead time show as unread for them; without a lastRead entry everything before the demo start counts as read. Chat names: '<projectId>:project', '<projectId>:doc:BRD' (any document type), or 'dm:<number>' for the direct conversations below, counting from 1.",
+  "direct": [
+    {
+      "between": ["u-pm", "u-tech"],
+      "messages": [
+        { "by": "u-tech", "at": "2026-10-06T17:40:00+06:00", "body": "Nusrat apa, quick one: on the cash count screen, do accountants enter each note denomination, or just the total?" },
+        { "by": "u-pm", "at": "2026-10-06T17:52:00+06:00", "body": "Each denomination. Habib bhai says the auditors check the notes by denomination." },
+        { "by": "u-tech", "at": "2026-10-06T18:01:00+06:00", "body": "Okay, I will size the SRS for that. It adds one table to the matching service.", "reactions": { "👍": ["u-pm"] } },
+        { "by": "u-tech", "at": "2026-10-07T09:20:00+06:00", "body": "Can we do a 15-minute call after the BRD sign-off to plan the SRS?" }
+      ]
+    },
+    {
+      "between": ["u-st1", "u-pm"],
+      "messages": [
+        { "by": "u-st1", "at": "2026-10-06T12:40:00+06:00", "body": "Apa, I will upload the paper form scan today. Some fields are handwritten in Bangla, is that okay?" },
+        { "by": "u-pm", "at": "2026-10-06T12:48:00+06:00", "body": "Yes, that is fine. The intake agent reads Bangla." },
+        { "by": "u-pm", "at": "2026-10-06T12:48:30+06:00", "body": "I will run the analysis as soon as it is there." },
+        { "by": "u-st1", "at": "2026-10-06T12:50:00+06:00", "body": "Thank you! 🙏", "reactions": { "❤️": ["u-pm"] } }
+      ]
+    },
+    {
+      "between": ["u-sqa1", "u-dev1"],
+      "messages": [
+        { "by": "u-sqa1", "at": "2026-10-06T11:00:00+06:00", "body": "Shuvo, the UAT-1 retest passes on build 1.1 in Chrome. Still checking on the branch laptops." },
+        { "by": "u-dev1", "at": "2026-10-06T11:04:00+06:00", "body": "Great, thanks Tania. Tell me if the Bangla font breaks on the old laptops." }
+      ]
+    }
+  ],
+  "lastRead": [
+    { "user": "u-pm", "chat": "dm:1", "at": "2026-10-06T18:05:00+06:00" },
+    { "user": "u-pm", "chat": "p-savings:project", "at": "2026-10-01T09:00:00+06:00" },
+    { "user": "u-tech", "chat": "dm:1", "at": "2026-10-06T18:05:00+06:00" },
+    { "user": "u-dev1", "chat": "p-savings:project", "at": "2026-09-25T09:00:00+06:00" }
+  ]
+}

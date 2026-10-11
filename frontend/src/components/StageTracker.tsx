@@ -18,7 +18,7 @@ export function StageTracker({ stage, compact }: { stage: Stage; compact?: boole
                 compact ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-1 text-xs',
                 done && 'bg-leaf-soft text-leaf',
                 now && 'bg-brand text-white',
-                !done && !now && 'bg-white text-muted ring-1 ring-line',
+                !done && !now && 'bg-surface text-muted ring-1 ring-line',
               )}
             >
               {done && <Check className="h-3 w-3" />}

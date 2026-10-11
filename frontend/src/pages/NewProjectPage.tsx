@@ -40,7 +40,7 @@ export function NewProjectPage() {
       <PageHeader title="New project" subtitle="You will be the Project Owner: you set up the team now and can change anyone later." actions={<OpenQuestion id="owner-member" />} />
       <ol className="mb-6 flex flex-wrap gap-2">
         {STEPS.map((s, i) => (
-          <li key={s} className={clsx('flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium', i === step ? 'bg-brand text-white' : i < step ? 'bg-leaf-soft text-leaf' : 'bg-white text-muted ring-1 ring-line')}>
+          <li key={s} className={clsx('flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium', i === step ? 'bg-brand text-white' : i < step ? 'bg-leaf-soft text-leaf' : 'bg-surface text-muted ring-1 ring-line')}>
             {i < step ? <Check className="h-3 w-3" /> : <span>{i + 1}</span>} {s}
           </li>
         ))}

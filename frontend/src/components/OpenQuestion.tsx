@@ -17,7 +17,7 @@ export function OpenQuestion({ id }: { id: string }) {
         <CircleHelp className="h-3 w-3" /> Open question
       </button>
       {open && (
-        <span className="absolute left-0 top-6 z-30 block w-72 rounded-md bg-white p-3 text-xs leading-relaxed shadow-xl ring-1 ring-amber-200">
+        <span className="absolute left-0 top-6 z-30 block w-72 rounded-md bg-surface p-3 text-xs leading-relaxed shadow-xl ring-1 ring-amber-200">
           <span className="block font-medium text-ink">{q.question}</span>
           <span className="mt-1 block text-muted">Prototype assumes: {q.assumption}</span>
           <span className="mt-1 block text-muted">Source: {q.source}</span>

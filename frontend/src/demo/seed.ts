@@ -28,6 +28,7 @@ import settingsJson from '../../seed/settings.json'
 import catalogJson from '../../seed/catalog.json'
 import templatesJson from '../../seed/templates.json'
 import teamTemplatesJson from '../../seed/team-templates.json'
+import messagesJson from '../../seed/messages.json'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Raw = any
@@ -43,7 +44,7 @@ function hash(text: string): string {
 
 /** Changes whenever any seed file changes, so the browser copy resets automatically. */
 export const SEED_VERSION = hash(
-  JSON.stringify([usersJson, settingsJson, catalogJson, templatesJson, teamTemplatesJson, projectFiles]) + Object.values(docFiles).join('') + allCannedText() + 'v1',
+  JSON.stringify([usersJson, settingsJson, catalogJson, templatesJson, teamTemplatesJson, messagesJson, projectFiles]) + Object.values(docFiles).join('') + allCannedText() + 'v2',
 )
 
 const SOURCE_LABEL: Record<string, string> = {
@@ -76,7 +77,7 @@ export async function buildSeedState(): Promise<DemoState> {
     factSheets: [], rounds: [], questions: [], uploads: [], ragRuns: [], ragSuggestions: [],
     docs: [], versions: [], drafts: [], locks: [], comments: [], suggestions: [], chains: [], signatures: [],
     changeRequests: [], factUpdates: [], chats: [], messages: [], calls: [], transcripts: [], decisions: [],
-    notifications: [], emails: [], audit: [], aiCalls: [], jobs: [], reminders: {}, otps: {},
+    notifications: [], emails: [], audit: [], aiCalls: [], jobs: [], reminders: {}, otps: {}, chatReads: {},
     requirements: [], traceLinksDone: {}, testCases: [], testConfirmations: [], builds: [], testRuns: [], executions: [], defects: [],
   }
 
@@ -222,7 +223,7 @@ export async function buildSeedState(): Promise<DemoState> {
     // Messages, decisions and a meeting transcript
     const chatId = (name: string) => (name === 'project' ? projectChat.id : `${p.id}-${name.replace('doc:', '')}-chat`)
     ;(raw.messages ?? []).forEach((m: Raw, i: number) => {
-      const msg: Message = { id: `${p.id}-m${i + 1}`, chatId: chatId(m.chat), authorId: m.by, body: m.body, createdAt: T(m.at), kind: m.by ? 'text' : 'system' }
+      const msg: Message = { id: `${p.id}-m${i + 1}`, chatId: chatId(m.chat), authorId: m.by, body: m.body, createdAt: T(m.at), kind: m.by ? 'text' : 'system', reactions: m.reactions }
       if (m.decisionBy) {
         const dec: CandidateDecision = { id: `${p.id}-dec${i + 1}`, projectId: p.id, source: 'chat', chatId: msg.chatId, messageId: msg.id, text: m.body, ai: false, markedBy: m.decisionBy, status: 'pending', createdAt: T(m.at) }
         s.decisions.push(dec)
@@ -264,6 +265,8 @@ export async function buildSeedState(): Promise<DemoState> {
 
     if (raw.testing) loadTesting(s, p, raw.testing, T, head, docByType)
   }
+
+  loadDirectMessages(s, T)
 
   await Promise.all(signTasks)
   deriveAudit(s)
@@ -395,4 +398,21 @@ function deriveAudit(s: DemoState) {
   for (const f of s.factSheets.filter((x) => x.confirmedBy)) audit(s, { projectId: f.projectId, actorId: f.confirmedBy, action: 'Fact Sheet confirmed', details: `Version ${f.number}`, at: f.createdAt })
   for (const p of s.projects) audit(s, { projectId: p.id, actorId: p.ownerId, action: 'Project created', details: p.name, at: p.createdAt })
   s.audit.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+}
+
+/** Direct messages and "last read" times from seed/messages.json. */
+function loadDirectMessages(s: DemoState, T: (iso: string) => string) {
+  const raw = messagesJson as Raw
+  raw.direct.forEach((d: Raw, i: number) => {
+    const [a, b] = d.between as string[]
+    const shared = s.projects.find((p) => p.status === 'active' && !p.finished && p.members.some((m) => m.userId === a) && p.members.some((m) => m.userId === b))
+    const id = `dm-${i + 1}`
+    s.chats.push({ id, projectId: shared?.id ?? null, kind: 'direct', memberIds: [a, b] })
+    d.messages.forEach((m: Raw, j: number) => s.messages.push({ id: `${id}-m${j + 1}`, chatId: id, authorId: m.by, body: m.body, createdAt: T(m.at), kind: 'text', reactions: m.reactions }))
+  })
+  for (const r of raw.lastRead as Raw[]) {
+    const [pid, kind, type] = String(r.chat).split(':')
+    const chatId = pid === 'dm' ? `dm-${kind}` : kind === 'project' ? `${pid}-chat` : `${pid}-${type}-chat`
+    s.chatReads[`${r.user}:${chatId}`] = T(r.at)
+  }
 }

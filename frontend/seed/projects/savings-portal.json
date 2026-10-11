@@ -178,7 +178,7 @@
   "messages": [
     { "chat": "project", "by": null, "at": "2026-04-20T10:00:00+06:00", "body": "Project created by Imran Chowdhury." },
     { "chat": "project", "by": "u-pm", "at": "2026-09-24T15:05:00+06:00", "body": "SQA is signed off on build 1.0, which is now released to UAT. UAT testers, please check your My tests inbox." },
-    { "chat": "project", "by": "u-st1", "at": "2026-09-28T11:05:00+06:00", "body": "UAT-2 is serious: members will think their deposit was lost." },
-    { "chat": "project", "by": "u-dev1", "at": "2026-10-06T10:10:00+06:00", "body": "Build 1.1 is registered with the Bangla fixes. SQA, it is yours." }
+    { "chat": "project", "by": "u-st1", "at": "2026-09-28T11:05:00+06:00", "body": "UAT-2 is serious: members will think their deposit was lost.", "reactions": { "👀": ["u-pm", "u-dev1"] } },
+    { "chat": "project", "by": "u-dev1", "at": "2026-10-06T10:10:00+06:00", "body": "Build 1.1 is registered with the Bangla fixes. @Tania Ferdous, it is yours.", "reactions": { "🎉": ["u-sqa1"] } }
   ]
 }

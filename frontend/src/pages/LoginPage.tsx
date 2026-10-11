@@ -65,25 +65,28 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-full bg-canvas">
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 lg:grid-cols-[1fr_1.4fr]">
+    <div className="relative min-h-full overflow-hidden bg-canvas">
+      {/* soft brand glow behind the page, as on many current product sites */}
+      <div className="pointer-events-none absolute -top-40 -left-40 h-[520px] w-[520px] rounded-full bg-brand/20 blur-[120px]" />
+      <div className="pointer-events-none absolute top-1/3 -right-40 h-[420px] w-[420px] rounded-full bg-leaf/15 blur-[120px]" />
+      <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-12 lg:grid-cols-[1fr_1.4fr]">
         <div>
           <div className="mb-6 flex items-center gap-3">
-            <img src="/favicon.svg" alt="" className="h-12 w-12" />
+            <img src="/favicon.svg" alt="" className="h-12 w-12 rounded-xl shadow-lg shadow-brand/30" />
             <div>
               <div className="text-lg font-semibold">{brand.appName}</div>
               <div className="text-sm text-muted">{brand.unitName}</div>
             </div>
           </div>
-          <h1 className="page-title mb-3 text-3xl leading-tight">From a stakeholder’s request to signed documents</h1>
+          <h1 className="page-title mb-3 text-4xl leading-tight">From a stakeholder’s request to <span className="bg-gradient-to-r from-brand to-brand-bright bg-clip-text text-transparent">signed documents</span></h1>
           <p className="mb-6 text-sm leading-relaxed text-muted">
             AI agents gather the information and draft the Project Proposal, Charter, BRD and SRS. People review, comment, approve and sign. Then SQA and UAT test what was built.
           </p>
-          <div className="mb-6 rounded-lg bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-200">
+          <div className="mb-6 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-200">
             <div className="mb-1 font-semibold">This is a clickable prototype</div>
-            All people, projects and documents are fictional. The AI is simulated with pre-written results. Data is kept only in this browser; use <b>Reset demo data</b> in the clock menu to start over.
+            All people, projects and documents are fictional. The AI is simulated with pre-written results. Data is kept only in this browser; use <b>Reset demo data</b> in the demo clock menu (bottom left) to start over.
           </div>
-          <div className="rounded-lg bg-white p-5 ring-1 ring-line">
+          <div className="shadow-soft rounded-2xl bg-surface p-5 ring-1 ring-line">
             <Field label="Email">
               <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@brac.example" />
             </Field>
@@ -100,16 +103,16 @@ export function LoginPage() {
             <h2 className="text-sm font-semibold">Demo users</h2>
             <Badge tone="amber">development mode only</Badge>
           </div>
-          <p className="mb-4 text-xs text-muted">Click a person to sign in as them. You can switch user at any time from the top bar, and each browser tab can be a different person.</p>
+          <p className="mb-4 text-xs text-muted">Click a person to sign in as them. You can switch user at any time from your profile menu (bottom left), and each browser tab can be a different person.</p>
           <div className="grid gap-4 sm:grid-cols-2">
             {GROUPS.map(([group, ids]) => (
-              <div key={group} className="rounded-lg bg-white p-3 ring-1 ring-line">
+              <div key={group} className="shadow-soft rounded-2xl bg-surface/80 p-3 ring-1 ring-line backdrop-blur">
                 <div className="mb-2 text-xs font-semibold tracking-wide text-muted uppercase">{group}</div>
                 {ids.map((id) => {
                   const u = byId.get(id)
                   if (!u) return null
                   return (
-                    <button key={id} onClick={() => login.run(id, 'demo1234')} className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-canvas">
+                    <button key={id} onClick={() => login.run(id, 'demo1234')} className="flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left hover:bg-canvas">
                       <Avatar name={u.name} id={u.id} size={30} />
                       <span className="min-w-0">
                         <span className="block text-sm font-medium">{u.name}</span>
@@ -121,10 +124,10 @@ export function LoginPage() {
               </div>
             ))}
             {others.length > 0 && (
-              <div className="rounded-lg bg-white p-3 ring-1 ring-line">
+              <div className="shadow-soft rounded-2xl bg-surface/80 p-3 ring-1 ring-line backdrop-blur">
                 <div className="mb-2 text-xs font-semibold tracking-wide text-muted uppercase">Added in this demo</div>
                 {others.map((u) => (
-                  <button key={u.id} onClick={() => login.run(u.id, 'demo1234')} className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-canvas">
+                  <button key={u.id} onClick={() => login.run(u.id, 'demo1234')} className="flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left hover:bg-canvas">
                     <Avatar name={u.name} id={u.id} size={30} />
                     <span className="text-sm">{u.name}</span>
                   </button>

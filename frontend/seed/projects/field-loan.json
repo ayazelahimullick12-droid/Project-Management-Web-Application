@@ -21,6 +21,6 @@
   "messages": [
     { "chat": "project", "by": null, "at": "2026-10-06T11:30:00+06:00", "body": "Project created by Imran Chowdhury. Welcome to the team!" },
     { "chat": "project", "by": "u-st1", "at": "2026-10-06T12:10:00+06:00", "body": "I have written our description in the Intake page. I will also upload a scan of the current paper form." },
-    { "chat": "project", "by": "u-pm", "at": "2026-10-06T12:25:00+06:00", "body": "Thanks Shirin. Once the form is uploaded I will run the intake analysis." }
+    { "chat": "project", "by": "u-pm", "at": "2026-10-06T12:25:00+06:00", "body": "Thanks @Shirin Akhter. Once the form is uploaded I will run the intake analysis." }
   ]
 }

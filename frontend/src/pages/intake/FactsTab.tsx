@@ -77,7 +77,7 @@ export function FactsTab({ data }: { data: IntakeData }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3 rounded-lg bg-white p-4 ring-1 ring-line">
+      <div className="flex flex-wrap items-center gap-3 rounded-xl bg-surface p-4 ring-1 ring-line">
         <div className="min-w-0 flex-1">
           <div className="text-sm font-semibold">
             {data.confirmed ? (

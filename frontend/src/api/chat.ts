@@ -10,7 +10,7 @@ import { now, nowIso } from '../demo/clock'
 import { newId } from '../demo/ids'
 import { runJob } from '../demo/jobs'
 import { transcribe } from '../demo/ai/agents'
-import { actAsHead, can, headOf, inTeam, isOwner, memberOf } from '../rules/permissions'
+import { actAsHead, can, headOf, inTeam, isAway, isOwner, memberOf, roleLabel } from '../rules/permissions'
 import { DOC_LABEL } from '../rules/pipeline'
 import { act, ApiError, ensure, fail, me, nameOf, projectOf, read } from './core'
 import { audit, notify } from './effects'
@@ -46,6 +46,72 @@ export async function listChats(pid: ID | null) {
   })
 }
 
+/** When this person last read the chat (messages from before the demo started count as read). */
+function lastRead(s: DemoState, userId: ID, chatId: ID): string {
+  return s.chatReads?.[`${userId}:${chatId}`] ?? s.meta.seedNow
+}
+
+function unreadIn(s: DemoState, userId: ID, chatId: ID): number {
+  const since = lastRead(s, userId, chatId)
+  return s.messages.filter((m) => m.chatId === chatId && m.authorId !== userId && m.createdAt > since && (m.kind === 'text' || m.kind === 'transcript')).length
+}
+
+export interface Conversation {
+  id: ID
+  kind: Chat['kind']
+  title: string
+  subtitle: string
+  projectId: ID | null
+  projectName?: string
+  docType?: string
+  otherUserId?: ID
+  away?: boolean
+  unavailable?: boolean
+  unread: number
+  callActive: boolean
+  last?: { body: string; authorName: string; mine: boolean; createdAt: string }
+}
+
+/**
+ * Everything I can chat in, split like Slack and Messenger: group channels (one per project and
+ * one per document) and direct messages (one-to-one, including people from past projects).
+ */
+export async function conversations() {
+  return read((s, t) => {
+    const user = me(s)
+    const list: Conversation[] = []
+    for (const c of s.chats) {
+      if (!canSee(s, c, user)) continue
+      const p = c.projectId ? s.projects.find((x) => x.id === c.projectId) : undefined
+      if ((c.kind === 'project' || c.kind === 'document') && (!p || p.status !== 'active' || p.finished)) continue
+      const last = s.messages.filter((m) => m.chatId === c.id && m.kind !== 'system').sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]
+      const other = c.memberIds?.find((id) => id !== user.id)
+      const otherUser = other ? s.users.find((u) => u.id === other) : undefined
+      const doc = c.docId ? s.docs.find((d) => d.id === c.docId) : undefined
+      const awayIn = other ? s.projects.some((pp) => isAway(pp, other, t)) : false
+      list.push({
+        id: c.id,
+        kind: c.kind,
+        title: c.kind === 'direct' || c.kind === 'rag_dm' ? nameOf(s, other) : doc ? DOC_LABEL[doc.type] : 'Project chat',
+        subtitle: c.kind === 'rag_dm' ? `About a similar past project · ${p?.name ?? ''}` : c.kind === 'direct' ? otherUser?.title ?? '' : p?.name ?? '',
+        projectId: c.projectId,
+        projectName: p?.name,
+        docType: doc?.type,
+        otherUserId: other,
+        away: awayIn,
+        unavailable: otherUser?.deactivated,
+        unread: unreadIn(s, user.id, c.id),
+        callActive: s.calls.some((x) => x.chatId === c.id && !x.endedAt),
+        last: last ? { body: last.kind === 'transcript' ? 'Meeting transcript' : last.body, authorName: last.authorId ? nameOf(s, last.authorId) : '', mine: last.authorId === user.id, createdAt: last.createdAt } : undefined,
+      })
+    }
+    const byRecent = (a: Conversation, b: Conversation) => (b.last?.createdAt ?? '').localeCompare(a.last?.createdAt ?? '')
+    const channels = list.filter((c) => c.kind === 'project' || c.kind === 'document').sort((a, b) => (a.projectName ?? '').localeCompare(b.projectName ?? '') || (a.kind === 'project' ? -1 : b.kind === 'project' ? 1 : 0) || byRecent(a, b))
+    const direct = list.filter((c) => c.kind === 'direct' || c.kind === 'rag_dm').sort(byRecent)
+    return { channels, direct, unread: list.reduce((n, c) => n + c.unread, 0) }
+  })
+}
+
 export async function getChat(chatId: ID) {
   return read((s, t) => {
     const user = me(s)
@@ -54,18 +120,57 @@ export async function getChat(chatId: ID) {
     if (!canSee(s, chat, user)) throw new ApiError(403, 'You are not part of this conversation.')
     const p = chat.projectId ? projectOf(s, chat.projectId) : undefined
     const call = s.calls.find((c) => c.chatId === chatId && !c.endedAt)
-    const members = chat.memberIds ?? p?.members.map((m) => m.userId) ?? []
+    const memberIds = chat.memberIds ?? p?.members.map((m) => m.userId) ?? []
+    const messages = s.messages.filter((m) => m.chatId === chatId).sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    const other = chat.kind === 'direct' || chat.kind === 'rag_dm' ? chat.memberIds?.find((id) => id !== user.id) : undefined
+    const myLast = [...messages].reverse().find((m) => m.authorId === user.id)
+    const doc = chat.docId ? s.docs.find((d) => d.id === chat.docId) : undefined
     return {
       chat: { ...chat, title: chatTitle(s, chat, user.id) },
       project: p,
-      messages: s.messages.filter((m) => m.chatId === chatId).sort((a, b) => a.createdAt.localeCompare(b.createdAt)).map((m) => ({ ...m, authorName: m.authorId ? nameOf(s, m.authorId) : 'System', decision: m.decisionId ? s.decisions.find((d) => d.id === m.decisionId) : undefined })),
+      doc: doc ? { type: doc.type, label: DOC_LABEL[doc.type] } : undefined,
+      messages: messages.map((m) => ({
+        ...m,
+        authorName: m.authorId ? nameOf(s, m.authorId) : 'System',
+        decision: m.decisionId ? s.decisions.find((d) => d.id === m.decisionId) : undefined,
+        reactionList: Object.entries(m.reactions ?? {}).filter(([, ids]) => ids.length).map(([emoji, ids]) => ({ emoji, count: ids.length, mine: ids.includes(user.id), names: ids.map((id) => nameOf(s, id)) })),
+      })),
       transcripts: s.transcripts.filter((x) => x.chatId === chatId),
       call: call ? { ...call, participants: call.participantIds.map((id) => ({ id, name: nameOf(s, id) })), startedByName: nameOf(s, call.startedBy) } : undefined,
-      members: members.map((id) => ({ id, name: nameOf(s, id) })),
-      canPost: p ? p.status === 'active' : true,
-      canMarkDecision: !!p || chat.kind === 'rag_dm',
+      members: memberIds.map((id) => {
+        const m = p ? memberOf(p, id) : undefined
+        return { id, name: nameOf(s, id), role: p && m ? roleLabel(p, id) : s.users.find((u) => u.id === id)?.title ?? '', away: p ? isAway(p, id, t) : false }
+      }),
+      other: other ? { id: other, name: nameOf(s, other), title: s.users.find((u) => u.id === other)?.title ?? '', unavailable: !!s.users.find((u) => u.id === other)?.deactivated } : undefined,
+      seenByOther: !!(other && myLast && lastRead(s, other, chatId) >= myLast.createdAt),
+      decisions: s.decisions.filter((d) => d.chatId === chatId).map((d) => ({ ...d, decidedByName: d.decidedBy ? nameOf(s, d.decidedBy) : undefined })),
+      unread: unreadIn(s, user.id, chatId),
+      canPost: p ? p.status === 'active' || chat.kind === 'rag_dm' || chat.kind === 'direct' : true,
+      canMarkDecision: !!p,
       isPm: p ? actAsHead(p, 'PM', user.id, t).ok : false,
     }
+  })
+}
+
+export async function markRead(chatId: ID) {
+  const user = await read((s) => me(s))
+  const unread = await read((s) => unreadIn(s, user.id, chatId))
+  if (!unread) return
+  return act((s, _t, at) => {
+    s.chatReads = { ...(s.chatReads ?? {}), [`${user.id}:${chatId}`]: at }
+  })
+}
+
+/** Emoji reactions, like most chat apps. Click again to remove yours. */
+export async function react(messageId: ID, emoji: string) {
+  return act((s) => {
+    const user = me(s)
+    const m = s.messages.find((x) => x.id === messageId)
+    if (!m) fail('Message not found.')
+    const chat = s.chats.find((c) => c.id === m.chatId)!
+    if (!canSee(s, chat, user)) throw new ApiError(403, 'You are not part of this conversation.')
+    const who = m.reactions?.[emoji] ?? []
+    m.reactions = { ...(m.reactions ?? {}), [emoji]: who.includes(user.id) ? who.filter((x) => x !== user.id) : [...who, user.id] }
   })
 }
 
@@ -74,23 +179,33 @@ export async function postMessage(chatId: ID, body: string) {
     const user = me(s)
     const chat = s.chats.find((c) => c.id === chatId)
     if (!chat || !canSee(s, chat, user)) throw new ApiError(403, 'You are not part of this conversation.')
-    if (chat.projectId && chat.kind !== 'rag_dm') ensure(can.change(projectOf(s, chat.projectId)))
+    if (chat.projectId && (chat.kind === 'project' || chat.kind === 'document')) ensure(can.change(projectOf(s, chat.projectId)))
     if (!body.trim()) fail('Write a message.')
     s.messages.push({ id: newId('msg'), chatId, authorId: user.id, body: body.trim(), createdAt: at, kind: 'text' })
+    s.chatReads = { ...(s.chatReads ?? {}), [`${user.id}:${chatId}`]: at }
     if (chat.kind === 'direct' || chat.kind === 'rag_dm')
       notify(s, { to: chat.memberIds!.filter((id) => id !== user.id), type: 'message', title: `New message from ${user.name}`, body: body.trim().slice(0, 140), link: `/messages/${chatId}`, at, email: false })
+    else if (chat.projectId) {
+      // @mentions in group channels notify the person mentioned.
+      const p = projectOf(s, chat.projectId)
+      const mentioned = p.members.map((m) => m.userId).filter((id) => id !== user.id && body.includes(`@${nameOf(s, id)}`))
+      if (mentioned.length) notify(s, { to: mentioned, type: 'mention', title: `${user.name} mentioned you in ${chatTitle(s, chat, user.id)}`, body: body.trim().slice(0, 140), link: `/messages/${chatId}`, projectId: p.id, at, email: false })
+    }
   })
 }
 
-export async function startDirect(pid: ID, otherId: ID) {
+/** Opens (or creates) a one-to-one conversation. It is linked to a shared project so decisions can be marked. */
+export async function startDirect(otherId: ID) {
   return act((s) => {
     const user = me(s)
-    const p = projectOf(s, pid)
-    if (!memberOf(p, user.id) || !memberOf(p, otherId)) fail('Direct messages are between members of the project.')
-    const existing = s.chats.find((c) => c.kind === 'direct' && c.projectId === pid && c.memberIds?.includes(user.id) && c.memberIds.includes(otherId))
+    if (otherId === user.id) fail('Choose someone else.')
+    const other = s.users.find((u) => u.id === otherId)
+    if (!other || other.deactivated) fail('This account is deactivated.')
+    const existing = s.chats.find((c) => c.kind === 'direct' && c.memberIds?.includes(user.id) && c.memberIds.includes(otherId))
     if (existing) return existing.id
+    const shared = s.projects.find((p) => p.status === 'active' && !p.finished && memberOf(p, user.id) && memberOf(p, otherId))
     const id = newId('chat')
-    s.chats.push({ id, projectId: pid, kind: 'direct', memberIds: [user.id, otherId] })
+    s.chats.push({ id, projectId: shared?.id ?? null, kind: 'direct', memberIds: [user.id, otherId] })
     return id
   })
 }
@@ -202,7 +317,7 @@ async function transcribeInto(chatId: ID, byUserId: ID, participantIds: ID[], so
     title: source.fileName ? `Transcribing ${source.fileName}` : 'Transcribing the meeting',
     projectId: p.id,
     byUserId,
-    link: chat.kind === 'document' ? `/projects/${p.id}/chat/${chatId}` : `/projects/${p.id}/chat/${chatId}`,
+    link: `/messages/${chatId}`,
     promptTokens: 1800,
     steps: [source.fileName ? 'Reading the audio file' : 'Collecting each speaker’s audio track', 'Splitting the audio into 30-second chunks', 'Transcribing with BanglaASR on the CPU', 'Correcting recognition mistakes with the LLM', 'Extracting candidate decisions'],
     apply: (s) => {

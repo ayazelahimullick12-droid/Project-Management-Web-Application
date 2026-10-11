@@ -11,6 +11,8 @@ import { api } from '../../api'
 import { useAction, useApi, useNow, useSessionUserId } from '../../api/hooks'
 import { ApprovalActions, ApprovalTimeline } from '../../components/ApprovalPanel'
 import { AiBadge, AiNote } from '../../components/ai'
+import { DiscussButton } from '../../components/chat/ChatThread'
+import { openChat } from '../../components/chat/dock'
 import { DocStatusChip } from '../../components/status'
 import { exportDocx, printUrl, safeName } from '../../components/exports'
 import { ago } from '../../components/format'
@@ -97,7 +99,7 @@ const NOTICE: Record<NoticeTone, string> = {
   amber: 'border-amber-200 bg-amber-50/70 text-amber-900',
   blue: 'border-sky-200 bg-sky-50/70 text-sky-900',
   violet: 'border-violet-200 bg-violet-50/70 text-violet-900',
-  gray: 'border-line bg-white text-ink/80',
+  gray: 'border-line bg-surface text-ink/80',
 }
 
 /** A slim callout (like Notion): one line of text and an optional action. */
@@ -150,8 +152,8 @@ export function DocumentPage() {
     return (
       <div>
         {breadcrumb}
-        <h1 className="page-title mb-8 text-[22px]">{data.label}</h1>
-        <div className="mx-auto max-w-lg rounded-xl border border-line/80 bg-white px-8 py-10 text-center">
+        <h1 className="page-title mb-8 text-2xl">{data.label}</h1>
+        <div className="mx-auto max-w-lg shadow-soft rounded-2xl border border-line/70 bg-surface px-8 py-10 text-center">
           <Sparkles className="mx-auto mb-3 h-6 w-6 text-violet-600" />
           <div className="font-semibold">Not drafted yet</div>
           <p className="mt-1 mb-5 text-sm text-muted">
@@ -209,9 +211,9 @@ export function DocumentPage() {
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           {breadcrumb}
-          <h1 className="page-title flex items-center gap-2 text-[22px]">
+          <h1 className="page-title flex items-center gap-2 text-2xl">
             {data.label}
-            <button className="rounded-md px-1.5 text-sm font-normal text-muted hover:bg-black/5" onClick={() => setTab('history')} title="Version history">
+            <button className="rounded-md px-1.5 text-sm font-normal text-muted hover:bg-ink/5" onClick={() => setTab('history')} title="Version history">
               v{current.number}
             </button>
           </h1>
@@ -241,13 +243,14 @@ export function DocumentPage() {
               <ApprovalActions {...approvalProps} layout="row" />
             </>
           )}
+          {data.chatId && <DiscussButton onClick={() => openChat(data.chatId!, navigate)} />}
           <MenuButton
             label={<MoreHorizontal className="h-4 w-4" />}
             items={[
               { label: 'Download PDF', href: printUrl(current.id) },
               { label: 'Download Word (.docx)', onClick: () => exportDocx({ project: data.project.name, title: data.label, versionLabel: `Version ${current.number}`, status: data.status.label, sections: current.sections, fileName: `${safeName(data.project.name)}-${safeName(data.label)}-v${current.number}.docx` }) },
               'divider',
-              { label: 'Document chat', onClick: () => navigate(`/projects/${pid}/chat/${data.chatId}`) },
+              { label: 'Open the discussion in Messages', onClick: () => navigate(`/messages/${data.chatId}`), hidden: !data.chatId },
               { label: 'Version history', onClick: () => setTab('history') },
               { label: 'Summaries and slides', onClick: () => setTab('summaries') },
               { label: 'Switch to the newer template', onClick: () => switchTemplate.run(pid, type as DocType), hidden: !data.perms.switchTemplate },
@@ -337,7 +340,7 @@ export function DocumentPage() {
 
       {tab === 'document' && (
         <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_340px]">
-          <article className="min-w-0 rounded-xl border border-line/70 bg-white px-6 py-8 shadow-[0_1px_3px_rgba(0,0,0,0.04)] md:px-12">
+          <article className="min-w-0 rounded-xl border border-line/70 bg-surface px-6 py-8 shadow-[0_1px_3px_rgba(0,0,0,0.04)] md:px-12">
             {editing ? (
               <DocEditor key={draft!.baseVersionId} docId={doc.id} draft={draft!} onStop={() => toast.error('You no longer hold the edit lock. Your draft is saved.')} />
             ) : showLive ? (
@@ -360,7 +363,7 @@ export function DocumentPage() {
             {current.authorId === null && !editing && <AiNote agent="docgen" compact />}
           </article>
 
-          <aside className="xl:sticky xl:top-20 xl:max-h-[calc(100vh-6rem)] xl:overflow-y-auto">
+          <aside className="xl:sticky xl:top-6 xl:max-h-[calc(100vh-3rem)] xl:overflow-y-auto">
             <div className="mb-3 flex gap-1 border-b border-line">
               {(
                 [

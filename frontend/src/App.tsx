@@ -8,6 +8,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-route
 import { subscribe } from './demo/store'
 import { subscribeSession } from './demo/session'
 import { useSessionUserId } from './api/hooks'
+import { useThemeClass } from './components/prefs'
 import { AppShell } from './components/Layout'
 import { ToastProvider } from './components/toast'
 import { LoginPage } from './pages/LoginPage'
@@ -20,7 +21,7 @@ import { MyWorkPage } from './pages/MyWorkPage'
 import { DocumentPage } from './pages/document/DocumentPage'
 import { ChangesPage } from './pages/ChangesPage'
 import { DecisionsPage } from './pages/DecisionsPage'
-import { ChatPage, MessagesPage } from './pages/chat/ChatPage'
+import { ChatRedirect, MessagesPage } from './pages/chat/ChatPage'
 import { TestingPage } from './pages/testing/TestingPage'
 import { DefectPage } from './pages/testing/DefectPage'
 import { NotificationsPage, MailboxPage } from './pages/NotificationsPage'
@@ -44,6 +45,13 @@ function DataRefresh() {
   return null
 }
 
+/** Light or dark mode on <html>. The print view is always light, like paper. */
+function Theme() {
+  const location = useLocation()
+  useThemeClass(location.pathname.startsWith('/print/'))
+  return null
+}
+
 function RequireLogin({ children }: { children: ReactNode }) {
   const uid = useSessionUserId()
   const location = useLocation()
@@ -57,6 +65,7 @@ export function App() {
       <ToastProvider>
         <BrowserRouter>
           <DataRefresh />
+          <Theme />
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/print/:versionId" element={<RequireLogin><PrintPage /></RequireLogin>} />
@@ -70,8 +79,8 @@ export function App() {
               <Route path="/projects/:pid/docs/:type" element={<DocumentPage />} />
               <Route path="/projects/:pid/changes" element={<ChangesPage />} />
               <Route path="/projects/:pid/decisions" element={<DecisionsPage />} />
-              <Route path="/projects/:pid/chat" element={<ChatPage />} />
-              <Route path="/projects/:pid/chat/:chatId" element={<ChatPage />} />
+              <Route path="/projects/:pid/chat" element={<ChatRedirect />} />
+              <Route path="/projects/:pid/chat/:chatId" element={<ChatRedirect />} />
               <Route path="/projects/:pid/testing/:stage" element={<TestingPage />} />
               <Route path="/projects/:pid/defects/:defectId" element={<DefectPage />} />
               <Route path="/projects/:pid/audit" element={<AuditPage />} />

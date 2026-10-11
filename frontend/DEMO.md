@@ -3,9 +3,11 @@
 A walkthrough of the prototype for a BRAC audience. Before you start:
 
 - Run `npm run dev` and open the app in a wide browser window.
-- In the clock menu (top bar), click **Reset demo data**, then set **AI speed** to `fast`.
-- Switch people with the menu at the top right. Each step says who to be.
-- For a product-style demo, leave **Show prototype notes** off (clock menu). For a spec review,
+- In the demo clock menu (bottom left, above your name), click **Reset demo data**, then set
+  **AI speed** to `fast`.
+- Switch people with your profile menu at the bottom left. Each step says who to be. The same
+  menu switches between light and dark mode.
+- For a product-style demo, leave **Show prototype notes** off (demo clock menu). For a spec review,
   turn it on: “In the real app…” notes and open-question markers appear on the screens.
 - **Ctrl+K** jumps to any project, document or page.
 
@@ -25,7 +27,7 @@ view and notifications without switching back and forth.
 1. Be **Shirin Akhter** (stakeholder). Open **Field Loan Application App → Intake & facts**.
    The description is already written. Click **Upload a file** and choose any PDF or image:
    the extracted text appears (simulated OCR, English + Bangla).
-2. Be **Nusrat Jahan** (PM). Click **Run intake analysis**. Watch the AI tray (bottom right):
+2. Be **Nusrat Jahan** (PM). Click **Run intake analysis**. Watch the AI tray (bottom left):
    facts are extracted, then the RAG agent searches past projects.
 3. **Fact Sheet** tab: “Number of users” is **conflicting** (description says 1,200, the upload
    says 1,450). Click **Settle** and pick a value.
@@ -92,9 +94,14 @@ view and notifications without switching back and forth.
 
 ## 6. Meetings and decisions (2 min) — Field Loan Application App
 
-1. Be **Nusrat**. **Chat** → **Video call** → switch **Transcription on** (everyone sees the
+1. Be **Nusrat**. Point out the **Messages** bar at the bottom right: it has an unread count and
+   is on every page. Open **Arif Rahman** (a direct message: Messenger-style bubbles, **Seen**),
+   reply, then open the **Branch Cash Reconciliation** project chat (Slack-style: reactions,
+   hover a message for 👍 ✅ 👀 🎉 and **Decision**, type `@` to mention someone).
+2. Open **Field Loan Application App** → **Discuss** (or **Project chat** in the sidebar): the chat
+   opens in a small window. Click the video icon → switch **Transcription on** (everyone sees the
    banner) → **End call**.
-2. The transcript appears in the chat: toggle **Corrected / Raw** (Bangla). Candidate decisions
+3. The transcript appears in the chat: toggle **Corrected / Raw** (Bangla). Candidate decisions
    go to **Changes & decisions → Decisions**: **Confirm into the Fact Sheet**, or **It changes
    scope: start a change request** (then show **Change requests**).
 

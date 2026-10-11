@@ -14,7 +14,7 @@ import { Spinner } from './ui'
 /** A quiet label on anything the AI produced, until a person confirms it. */
 export function AiBadge({ label = 'AI' }: { label?: string }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap text-violet-700" title="Produced by the AI (simulated in this prototype). A person must check it.">
+    <span className="ai-gradient inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-semibold whitespace-nowrap text-violet-700 ring-1 ring-violet-200/60 ring-inset" title="Produced by the AI (simulated in this prototype). A person must check it.">
       <Sparkles className="h-3 w-3" />
       {label}
     </span>
@@ -52,9 +52,9 @@ export function JobTray() {
   const visible = (jobs ?? []).filter((j) => !hidden.includes(j.id) && (j.status === 'running' || Date.now() - (j.startedReal ?? 0) < 45_000)).slice(0, 3)
   if (!visible.length) return null
   return (
-    <div className="fixed right-4 bottom-4 z-40 flex w-80 flex-col gap-2 no-print">
+    <div className="fixed bottom-4 left-4 z-40 flex w-80 flex-col gap-2 no-print md:left-[17rem]">
       {visible.map((j) => (
-        <div key={j.id} className="rounded-lg bg-white p-3 text-sm shadow-xl ring-1 ring-violet-200">
+        <div key={j.id} className="rounded-xl bg-surface p-3 text-sm shadow-xl ring-1 ring-violet-200">
           <div className="flex items-start gap-2">
             {j.status === 'running' ? <Spinner className="mt-0.5 border-violet-600" /> : j.status === 'done' ? <CircleCheck className="mt-0.5 h-4 w-4 text-leaf" /> : <TriangleAlert className="mt-0.5 h-4 w-4 text-red-600" />}
             <div className="min-w-0 flex-1">

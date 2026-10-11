@@ -4,9 +4,9 @@ import { clsx } from 'clsx'
 
 export function SubNav({ items }: { items: { to: string; label: string }[] }) {
   return (
-    <div className="mb-6 inline-flex rounded-lg bg-black/[0.05] p-0.5">
+    <div className="mb-6 inline-flex rounded-lg bg-ink/[0.05] p-0.5">
       {items.map((it) => (
-        <NavLink key={it.to} to={it.to} end className={({ isActive }) => clsx('rounded-md px-3 py-1 text-sm', isActive ? 'bg-white font-medium shadow-sm' : 'text-muted hover:text-ink')}>
+        <NavLink key={it.to} to={it.to} end className={({ isActive }) => clsx('rounded-md px-3 py-1 text-sm', isActive ? 'bg-surface font-medium shadow-sm' : 'text-muted hover:text-ink')}>
           {it.label}
         </NavLink>
       ))}

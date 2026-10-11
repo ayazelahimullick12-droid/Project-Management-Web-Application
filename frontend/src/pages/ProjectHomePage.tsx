@@ -3,16 +3,75 @@
  * the items that need attention. SPEC.md "Dashboard" (per project). Layout idea from Linear's
  * project page.
  */
-import { Archive, ArrowRight, FileText, FlaskConical, MessageSquare, MoreHorizontal } from 'lucide-react'
+import { Archive, ArrowRight, FileText, FlaskConical, MessageSquare, MoreHorizontal, SendHorizontal } from 'lucide-react'
+import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { api } from '../api'
-import { useApi, useNow } from '../api/hooks'
+import { useAction, useApi, useNow } from '../api/hooks'
+import { DiscussButton, useChat } from '../components/chat/ChatThread'
+import { openChat } from '../components/chat/dock'
 import { DOC_LABEL, STAGES, STAGE_LABEL } from '../rules/pipeline'
 import { TEAM_LABEL } from '../rules/permissions'
 import { DocStatusChip } from '../components/status'
-import { ago, duration, fmtDate } from '../components/format'
-import { Avatar, Dot, ErrorBox, LinkButton, Loading, MenuButton, Note } from '../components/ui'
+import { ago, duration, fmtDate, shortAgo } from '../components/format'
+import { Avatar, AvatarStack, Dot, ErrorBox, LinkButton, Loading, MenuButton, Note, ProjectIcon } from '../components/ui'
+
+/** The latest project chat messages with a quick reply box, so the conversation is visible on the overview. */
+function Discussion({ pid }: { pid: string }) {
+  const chatId = `${pid}-chat`
+  const now = useNow()
+  const navigate = useNavigate()
+  const { data } = useChat(chatId)
+  const [text, setText] = useState('')
+  const post = useAction(api.chat.postMessage, { onDone: () => setText('') })
+  if (!data) return null
+  const latest = data.messages.filter((m) => m.kind === 'text').slice(-3)
+  return (
+    <section className="shadow-soft rounded-2xl border border-line/70 bg-surface">
+      <div className="flex items-center justify-between px-4 pt-3.5 pb-1">
+        <h2 className="flex items-center gap-2 text-sm font-semibold">
+          Team discussion
+          {!!data.unread && <span className="rounded-full bg-brand px-1.5 text-[10px] leading-4 font-semibold text-white">{data.unread} new</span>}
+        </h2>
+        <button className="text-xs font-medium text-brand hover:underline" onClick={() => openChat(chatId, navigate)}>
+          Open chat
+        </button>
+      </div>
+      <ul className="px-2">
+        {latest.map((m) => (
+          <li key={m.id}>
+            <button onClick={() => openChat(chatId, navigate)} className="flex w-full gap-2.5 rounded-xl px-2 py-2 text-left hover:bg-ink/[0.04]">
+              <Avatar name={m.authorName} id={m.authorId ?? ''} size={26} />
+              <span className="min-w-0 flex-1">
+                <span className="flex items-baseline gap-1.5 text-xs">
+                  <b className="font-semibold">{m.authorName}</b>
+                  <span className="text-muted">{shortAgo(m.createdAt, now)}</span>
+                </span>
+                <span className="line-clamp-2 text-[13px] text-ink/85">{m.body}</span>
+              </span>
+            </button>
+          </li>
+        ))}
+        {!latest.length && <li className="px-2 py-3 text-sm text-muted">No messages yet. Say hello to the team.</li>}
+      </ul>
+      {data.canPost && (
+        <form
+          className="m-3 mt-1 flex items-center gap-1 rounded-xl bg-canvas py-1 pr-1 pl-3 ring-1 ring-line focus-within:ring-2 focus-within:ring-brand/60"
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (text.trim()) post.run(chatId, text)
+          }}
+        >
+          <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Write to the team…" className="min-w-0 flex-1 bg-transparent py-1 text-sm outline-none placeholder:text-muted/70" />
+          <button type="submit" disabled={!text.trim()} className={clsx('flex h-7 w-7 items-center justify-center rounded-lg', text.trim() ? 'bg-brand text-white' : 'text-muted/60')} title="Send">
+            <SendHorizontal className="h-4 w-4" />
+          </button>
+        </form>
+      )}
+    </section>
+  )
+}
 
 const NEXT_STYLE = {
   action: 'border-brand/30 bg-brand-soft/40',
@@ -26,6 +85,7 @@ export function ProjectHomePage() {
   const now = useNow()
   const navigate = useNavigate()
   const { data, isLoading, error } = useApi(['project', pid], () => api.projects.getProject(pid))
+  const { data: chat } = useChat(`${pid}-chat`)
   if (isLoading) return <Loading />
   if (error || !data) return <ErrorBox error={error} />
   const { summary, me } = data
@@ -36,34 +96,35 @@ export function ProjectHomePage() {
   const nameOf = (id?: string) => data.members.find((m) => m.member.userId === id)?.name ?? '—'
   const attention = data.openItems.filter((o) => o.count > 0)
   const heads = data.members.filter((m) => m.member.isHead)
+  const chatUnread = chat?.unread ?? 0
 
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="page-title text-[24px]">{p.name}</h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted">{p.description}</p>
-          <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted">
-            <span>
-              {summary.myRole} · Owner {data.ownerName} · started {fmtDate(p.createdAt)}
-            </span>
-            <span className="flex -space-x-1.5">
-              {heads.map((m) => (
-                <span key={m.member.userId} className="rounded-full ring-2 ring-white" title={`${m.name} — ${m.role}`}>
-                  <Avatar name={m.name} id={m.member.userId} size={24} />
-                </span>
-              ))}
-            </span>
+        <div className="flex min-w-0 items-start gap-4">
+          <ProjectIcon id={p.id} name={p.name} size={48} />
+          <div className="min-w-0">
+            <h1 className="page-title text-2xl">{p.name}</h1>
+            <p className="mt-1 max-w-2xl text-sm text-muted">{p.description}</p>
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted">
+              <AvatarStack people={heads.map((m) => ({ id: m.member.userId, name: m.name }))} size={24} max={6} />
+              <span>
+                {summary.myRole} · Owner {data.ownerName} · started {fmtDate(p.createdAt)}
+              </span>
+            </div>
           </div>
         </div>
-        <MenuButton
-          label={<MoreHorizontal className="h-4 w-4" />}
-          items={[
-            { label: 'Team and roles', onClick: () => navigate(`/projects/${pid}/team`) },
-            { label: 'Audit log', onClick: () => navigate(`/projects/${pid}/audit`) },
-            { label: 'Project chat', onClick: () => navigate(`/projects/${pid}/chat`) },
-          ]}
-        />
+        <div className="flex items-center gap-2">
+          <DiscussButton onClick={() => openChat(`${pid}-chat`, navigate)} unread={chatUnread} />
+          <MenuButton
+            label={<MoreHorizontal className="h-4 w-4" />}
+            items={[
+              { label: 'Team and roles', onClick: () => navigate(`/projects/${pid}/team`) },
+              { label: 'Audit log', onClick: () => navigate(`/projects/${pid}/audit`) },
+              { label: 'Open in Messages', onClick: () => navigate(`/messages/${pid}-chat`) },
+            ]}
+          />
+        </div>
       </div>
 
       {p.status === 'archived' && (
@@ -77,7 +138,7 @@ export function ProjectHomePage() {
         <div className="flex gap-1">
           {STAGES.map((s, i) => (
             <div key={s} className="flex-1">
-              <div className={clsx('h-1.5 rounded-full', summary.stage === 'COMPLETE' || i < at ? 'bg-leaf' : i === at ? 'bg-brand' : 'bg-black/10')} />
+              <div className={clsx('h-1.5 rounded-full', summary.stage === 'COMPLETE' || i < at ? 'bg-leaf' : i === at ? 'bg-brand' : 'bg-ink/10')} />
               <div className={clsx('mt-1.5 truncate text-[11px]', i === at && summary.stage !== 'COMPLETE' ? 'font-semibold text-ink' : 'text-muted')}>{STAGE_LABEL[s]}</div>
             </div>
           ))}
@@ -85,7 +146,7 @@ export function ProjectHomePage() {
       </div>
 
       {/* Next step */}
-      <Link to={next.link} className={clsx('flex flex-wrap items-center gap-4 rounded-xl border px-5 py-4 transition hover:shadow-sm', NEXT_STYLE[next.tone])}>
+      <Link to={next.link} className={clsx('flex flex-wrap items-center gap-4 rounded-2xl border px-5 py-4 transition hover:-translate-y-0.5 hover:shadow-md', NEXT_STYLE[next.tone])}>
         <div className="min-w-0 flex-1">
           <div className="text-[11px] font-semibold tracking-wide text-muted uppercase">{next.tone === 'done' ? 'Status' : 'Next step'}</div>
           <div className="mt-0.5 text-base font-semibold">{next.title}</div>
@@ -107,11 +168,11 @@ export function ProjectHomePage() {
         </span>
       </Link>
 
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-8">
           <section>
             <h2 className="mb-2 text-sm font-semibold">Documents</h2>
-            <ul className="divide-y divide-line/70 overflow-hidden rounded-xl border border-line/80 bg-white">
+            <ul className="shadow-soft divide-y divide-line/70 overflow-hidden rounded-2xl border border-line/70 bg-surface">
               {summary.docs.map((d) => {
                 const signoff = d.type.endsWith('SIGNOFF')
                 const testing = signoff ? data.testing[d.type === 'SQA_SIGNOFF' ? 'SQA' : 'UAT'] : undefined
@@ -149,13 +210,14 @@ export function ProjectHomePage() {
         </div>
 
         <aside className="space-y-8">
+          <Discussion pid={pid} />
           <section>
             <h2 className="mb-2 text-sm font-semibold">Needs attention</h2>
             {attention.length ? (
               <ul className="space-y-1">
                 {attention.map((o) => (
                   <li key={o.label}>
-                    <Link to={o.link} className="flex items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-black/[0.04]">
+                    <Link to={o.link} className="flex items-center justify-between rounded-lg px-2 py-1.5 text-sm hover:bg-ink/[0.04]">
                       {o.label}
                       <span className="rounded-full bg-brand px-1.5 text-[11px] font-semibold text-white">{o.count}</span>
                     </Link>

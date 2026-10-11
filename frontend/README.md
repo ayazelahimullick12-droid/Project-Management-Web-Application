@@ -30,21 +30,36 @@ copy of the dummy data in their own browser.
 
 ## Using it
 
-- **Home** shows what is waiting on you and each project's next step; **My work** lists your
-  approvals, Q/A questions and tests in one place; **Inbox** holds notifications.
+- **Home** is a dashboard: numbers at a glance (waiting on you, documents in review, open
+  questions, defects, decisions), what is waiting on you and for how long, your recent
+  conversations, a card per project (health, progress, next step, heads) and the last two weeks of
+  activity. The Owner and Admin also see the pipeline by stage and stalled items.
+- **My work** lists your approvals, Q/A questions and tests in one place; **Inbox** holds
+  notifications (the bell next to the app name shows the latest).
+- **Messages** are never hidden: the **chat dock** sits at the bottom right of every page (like
+  LinkedIn or Facebook Messenger). Open a conversation and it pops up in a small window, so you can
+  keep chatting while you read a document. **Discuss** buttons on the project overview and on each
+  document open their chat the same way, and the project overview shows the latest messages with a
+  reply box. The **Messages** page is the full view (conversations, the chat, and details).
+- The two kinds of chat look different, as on social media: **group channels** (the project chat
+  and one chat per document) look like Slack, with names, reactions, @mentions and **Mark as
+  decision** on hover; **direct messages** look like Messenger, with your messages as magenta
+  bubbles on the right and **Seen** under your last one.
 - **Ctrl+K** (or the search box) jumps to any project, document or page.
-- **Switch user** from the top-right menu. Each browser tab can be a different person, so two
-  windows side by side can show the edit lock and the live read-only view.
-- **Demo controls** (the clock in the top bar): move time forward to see reminders and the 1-hour
-  edit-lock timeout, change the AI speed, **Reset demo data**, and **Show prototype notes**
+- **Your profile menu** (bottom left): **Light, Dark or System** theme, and **Switch user**. Each
+  browser tab can be a different person, so two windows side by side can show the edit lock and the
+  live read-only view.
+- **Demo controls** (the clock above your name): move time forward to see reminders and the
+  1-hour edit-lock timeout, change the AI speed, **Reset demo data**, and **Show prototype notes**
   (off by default; turn it on for spec reviews to see the "In the real app…" notes and
   open-question markers).
-- **Help & prototype** (bottom of the sidebar): the Mailbox (every email the app would send,
-  including signing codes), Open questions, and How the real app works.
+- **Help & prototype** (in the sidebar): the Mailbox (every email the app would send, including
+  signing codes), Open questions, and How the real app works.
 
-The layout borrows familiar patterns: a Linear-style sidebar and quick switcher, an Asana-style
-"My work" list, a Google Docs-style document page with a comments rail, GitHub-style reviewers,
-and a Jira-style defect board.
+The layout borrows familiar patterns: a Linear-style sidebar with the page in a rounded panel,
+a quick switcher, a bento-style home dashboard, an Asana-style "My work" list, a Google Docs-style
+document page with a comments rail, GitHub-style reviewers, a Jira-style defect board, and
+LinkedIn/Messenger-style chat.
 - `DEMO.md` is a 20-minute walkthrough script.
 
 ## How the code is organised
@@ -58,6 +73,7 @@ frontend/
     demo/        everything simulated: browser storage, fake AI, clock   ← deleted later
     pages/       one file or folder per screen
     components/  shared pieces (buttons, badges, approval panel, editor helpers…)
+      chat/      the chat dock, conversation list and chat thread (used on every page)
     theme/       brand.ts — BRAC colours and fonts in one place
     types.ts     every data shape
 ```
@@ -80,6 +96,8 @@ Three folders matter most:
 | I want to… | Edit |
 | --- | --- |
 | Change BRAC colours or the logo text | `src/theme/brand.ts` (and `public/favicon.svg`) |
+| Change dark-mode colours | `brand.dark` in `src/theme/brand.ts`; status colours in `src/index.css` (`.dark`) |
+| Change demo direct messages or what shows as unread | `seed/messages.json` |
 | Change dummy projects, people or documents | files in `seed/` (the browser resets automatically when they change) |
 | Change what the simulated AI writes | `seed/ai/field-loan.json` and `seed/ai/field-loan/*.md` |
 | Change the questions the Q/A agent asks | `seed/catalog.json` (`question`, `sample`, `defaultIfUnknown`) |

@@ -4,6 +4,7 @@
  */
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import '@fontsource-variable/inter'
 import './index.css'
 import { applyBrand } from './theme/brand'
 import { initStore } from './demo/store'

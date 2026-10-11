@@ -28,7 +28,7 @@ export function HistoryTab({ data, onCompare }: { data: DocData; onCompare: (a: 
         {[...data.versions].reverse().map((v) => {
           const ch = chainFor(v.id)
           return (
-            <li key={v.id} className="flex flex-wrap items-center gap-3 rounded-lg bg-white p-3 ring-1 ring-line">
+            <li key={v.id} className="flex flex-wrap items-center gap-3 rounded-xl bg-surface p-3 ring-1 ring-line">
               <div className="w-10 text-lg font-semibold">v{v.number}</div>
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-medium">{v.message}</div>
@@ -152,7 +152,7 @@ export function SummariesTab({ data }: { data: DocData }) {
       >
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {d.slides.map((s, i) => (
-            <div key={i} className={`aspect-video overflow-hidden rounded-md p-3 text-xs ring-1 ring-line ${i === 0 ? 'bg-brand text-white' : 'bg-white'}`}>
+            <div key={i} className={`aspect-video overflow-hidden rounded-md p-3 text-xs ring-1 ring-line ${i === 0 ? 'bg-brand text-white' : 'bg-surface'}`}>
               <div className={`mb-1.5 font-semibold ${i === 0 ? 'text-base' : 'text-sm'}`}>{s.title}</div>
               {i > 0 && <div className="mb-1.5 h-0.5 w-8 bg-brand" />}
               <ul className={i > 0 ? 'list-disc space-y-0.5 pl-4' : 'space-y-0.5'}>

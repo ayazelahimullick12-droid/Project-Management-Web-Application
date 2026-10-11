@@ -20,7 +20,7 @@ export function TeamEditor({ members, onChange, users, lockPm }: { members: Memb
       {TEAMS.map((team) => {
         const list = members.filter((m) => m.team === team)
         return (
-          <div key={team} className="rounded-lg bg-white p-3 ring-1 ring-line">
+          <div key={team} className="rounded-xl bg-surface p-3 ring-1 ring-line">
             <div className="mb-2 flex items-center justify-between">
               <div className="text-sm font-semibold">{TEAM_LABEL[team]}</div>
               {!list.some((m) => m.isHead) && <Badge tone="red">needs a head</Badge>}

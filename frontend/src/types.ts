@@ -460,6 +460,7 @@ export interface Message {
   kind: 'text' | 'system' | 'transcript' | 'call'
   decisionId?: ID
   transcriptId?: ID
+  reactions?: Record<string, ID[]> // emoji → who reacted
 }
 
 export interface Call {
@@ -754,6 +755,7 @@ export interface DemoState {
   jobs: AiJob[]
   reminders: Record<string, { count: number; lastAt: string }>
   otps: Record<ID, { code: string; expiresAt: string }> // email one-time codes for signing
+  chatReads: Record<string, string> // '<userId>:<chatId>' → when that person last read the chat
   requirements: Requirement[]
   traceLinksDone: Record<ID, boolean> // SRS traceability matrix built, per project
   testCases: TestCase[]

@@ -25,7 +25,7 @@ export function MyWorkPage() {
   const tOpen = (tests ?? []).filter((e) => e.result === 'not_run').length
   return (
     <div>
-      <h1 className="page-title text-[22px]">My work</h1>
+      <h1 className="page-title text-2xl">My work</h1>
       <p className="mt-1 mb-5 text-sm text-muted">Everything waiting on you. Items are reminded every 4 working hours until they are done.</p>
       <div className="mb-5">
         <Segmented
@@ -40,7 +40,7 @@ export function MyWorkPage() {
       </div>
       {tab === 'all' &&
         (data.myTasks.length ? (
-          <ul className="divide-y divide-line/70 overflow-hidden rounded-xl border border-line/80 bg-white">
+          <ul className="divide-y divide-line/70 overflow-hidden shadow-soft rounded-2xl border border-line/70 bg-surface">
             {groupTasks(data.myTasks).map((t) => (
               <li key={t.key}>
                 <Link to={t.link === '/inbox/questions' ? '/my-work?tab=questions' : t.link === '/inbox/tests' ? '/my-work?tab=tests' : t.link} className="flex items-center gap-3 px-4 py-3 hover:bg-canvas">
@@ -59,7 +59,7 @@ export function MyWorkPage() {
             ))}
           </ul>
         ) : (
-          <div className="flex items-center gap-2 rounded-xl border border-line/80 bg-white px-4 py-4 text-sm text-muted">
+          <div className="flex items-center gap-2 shadow-soft rounded-2xl border border-line/70 bg-surface px-4 py-4 text-sm text-muted">
             <CircleCheck className="h-4 w-4 text-leaf" /> You are all caught up.
           </div>
         ))}

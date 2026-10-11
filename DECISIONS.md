@@ -63,3 +63,16 @@ One line each: the decision, then the reason.
 - Each project shows one computed **next step** (who must act, since when) above the document list — answers "what happens now?" without reading every card.
 - On a document, the main action (Edit, Send for approval, Approve, Approve and sign) sits in the header; downloads and rarer actions are behind "…"; comments and the approval list share a side rail.
 - The defect board hides the outcome columns (Rejected, Duplicate, Deferred, Change request) until "Show…" is clicked — they are rarely needed while triaging.
+
+## Current-style UI and chat (11 October 2026)
+
+- Chat lives in a dock at the bottom right of every page instead of a project tab — people can talk while they read a document, as on LinkedIn and Facebook; the full Messages page is still there.
+- Group channels (project and document chats) use a Slack-style layout and direct messages a Messenger-style bubble layout — a group conversation needs names on every message; a one-to-one conversation reads better as two sides.
+- Document chats with no messages are left out of the conversation list (search still finds them); each document's Discuss button opens its chat — keeps the list short.
+- At most two chat windows are open at once (the oldest closes) — they would cover the page otherwise. On phones, chats open the Messages page instead.
+- Unread counts: messages from before the demo started count as read, unless `seed/messages.json` says otherwise. Reading a chat on screen marks it read.
+- Reactions are a fixed quick set (👍 ✅ 👀 🎉) — enough for approvals and acknowledgements without an emoji picker. They are not in the spec; they are a small, common chat feature.
+- @mentions in group channels send an in-app notification (no email); direct messages notify the other person in-app.
+- Dark mode is the viewer's choice (System by default), kept in this browser. The print/PDF view is always light.
+- Activity on Home comes from the audit log (sign-ins left out); the "health" label is computed from the next step: Needs attention, Delayed (waiting more than 2 days), Waiting, On track, Complete.
+

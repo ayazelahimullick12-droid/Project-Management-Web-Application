@@ -11,7 +11,7 @@ import { getSessionUserId, setSessionUserId } from '../demo/session'
 import { reassign } from '../rules/approval'
 import { blockingCounts } from '../rules/comments'
 import { actAsHead, can, HEAD_LABEL, headOf, headRecipient, isAway, isDeveloper, isOwner, isSqa, memberOf, roleLabel, TEAM_LABEL } from '../rules/permissions'
-import { docOf, docStatus, factSheetConfirmed, projectStage, STAGES, type DocStatus } from '../rules/pipeline'
+import { docOf, docStatus, factSheetConfirmed, projectStage, STAGE_LABEL, STAGES, type DocStatus } from '../rules/pipeline'
 import { UNRESOLVED } from '../rules/testing'
 import { act, ApiError, ensure, fail, me, nameOf, pipelineCtx, projectOf, read } from './core'
 import { audit, notify } from './effects'
@@ -80,6 +80,9 @@ export interface ProjectSummary {
   openDefects: number
   myRole: string
   next: NextStep
+  progress: number // 0–100, by stage
+  health: { label: string; tone: 'green' | 'blue' | 'amber' | 'red' | 'gray' }
+  heads: { id: ID; name: string }[]
 }
 
 /** The one thing that should happen next in a project, and who is responsible. */
@@ -125,7 +128,21 @@ export function summarize(s: DemoState, p: Project, userId: ID, t: Date): Projec
     openDefects: s.defects.filter((d) => d.projectId === p.id && UNRESOLVED.includes(d.status)).length,
     myRole: roleLabel(p, userId),
     next: nextStep(s, p, projectStage(ctx), docs, t),
+    progress: Math.round((STAGES.indexOf(projectStage(ctx)) / (STAGES.length - 1)) * 100),
+    health: healthOf(nextStep(s, p, projectStage(ctx), docs, t), t),
+    heads: p.members.filter((m) => m.isHead).map((m) => ({ id: m.userId, name: nameOf(s, m.userId) })),
   }
+}
+
+/** A simple health label, like project tools show: on track, waiting, delayed, needs attention. */
+function healthOf(next: NextStep, t: Date): ProjectSummary['health'] {
+  if (next.tone === 'done') return { label: 'Complete', tone: 'gray' }
+  if (next.tone === 'problem') return { label: 'Needs attention', tone: 'red' }
+  if (next.tone === 'waiting') {
+    const days = next.since ? (t.getTime() - new Date(next.since).getTime()) / 86_400_000 : 0
+    return days > 2 ? { label: 'Delayed', tone: 'amber' } : { label: 'Waiting', tone: 'blue' }
+  }
+  return { label: 'On track', tone: 'green' }
 }
 
 const DOC_NAME: Record<string, string> = { PROPOSAL: 'Proposal', CHARTER: 'Charter', BRD: 'BRD', SRS: 'SRS', SQA_SIGNOFF: 'SQA sign-off', UAT_SIGNOFF: 'UAT sign-off' }
@@ -189,6 +206,10 @@ export interface Dashboard {
   myTasks: (WaitingItem & { projectName: string; waitingOnName: string })[]
   stalled: (WaitingItem & { projectName: string; waitingOnName: string })[]
   portfolio: boolean // Owner or Admin
+  kpis: { inReview: number; questionsOpen: number; defectsOpen: number; criticalDefects: number; decisionsPending: number }
+  pipeline: { stage: string; label: string; count: number }[]
+  activity: { id: ID; actorId?: ID | null; actorName: string; action: string; details: string; projectId?: ID; projectName?: string; createdAt: string }[]
+  activityByDay: { day: string; count: number }[]
 }
 
 export async function dashboard(): Promise<Dashboard> {
@@ -196,6 +217,8 @@ export async function dashboard(): Promise<Dashboard> {
     const user = me(s)
     const projects = visibleProjects(s, user.id)
     const all = projects.map((p) => summarize(s, p, user.id, t))
+    const activeSummaries = all.filter((x) => x.project.status === 'active' && !x.project.finished)
+    const activeIds = new Set(activeSummaries.map((x) => x.project.id))
     const items = waitingItems(s, t).map((i) => ({ ...i, projectName: projectOf(s, i.projectId).name, waitingOnName: nameOf(s, i.waitingOn) }))
     const visibleIds = new Set(projects.map((p) => p.id))
     const portfolio = !!user.isAdmin || s.projects.some((p) => p.ownerId === user.id)
@@ -206,6 +229,23 @@ export async function dashboard(): Promise<Dashboard> {
       myTasks: items.filter((i) => i.recipients.some((r) => r.to === user.id)),
       stalled: portfolio ? items.filter((i) => visibleIds.has(i.projectId) && i.reminders) : [],
       portfolio,
+      kpis: {
+        inReview: activeSummaries.reduce((n, x) => n + x.docs.filter((d) => d.status.key === 'in_review').length, 0),
+        questionsOpen: activeSummaries.reduce((n, x) => n + x.unansweredQuestions, 0),
+        defectsOpen: activeSummaries.reduce((n, x) => n + x.openDefects, 0),
+        criticalDefects: s.defects.filter((d) => activeIds.has(d.projectId) && d.severity === 'Critical' && UNRESOLVED.includes(d.status)).length,
+        decisionsPending: activeSummaries.reduce((n, x) => n + x.pendingDecisions, 0),
+      },
+      pipeline: STAGES.map((st) => ({ stage: st, label: STAGE_LABEL[st], count: activeSummaries.filter((x) => x.stage === st).length })),
+      activity: s.audit
+        .filter((a) => a.projectId && activeIds.has(a.projectId) && a.action !== 'Login' && a.createdAt <= t.toISOString())
+        .slice(0, 12)
+        .map((a) => ({ id: a.id, actorId: a.actorId, actorName: a.actorId ? nameOf(s, a.actorId) : 'AI', action: a.action, details: a.details, projectId: a.projectId, projectName: s.projects.find((x) => x.id === a.projectId)?.name, createdAt: a.createdAt })),
+      activityByDay: Array.from({ length: 14 }, (_, i) => {
+        const end = new Date(t.getTime() - (13 - i) * 86_400_000)
+        const day = end.toISOString().slice(0, 10)
+        return { day, count: s.audit.filter((a) => a.projectId && activeIds.has(a.projectId) && a.action !== 'Login' && a.createdAt.slice(0, 10) === day).length }
+      }),
     }
   })
 }

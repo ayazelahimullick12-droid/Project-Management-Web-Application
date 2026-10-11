@@ -45,7 +45,7 @@ If the prototype has to simplify a rule, it is recorded in `DECISIONS.md` (one l
 
 Every simulated AI action shows a short note explaining what the real app would do, for example: *"In the real app, the AI reads the confirmed Fact Sheet and the signed Charter and writes the BRD one section at a time. This prototype shows a pre-written BRD."* AI results are labelled **AI-generated (simulated)**.
 
-A badge in the top bar always says **Prototype · dummy data**.
+A **Demo** badge next to the demo clock (bottom of the sidebar) always marks the prototype.
 
 Some parts of the spec can only be explained, not shown: the technical decisions (LM Studio, the models, BanglaASR, OCR, embeddings, LiveKit) and the AI security rules. They are covered on a **How the real app works** page in plain language.
 
@@ -104,7 +104,7 @@ Three folders matter most for understanding and later upgrading:
 ### Data and reset
 
 - On first load, the app copies everything in `seed/` into the browser's storage. Every click changes that copy.
-- **Reset demo** (top bar) restores the original seed data.
+- **Reset demo** (demo clock menu) restores the original seed data.
 - If the seed files change, the app resets automatically on the next load.
 - Two tabs in the same browser stay in sync, so "X is editing" and the live read-only view can be shown with two windows side by side.
 
@@ -112,7 +112,7 @@ Three folders matter most for understanding and later upgrading:
 
 ## 4. Demo users
 
-One cast of fictional people, with different roles in different projects. All are listed on the login page; anyone can switch user from the top bar at any time without logging out.
+One cast of fictional people, with different roles in different projects. All are listed on the login page; anyone can switch user from the profile menu at any time without logging out.
 
 | Person (fictional) | Typical role |
 | --- | --- |

@@ -132,7 +132,7 @@
     { "chat": "project", "by": null, "at": "2026-08-18T10:00:00+06:00", "body": "Project created by Imran Chowdhury." },
     { "chat": "project", "by": "u-pm", "at": "2026-09-21T15:05:00+06:00", "body": "The BRD first draft is ready. Please review and comment in the document, not here." },
     { "chat": "project", "by": "u-st2", "at": "2026-10-02T10:20:00+06:00", "body": "From the field: core banking closes the day at 6 pm, so accountants should finish the count by 4:30 pm.", "decisionBy": "u-st2" },
-    { "chat": "project", "by": "u-tech", "at": "2026-10-02T10:45:00+06:00", "body": "Agreed, 4:30 gives the matching service enough time before 6." },
+    { "chat": "project", "by": "u-tech", "at": "2026-10-02T10:45:00+06:00", "body": "Agreed, 4:30 gives the matching service enough time before 6.", "reactions": { "👍": ["u-pm", "u-st2", "u-pm2"] } },
     { "chat": "doc:BRD", "by": "u-pm2", "at": "2026-10-05T11:35:00+06:00", "body": "Version 3 is up with the new cut-off time. Sending it for approval now." },
     { "chat": "doc:BRD", "by": "u-shdep", "at": "2026-10-06T16:00:00+06:00", "body": "Rokeya apa is away this week, I am covering her approvals." }
   ],

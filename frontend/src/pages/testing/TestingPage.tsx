@@ -334,7 +334,7 @@ type DefectRow = TData['defects'][number]
 function DefectCard({ x, pid, draggable }: { x: DefectRow; pid: string; draggable: boolean }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: x.id, disabled: !draggable })
   return (
-    <div ref={setNodeRef} {...attributes} {...listeners} style={transform ? { transform: `translate(${transform.x}px, ${transform.y}px)` } : undefined} className={clsx('rounded-md bg-white p-2 text-xs shadow-sm ring-1 ring-line', draggable && 'cursor-grab', isDragging && 'z-50 opacity-80 shadow-lg')}>
+    <div ref={setNodeRef} {...attributes} {...listeners} style={transform ? { transform: `translate(${transform.x}px, ${transform.y}px)` } : undefined} className={clsx('rounded-md bg-surface p-2 text-xs shadow-sm ring-1 ring-line', draggable && 'cursor-grab', isDragging && 'z-50 opacity-80 shadow-lg')}>
       <div className="mb-1 flex items-center gap-1.5">
         <Link to={`/projects/${pid}/defects/${x.id}`} className="font-mono font-medium text-brand" onPointerDown={(e) => e.stopPropagation()}>{x.key}</Link>
         <SeverityChip severity={x.severity} />
@@ -395,18 +395,18 @@ function Defects({ d }: { d: TData }) {
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <Guarded variant="primary" check={d.perms.raise} onClick={() => setRaising(true)}><Bug className="h-4 w-4" /> Raise a defect</Guarded>
         <div className="ml-2 flex overflow-hidden rounded-md ring-1 ring-line">
-          <button onClick={() => setView('board')} className={clsx('px-2.5 py-1.5', view === 'board' ? 'bg-ink text-white' : 'bg-white')}><Columns3 className="h-4 w-4" /></button>
-          <button onClick={() => setView('list')} className={clsx('px-2.5 py-1.5', view === 'list' ? 'bg-ink text-white' : 'bg-white')}><List className="h-4 w-4" /></button>
+          <button onClick={() => setView('board')} className={clsx('px-2.5 py-1.5', view === 'board' ? 'bg-ink text-canvas' : 'bg-surface')}><Columns3 className="h-4 w-4" /></button>
+          <button onClick={() => setView('list')} className={clsx('px-2.5 py-1.5', view === 'list' ? 'bg-ink text-canvas' : 'bg-surface')}><List className="h-4 w-4" /></button>
         </div>
         {([['all', 'All'], ['mine', 'Assigned to me'], ['raised', 'Raised by me'], ['retest', 'Waiting for my retest'], ['untriaged', 'Untriaged']] as const).map(([k, l]) => (
-          <button key={k} onClick={() => setFilter(k)} className={clsx('rounded-full px-2.5 py-1 text-xs ring-1', filter === k ? 'bg-brand-soft text-brand ring-brand' : 'bg-white ring-line')}>{l}</button>
+          <button key={k} onClick={() => setFilter(k)} className={clsx('rounded-full px-2.5 py-1 text-xs ring-1', filter === k ? 'bg-brand-soft text-brand ring-brand' : 'bg-surface ring-line')}>{l}</button>
         ))}
         <Select value={severity} onChange={(e) => setSeverity(e.target.value as Severity)} className="!w-36 !py-1 text-xs">
           <option value="">All severities</option>
           {d.severities.map((s) => <option key={s}>{s}</option>)}
         </Select>
         {view === 'board' && (
-          <button onClick={() => setShowOutcomes(!showOutcomes)} className={clsx('rounded-full px-2.5 py-1 text-xs ring-1', showOutcomes ? 'bg-brand-soft text-brand ring-brand' : 'bg-white ring-line')}>
+          <button onClick={() => setShowOutcomes(!showOutcomes)} className={clsx('rounded-full px-2.5 py-1 text-xs ring-1', showOutcomes ? 'bg-brand-soft text-brand ring-brand' : 'bg-surface ring-line')}>
             {showOutcomes ? 'Hide' : 'Show'} rejected, duplicate, deferred ({outcomeCount})
           </button>
         )}
