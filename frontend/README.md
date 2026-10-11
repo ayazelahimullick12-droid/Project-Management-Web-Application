@@ -46,7 +46,8 @@ copy of the dummy data in their own browser.
   decision** on hover; **direct messages** look like Messenger, with your messages as magenta
   bubbles on the right and **Seen** under your last one.
 - **Ctrl+K** (or the search box) jumps to any project, document or page.
-- **Your profile menu** (bottom left): **Light, Dark or System** theme, and **Switch user**. Each
+- **Dark mode**: the sun/moon button next to the search box (also on the login page, and "dark" in Ctrl+K) switches between light and dark. The profile menu (bottom left) also offers **System**, which follows the computer.
+- **Your profile menu** (bottom left): theme, and **Switch user**. Each
   browser tab can be a different person, so two windows side by side can show the edit lock and the
   live read-only view.
 - **Demo controls** (the clock above your name): move time forward to see reminders and the

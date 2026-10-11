@@ -73,6 +73,6 @@ One line each: the decision, then the reason.
 - Unread counts: messages from before the demo started count as read, unless `seed/messages.json` says otherwise. Reading a chat on screen marks it read.
 - Reactions are a fixed quick set (👍 ✅ 👀 🎉) — enough for approvals and acknowledgements without an emoji picker. They are not in the spec; they are a small, common chat feature.
 - @mentions in group channels send an in-app notification (no email); direct messages notify the other person in-app.
-- Dark mode is the viewer's choice (System by default), kept in this browser. The print/PDF view is always light.
+- Dark mode is the viewer's choice (System by default), kept in this browser: a one-click sun/moon button next to search (and on the login page), "dark"/"light" in Ctrl+K, and Light/Dark/System in the profile menu. The print/PDF view is always light.
 - Activity on Home comes from the audit log (sign-ins left out); the "health" label is computed from the next step: Needs attention, Delayed (waiting more than 2 days), Waiting, On track, Complete.
 

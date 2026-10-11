@@ -27,6 +27,7 @@ import { ago, fmtDateTime } from './format'
 import { setPref, usePrefs, type Theme } from './prefs'
 import { Avatar, Badge, ProjectIcon } from './ui'
 import { useToast } from './toast'
+import { ThemeToggle } from './ThemeToggle'
 
 function useClickOutside(ref: React.RefObject<HTMLElement | null>, onOut: () => void) {
   useEffect(() => {
@@ -359,13 +360,16 @@ function Sidebar({ pid, onSearch }: { pid?: string; onSearch: () => void }) {
             <span className="block truncate text-[11px] text-muted">{brand.orgName} · Microfinance Tech</span>
           </span>
         </Link>
+      </div>
+      <div className="mb-3 flex items-center gap-1">
+        <button onClick={onSearch} className="flex min-w-0 flex-1 items-center gap-2 rounded-lg bg-surface px-2.5 py-1.5 text-[13px] text-muted shadow-xs ring-1 ring-line hover:text-ink dark:bg-ink/5 dark:ring-transparent">
+          <Search className="h-4 w-4 shrink-0" />
+          <span className="flex-1 text-left">Search</span>
+          <kbd className="rounded-md bg-canvas px-1.5 text-[10px] ring-1 ring-line">Ctrl K</kbd>
+        </button>
+        <ThemeToggle />
         <NotificationBell />
       </div>
-      <button onClick={onSearch} className="mb-3 flex items-center gap-2 rounded-lg bg-surface px-2.5 py-1.5 text-[13px] text-muted shadow-xs ring-1 ring-line hover:text-ink dark:bg-ink/5 dark:ring-transparent">
-        <Search className="h-4 w-4" />
-        <span className="flex-1 text-left">Search</span>
-        <kbd className="rounded-md bg-canvas px-1.5 text-[10px] ring-1 ring-line">Ctrl K</kbd>
-      </button>
 
       <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1">
         <nav className="space-y-px">
@@ -488,6 +492,7 @@ export function AppShell() {
             <button className="rounded-lg p-1.5 hover:bg-ink/5" onClick={() => setPalette(true)} aria-label="Search">
               <Search className="h-5 w-5" />
             </button>
+            <ThemeToggle />
             <NotificationBell align="right" />
           </header>
           <main ref={main} className={clsx('min-h-0 flex-1', full ? 'flex flex-col' : 'overflow-y-auto')}>

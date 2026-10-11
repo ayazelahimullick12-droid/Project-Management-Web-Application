@@ -8,11 +8,13 @@ import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { api } from '../api'
 import { useApi, useSessionUserId } from '../api/hooks'
+import { setPref, useIsDark } from './prefs'
 
 interface Item {
   label: string
   hint: string
-  to: string
+  to?: string // a page to open…
+  run?: () => void // …or an action (light / dark mode)
 }
 
 const PAGES: Item[] = [
@@ -46,17 +48,22 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
   const uid = useSessionUserId()
   const navigate = useNavigate()
   const { data: projects } = useApi(['my-projects', uid], api.projects.myProjects, !!uid)
+  const dark = useIsDark()
   const [q, setQ] = useState('')
   const [i, setI] = useState(0)
   const input = useRef<HTMLInputElement>(null)
 
   const items = useMemo(() => {
-    const all: Item[] = [...PAGES]
+    const all: Item[] = [
+      ...PAGES,
+      { label: dark ? 'Switch to light mode' : 'Switch to dark mode', hint: 'Appearance (theme, dark, light)', run: () => setPref('theme', dark ? 'light' : 'dark') },
+      { label: 'Use the computer’s light or dark setting', hint: 'Appearance (theme, system)', run: () => setPref('theme', 'system') },
+    ]
     for (const p of (projects ?? []).filter((x) => x.status === 'active'))
       for (const [label, path] of PROJECT_PAGES) all.push({ label: path ? `${p.name} › ${label}` : p.name, hint: path ? 'Project page' : `Project · ${p.role}`, to: `/projects/${p.id}${path}` })
     const words = q.toLowerCase().split(/\s+/).filter(Boolean)
-    return all.filter((it) => words.every((w) => it.label.toLowerCase().includes(w))).slice(0, 9)
-  }, [projects, q])
+    return all.filter((it) => words.every((w) => `${it.label} ${it.hint}`.toLowerCase().includes(w))).slice(0, 9)
+  }, [projects, q, dark])
 
   useEffect(() => {
     if (open) {
@@ -70,7 +77,8 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
   if (!open) return null
   const go = (it?: Item) => {
     if (!it) return
-    navigate(it.to)
+    if (it.run) it.run()
+    else if (it.to) navigate(it.to)
     onClose()
   }
   return createPortal(
@@ -95,7 +103,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
         </div>
         <ul className="max-h-80 overflow-y-auto py-1">
           {items.map((it, n) => (
-            <li key={it.to}>
+            <li key={it.to ?? it.label}>
               <button onMouseEnter={() => setI(n)} onClick={() => go(it)} className={clsx('flex w-full items-center gap-3 px-4 py-2 text-left', n === i && 'bg-brand-soft/60')}>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm">{it.label}</span>

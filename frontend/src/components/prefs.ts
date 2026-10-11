@@ -64,3 +64,16 @@ export function useThemeClass(forceLight = false) {
     return () => media.removeEventListener('change', apply)
   }, [theme, forceLight])
 }
+
+function subscribeSystemTheme(fn: () => void) {
+  const media = window.matchMedia('(prefers-color-scheme: dark)')
+  media.addEventListener('change', fn)
+  return () => media.removeEventListener('change', fn)
+}
+
+/** True when the app is dark right now (chosen, or "System" and the computer is in dark mode). */
+export function useIsDark(): boolean {
+  const { theme } = usePrefs()
+  const systemDark = useSyncExternalStore(subscribeSystemTheme, () => window.matchMedia('(prefers-color-scheme: dark)').matches)
+  return theme === 'dark' || (theme === 'system' && systemDark)
+}

@@ -9,6 +9,7 @@ import { api } from '../api'
 import { useAction, useApi } from '../api/hooks'
 import { brand } from '../theme/brand'
 import { Avatar, Badge, Button, Field, Input } from '../components/ui'
+import { ThemeToggle } from '../components/ThemeToggle'
 
 const ROLE_HINTS: Record<string, string> = {
   'u-admin': 'Admin: templates, users, settings, import',
@@ -69,6 +70,7 @@ export function LoginPage() {
       {/* soft brand glow behind the page, as on many current product sites */}
       <div className="pointer-events-none absolute -top-40 -left-40 h-[520px] w-[520px] rounded-full bg-brand/20 blur-[120px]" />
       <div className="pointer-events-none absolute top-1/3 -right-40 h-[420px] w-[420px] rounded-full bg-leaf/15 blur-[120px]" />
+      <ThemeToggle className="absolute top-4 right-4 z-10" />
       <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-12 lg:grid-cols-[1fr_1.4fr]">
         <div>
           <div className="mb-6 flex items-center gap-3">
