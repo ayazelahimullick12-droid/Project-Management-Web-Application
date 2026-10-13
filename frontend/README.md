@@ -61,7 +61,8 @@ The layout borrows familiar patterns: a Linear-style sidebar with the page in a 
 a quick switcher, a bento-style home dashboard, an Asana-style "My work" list, a Google Docs-style
 document page with a comments rail, GitHub-style reviewers, a Jira-style defect board, and
 LinkedIn/Messenger-style chat.
-- `DEMO.md` is a 20-minute walkthrough script.
+- `DEMO.md` is a 20-minute walkthrough script. `FEATURE_TOUR.md` shows every feature, part by part,
+  with the account to use for each step.
 
 ## How the code is organised
 

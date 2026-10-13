@@ -1,6 +1,8 @@
 # Demo script (about 20 minutes)
 
-A walkthrough of the prototype for a BRAC audience. Before you start:
+A walkthrough of the prototype for a BRAC audience. To show every feature, use `FEATURE_TOUR.md`.
+
+Before you start:
 
 - Run `npm run dev` and open the app in a wide browser window.
 - In the demo clock menu (bottom left, above your name), click **Reset demo data**, then set
