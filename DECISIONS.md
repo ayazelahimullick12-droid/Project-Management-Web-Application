@@ -87,3 +87,8 @@ One line each: the decision, then the reason.
 - Editing, history, compare, summaries and traceability open the Full document tools at `/docs/<type>/tools` — they are used by the PM team, who are comfortable with the full tools.
 - Light colours are now the default (dark and System remain); text size can be raised by 12.5% or 25%.
 
+## Mark as decision (27 October 2026)
+
+- **Not offered in direct messages between two members**, although SPEC.md says “any member can click Mark as decision on a chat message”. A private chat is not tied to one project (two people often share several), so nobody could tell which project the decision belongs to. Decisions are marked in the project chat or a document chat instead. Rule: `canMarkDecision` in `src/rules/permissions.ts`, enforced in `src/api/chat.ts`.
+- Still offered in messages with a member of a similar past project: those are started from one project, and the spec asks for it there.
+

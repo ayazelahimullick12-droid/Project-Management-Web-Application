@@ -106,7 +106,7 @@ Every feature and rule in `SPEC.md` and `SPEC_SQA_UAT.md`, and where to see it i
 - [x] Transcription switched on by the starter; banner for everyone — call screen
 - [~] BanglaASR transcript, LLM correction, raw kept — pre-written Bangla transcript with Raw/Corrected toggle `[e]`
 - [x] Audio upload as a transcript source — a project or document chat → audio button in the message box
-- [x] Decisions from transcripts and “Mark as decision”; PM confirms into the Fact Sheet or starts a change request — Changes & decisions → Decisions
+- [x] Decisions from transcripts and “Mark as decision”; PM confirms into the Fact Sheet or starts a change request — Changes & decisions → Decisions. “Mark as decision” is offered in the project chat, document chats and messages with past-project members, not in direct messages between two members (see DECISIONS.md)
 
 ## Notifications, dashboard and archive
 

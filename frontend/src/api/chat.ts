@@ -10,7 +10,7 @@ import { now, nowIso } from '../demo/clock'
 import { newId } from '../demo/ids'
 import { runJob } from '../demo/jobs'
 import { transcribe } from '../demo/ai/agents'
-import { actAsHead, can, headOf, inTeam, isAway, isOwner, memberOf, roleLabel } from '../rules/permissions'
+import { actAsHead, can, canMarkDecision, headOf, inTeam, isAway, isOwner, memberOf, roleLabel } from '../rules/permissions'
 import { DOC_LABEL } from '../rules/pipeline'
 import { act, ApiError, ensure, fail, me, nameOf, projectOf, read } from './core'
 import { audit, notify } from './effects'
@@ -146,7 +146,7 @@ export async function getChat(chatId: ID) {
       decisions: s.decisions.filter((d) => d.chatId === chatId).map((d) => ({ ...d, decidedByName: d.decidedBy ? nameOf(s, d.decidedBy) : undefined })),
       unread: unreadIn(s, user.id, chatId),
       canPost: p ? p.status === 'active' || chat.kind === 'rag_dm' || chat.kind === 'direct' : true,
-      canMarkDecision: !!p,
+      canMarkDecision: canMarkDecision(chat).ok,
       isPm: p ? actAsHead(p, 'PM', user.id, t).ok : false,
     }
   })
@@ -236,8 +236,8 @@ export async function markDecision(messageId: ID) {
     const chat = s.chats.find((c) => c.id === m.chatId)!
     if (!canSee(s, chat, user)) throw new ApiError(403, 'You are not part of this conversation.')
     if (m.decisionId) fail('Already marked as a decision.')
-    if (!chat.projectId) fail('Decisions belong to a project.')
-    const p = projectOf(s, chat.projectId)
+    ensure(canMarkDecision(chat))
+    const p = projectOf(s, chat.projectId!)
     const id = newId('dec')
     s.decisions.push({ id, projectId: p.id, source: 'chat', chatId: chat.id, messageId, text: m.body, ai: false, markedBy: user.id, status: 'pending', createdAt: at })
     m.decisionId = id

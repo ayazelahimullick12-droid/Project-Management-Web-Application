@@ -142,3 +142,15 @@ export const can = {
     return memberOf(p, userId) || isOwner(p, userId) ? yes : no('Only project members can do this.')
   },
 }
+
+/**
+ * Where "Mark as decision" is offered. SPEC.md "Chat and meetings" allows it on any chat message;
+ * we leave out direct messages between two members, because a private chat is not tied to one
+ * project, so nobody could tell which project the decision belongs to (see DECISIONS.md).
+ * Messages with a member of a similar past project stay: they are started from one project.
+ */
+export function canMarkDecision(chat: { kind: 'project' | 'document' | 'direct' | 'rag_dm'; projectId: ID | null }): Check {
+  if (chat.kind === 'direct') return no('Decisions are marked in the project chat or a document chat, so it is clear which project they belong to.')
+  if (!chat.projectId) return no('Decisions belong to a project.')
+  return yes
+}
