@@ -1,5 +1,6 @@
 /**
  * The app frame, in the current "inset panel" style (Linear, Vercel, Notion):
+ * This is the FULL view (every tool on screen). The SIMPLE view is in src/simple/.
  * - Sidebar on the page background: app name and inbox bell, search (Ctrl+K), Home / My work /
  *   Inbox / Messages, your projects (only the open one expanded), and at the bottom the demo
  *   clock and your profile menu (theme: light, dark or system; switch user; sign out).
@@ -8,8 +9,8 @@
  */
 import { clsx } from 'clsx'
 import {
-  Archive, Bell, BookOpen, ChevronDown, ChevronsUpDown, CircleHelp, Clock, FastForward, House, Inbox, LogOut, Mail, Menu, MessageCircle,
-  Monitor, Moon, Plus, RotateCcw, Search, Settings, SquareCheckBig, Sun, X, Zap,
+  Archive, Bell, BookOpen, ChevronDown, ChevronsUpDown, CircleHelp, Clock, House, Inbox, LogOut, Mail, Menu, MessageCircle,
+  Plus, Search, Settings, SquareCheckBig, X,
 } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, NavLink, Outlet, useLocation, useMatch, useNavigate } from 'react-router-dom'
@@ -24,47 +25,16 @@ import { openChat } from './chat/dock'
 import { CommandPalette } from './CommandPalette'
 import { groupTasks } from '../pages/DashboardPage'
 import { ago, fmtDateTime } from './format'
-import { setPref, usePrefs, type Theme } from './prefs'
 import { Avatar, Badge, ProjectIcon } from './ui'
-import { useToast } from './toast'
 import { ThemeToggle } from './ThemeToggle'
-
-function useClickOutside(ref: React.RefObject<HTMLElement | null>, onOut: () => void) {
-  useEffect(() => {
-    const h = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && onOut()
-    document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
-  }, [ref, onOut])
-}
-
-function Dropdown({ button, children, align = 'right', width = 'w-80', up, full }: { button: (open: boolean) => ReactNode; children: (close: () => void) => ReactNode; align?: 'left' | 'right'; width?: string; up?: boolean; full?: boolean }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-  useClickOutside(ref, () => setOpen(false))
-  return (
-    <div className={clsx('relative', full && 'w-full')} ref={ref}>
-      <button type="button" onClick={() => setOpen(!open)} className={clsx('flex items-center', full && 'w-full')}>
-        {button(open)}
-      </button>
-      {open && (
-        <div className={clsx('absolute z-50 rounded-2xl bg-surface shadow-2xl ring-1 ring-line', width, up ? 'bottom-full mb-2' : 'top-full mt-2', align === 'right' ? 'right-0' : 'left-0')}>
-          {children(() => setOpen(false))}
-        </div>
-      )}
-    </div>
-  )
-}
+import { AppearanceSettings } from './Appearance'
+import { DemoControls, SwitchUserList } from './DemoControls'
+import { Dropdown } from './Dropdown'
+import { ViewSwitch } from './ViewSwitch'
 
 function DemoMenu() {
   const now = useNow()
-  const toast = useToast()
-  const { showNotes } = usePrefs()
   const { data: info } = useApi(['demo-info'], api.admin.demoInfo)
-  const travel = useAction(api.admin.timeTravel, { onDone: (r) => toast.ok(`Clock moved forward. ${r.reminders} reminder${r.reminders === 1 ? '' : 's'} sent, ${r.locksReleased} lock${r.locksReleased === 1 ? '' : 's'} released.`) })
-  const morning = useAction(api.admin.jumpToNextWorkingMorning, { onDone: (r) => toast.ok(`Jumped to the next working morning. ${r.reminders} reminder${r.reminders === 1 ? '' : 's'} sent.`) })
-  const resetClock = useAction(api.admin.resetClock, { success: 'Clock reset.' })
-  const speed = useAction(api.admin.setAiSpeed)
-  const reset = useAction(api.admin.reset, { success: 'Demo data reset to the seed files.' })
   const H = 3600_000
   return (
     <Dropdown
@@ -81,51 +51,12 @@ function DemoMenu() {
         </span>
       )}
     >
-      {() => (
-        <div className="p-3 text-sm">
-          <div className="mb-1 font-semibold">Demo controls</div>
-          <p className="mb-3 text-xs text-muted">This is a clickable prototype. All data is fictional and kept only in this browser.</p>
-          <label className="mb-3 flex cursor-pointer items-start gap-2 rounded-xl bg-canvas p-2.5">
-            <input type="checkbox" className="mt-0.5 h-4 w-4 accent-[var(--brand-primary)]" checked={showNotes} onChange={(e) => setPref('showNotes', e.target.checked)} />
-            <span>
-              <span className="block font-medium">Show prototype notes</span>
-              <span className="block text-xs text-muted">“In the real app…” explanations and open-question markers. Turn on for spec reviews.</span>
-            </span>
-          </label>
-          <div className="mb-1 text-xs font-medium">Time travel <span className="font-normal text-muted">(demo clock, Bangladesh time)</span></div>
-          <div className="mb-3 flex flex-wrap gap-1.5">
-            {[['+1 hour', H], ['+4 hours', 4 * H], ['+1 day', 24 * H]].map(([l, ms]) => (
-              <button key={l as string} className="rounded-lg bg-canvas px-2 py-1 text-xs hover:bg-ink/10" onClick={() => travel.run(ms as number)}>
-                <FastForward className="mr-1 inline h-3 w-3" />
-                {l}
-              </button>
-            ))}
-            <button className="rounded-lg bg-canvas px-2 py-1 text-xs hover:bg-ink/10" onClick={() => morning.run()}>
-              Next working morning
-            </button>
-            {!!info?.offsetMs && (
-              <button className="rounded-lg px-2 py-1 text-xs text-muted hover:bg-ink/5" onClick={() => resetClock.run()}>
-                Reset clock
-              </button>
-            )}
+      {(close) => (
+        <div className="max-h-[80vh] overflow-y-auto">
+          <DemoControls />
+          <div className="border-t border-line">
+            <SwitchUserList onPicked={close} />
           </div>
-          <div className="mb-1 text-xs font-medium">AI speed</div>
-          <div className="mb-3 flex gap-1.5">
-            {(['normal', 'fast', 'instant'] as const).map((sp) => (
-              <button key={sp} onClick={() => speed.run(sp)} className={clsx('rounded-lg px-2 py-1 text-xs', info?.aiSpeed === sp ? 'bg-ink text-canvas' : 'bg-canvas hover:bg-ink/10')}>
-                <Zap className="mr-1 inline h-3 w-3" />
-                {sp}
-              </button>
-            ))}
-          </div>
-          <button
-            className="flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-50"
-            onClick={() => {
-              if (confirm('Reset all demo data to the original seed files? Everything done in this browser will be lost.')) reset.run()
-            }}
-          >
-            <RotateCcw className="h-3.5 w-3.5" /> Reset demo data
-          </button>
         </div>
       )}
     </Dropdown>
@@ -189,18 +120,10 @@ function NotificationBell({ align = 'left' }: { align?: 'left' | 'right' }) {
   )
 }
 
-const THEMES: { id: Theme; label: string; icon: ReactNode }[] = [
-  { id: 'light', label: 'Light', icon: <Sun className="h-3.5 w-3.5" /> },
-  { id: 'dark', label: 'Dark', icon: <Moon className="h-3.5 w-3.5" /> },
-  { id: 'system', label: 'System', icon: <Monitor className="h-3.5 w-3.5" /> },
-]
-
 /** Profile menu at the bottom of the sidebar: theme, switch user (demo), sign out. */
 function UserMenu() {
   const uid = useSessionUserId()
-  const { theme } = usePrefs()
   const { data: me } = useApi(['whoami', uid], api.projects.whoami)
-  const { data: users } = useApi(['users'], api.projects.users)
   const navigate = useNavigate()
   if (!me) return null
   return (
@@ -222,40 +145,8 @@ function UserMenu() {
     >
       {(close) => (
         <div>
-          <div className="px-4 pt-3 pb-2">
-            <div className="mb-1.5 text-[11px] font-medium text-muted">Appearance</div>
-            <div className="grid grid-cols-3 gap-1 rounded-xl bg-ink/[0.05] p-1">
-              {THEMES.map((t) => (
-                <button key={t.id} onClick={() => setPref('theme', t.id)} className={clsx('flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs', theme === t.id ? 'bg-surface font-medium shadow-sm dark:bg-ink/15' : 'text-muted hover:text-ink')}>
-                  {t.icon}
-                  {t.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="px-4 pt-2 text-[11px] font-medium text-muted">Switch user (demo) · each browser tab can be a different person</div>
-          <div className="max-h-80 overflow-y-auto p-1">
-            {(users ?? [])
-              .filter((u) => !u.deactivated)
-              .map((u) => (
-                <button
-                  key={u.id}
-                  className={clsx('flex w-full items-center gap-2 rounded-xl px-3 py-1.5 text-left text-sm hover:bg-canvas', u.id === me.id && 'bg-brand-soft')}
-                  onClick={() => {
-                    api.projects.switchUser(u.id)
-                    close()
-                  }}
-                >
-                  <Avatar name={u.name} id={u.id} size={24} />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate">{u.name}</span>
-                    <span className="block truncate text-[11px] text-muted">{u.title}</span>
-                  </span>
-                  {u.isAdmin && <Badge tone="dark">Admin</Badge>}
-                  {u.external && <Badge>External</Badge>}
-                </button>
-              ))}
-          </div>
+          <AppearanceSettings />
+          <SwitchUserList onPicked={close} />
           <div className="border-t border-line p-1">
             <button
               className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-muted hover:bg-canvas hover:text-ink"
@@ -370,6 +261,7 @@ function Sidebar({ pid, onSearch }: { pid?: string; onSearch: () => void }) {
         <ThemeToggle />
         <NotificationBell />
       </div>
+      <ViewSwitch compact className="mb-3 grid w-full grid-cols-2 [&>button]:justify-center" />
 
       <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1">
         <nav className="space-y-px">

@@ -8,7 +8,7 @@
     <script>
       // Apply dark mode before the page draws, so it doesn't flash white (see src/components/prefs.ts).
       try {
-        var t = (JSON.parse(localStorage.getItem('brac-pm-prototype:prefs') || '{}').theme) || 'system'
+        var t = (JSON.parse(localStorage.getItem('brac-pm-prototype:prefs') || '{}').theme) || 'light'
         if (t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)) document.documentElement.classList.add('dark')
       } catch (e) {}
     </script>

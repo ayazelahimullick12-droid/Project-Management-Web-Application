@@ -6,16 +6,21 @@ each one. For a short demo, use `DEMO.md` (20 minutes) instead.
 The parts can be shown on their own, in any order, **except Parts 4, 5 and 6**: they follow the
 Field Loan Application App from intake to signed documents, so do them in that order.
 
+**Two views.** The app opens in the **Simple view** (Part 0). Parts 1–13 are written for the
+**Full view**, where every tool is on screen: click **Full** in the top bar first. The switch keeps
+you on the same page, so you can flip between the two at any point to compare.
+
 ---
 
 ## Before you start
 
 1. Run the app (`npm run dev` in `frontend/`) and open it in a wide browser window.
-2. Sign in as anyone. In the **demo clock menu** (bottom left, above your name, with the
-   **Demo** badge), click **Reset demo data**. Then set **AI speed** to `fast`.
+2. Sign in as anyone. Open the **Demo** menu (the **Demo** button at the top right in the Simple
+   view; the clock above your name in the Full view) and click **Reset demo data**. Then set
+   **AI speed** to `fast`.
 3. Every account's password is **demo1234**. On the login page you can also just click a person.
-4. **Switch person** at any time from your **profile menu** (bottom left, your name) →
-   pick someone from the list. You do not need to sign out.
+4. **Switch person** at any time from the **Demo** menu → pick someone from the list. You do not
+   need to sign out.
 5. **Tip: use two browser windows side by side.** Each browser tab can be signed in as a
    different person. Keep the PM (Nusrat) in one window and the person approving or answering in
    the other.
@@ -50,6 +55,28 @@ Cash Reconciliation** (BRD in review), **Member Savings Statement Portal** (in U
 two finished past projects used by the RAG agent.
 
 ---
+
+## Part 0 — The Simple view (8 min)
+
+The view most people will use. Show it first, then flip to **Full** to show the difference.
+
+1. Be **Selim Reza** (sponsor head). **To do** shows only what he must do, as plain sentences with
+   one button each. Point out the top bar: four places, nothing else.
+2. Be **Nusrat Jahan** (PM). **To do** lists her tasks, oldest first; the first one is highlighted.
+   **Recent updates** is folded away.
+3. **Projects → Branch Cash Reconciliation:** “Step 4 of 8”, **Your turn** with one button, the
+   documents so far, and only the areas that matter now. Team, changes and the activity log are
+   under **More**.
+4. Be **Jahid Hasan** → open the **Business requirements (BRD)**: “Waiting for your approval, as
+   deputy for Rokeya Begum, who is away”, **Your turn**, a blue box **What changed since version 2**,
+   the text, and **Approve (as deputy)** / **Ask for changes** at the bottom of the screen.
+   **Comments** open on request; **More** has editing, history, compare and downloads.
+5. Questions (after Part 4 starts a round): **To do → Answer** shows one question at a time with
+   **Save answer** and **I don't know**.
+6. Profile menu (top right): **Text size** A / A+ / A++ and light or dark colours. With larger
+   text, the four places move to their own row so nothing is cut off.
+7. Click **Full** (top bar): the same page with every tool. Click **Simple** to come back.
+8. **Help:** short “How do I…” answers.
 
 ## Part 1 — Login, look and navigation (5 min) — anyone
 

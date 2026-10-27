@@ -137,7 +137,7 @@ function sendVisible(send: Check): boolean {
  * The approval buttons: Approve / Approve and Sign / Request changes, Send for approval and
  * Declare a minor correction. `row` is for a page header (one main button), `stack` for a panel.
  */
-export function ApprovalActions(props: ApprovalProps & { layout?: 'row' | 'stack' }) {
+export function ApprovalActions(props: ApprovalProps & { layout?: 'row' | 'stack'; plain?: boolean; size?: 'md' | 'lg' }) {
   const [requesting, setRequesting] = useState(false)
   const [comment, setComment] = useState('')
   const [signing, setSigning] = useState(false)
@@ -150,35 +150,38 @@ export function ApprovalActions(props: ApprovalProps & { layout?: 'row' | 'stack
   const current = chain?.steps.find((s) => s.status === 'pending')
   const row = props.layout === 'row'
   const deputy = props.act.actingFor ? ' (as deputy)' : ''
+  // plain: the Simple view's wording and larger buttons
+  const size = props.size ?? 'md'
+  const askLabel = props.plain ? 'Ask for changes' : 'Request changes'
 
   const buttons: React.ReactNode[] = []
   if (chain && props.act.ok && current) {
     buttons.push(
       current.sign ? (
-        <Button key="sign" variant="success" onClick={() => setSigning(true)}>
+        <Button key="sign" size={size} variant="success" onClick={() => setSigning(true)}>
           <FileSignature className="h-4 w-4" /> Approve and sign{deputy}
         </Button>
       ) : (
-        <Button key="approve" variant="success" onClick={() => approve.run(props.docId)}>
+        <Button key="approve" size={size} variant="success" onClick={() => approve.run(props.docId)}>
           <BadgeCheck className="h-4 w-4" /> Approve{deputy}
         </Button>
       ),
-      <Button key="request" onClick={() => { setComment(''); setRequesting(true) }}>
-        <Undo2 className="h-4 w-4" /> Request changes
+      <Button key="request" size={size} variant={props.plain ? 'ghost' : 'secondary'} onClick={() => { setComment(''); setRequesting(true) }}>
+        <Undo2 className="h-4 w-4" /> {askLabel}
       </Button>,
     )
   }
   if (!chain && props.minor.requested && props.minor.ok)
     buttons.push(
-      <Button key="minor" variant="primary" onClick={() => minor.run(props.docId)}>
-        Declare minor correction
+      <Button key="minor" size={size} variant="primary" onClick={() => minor.run(props.docId)}>
+        {props.plain ? 'It was a small fix: continue the approvals' : 'Declare minor correction'}
       </Button>,
     )
   if (!chain && sendVisible(props.send)) {
     const label = props.outOfSync && props.frozen ? 'Send for re-approval' : 'Send for approval'
     buttons.push(
       row ? (
-        <Button key="send" variant={props.minor.requested && props.minor.ok ? 'secondary' : 'primary'} disabled={!props.send.ok} why={props.send.reason} onClick={() => send.run(props.docId)}>
+        <Button key="send" size={size} variant={props.minor.requested && props.minor.ok ? 'secondary' : 'primary'} disabled={!props.send.ok} why={props.send.reason} onClick={() => send.run(props.docId)}>
           <Send className="h-4 w-4" /> {label}
         </Button>
       ) : (
@@ -197,10 +200,10 @@ export function ApprovalActions(props: ApprovalProps & { layout?: 'row' | 'stack
       <Modal
         open={requesting}
         onClose={() => setRequesting(false)}
-        title="Request changes"
+        title={askLabel}
         footer={
           <Button variant="primary" disabled={!comment.trim()} onClick={() => request.run(props.docId, comment)}>
-            Request changes
+            {askLabel}
           </Button>
         }
       >

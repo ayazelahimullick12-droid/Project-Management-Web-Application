@@ -86,7 +86,7 @@ export function LoginPage() {
           </p>
           <div className="mb-6 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-200">
             <div className="mb-1 font-semibold">This is a clickable prototype</div>
-            All people, projects and documents are fictional. The AI is simulated with pre-written results. Data is kept only in this browser; use <b>Reset demo data</b> in the demo clock menu (bottom left) to start over.
+            All people, projects and documents are fictional. The AI is simulated with pre-written results. Data is kept only in this browser; use <b>Reset demo data</b> in the <b>Demo</b> menu to start over.
           </div>
           <div className="shadow-soft rounded-2xl bg-surface p-5 ring-1 ring-line">
             <Field label="Email">
@@ -105,7 +105,7 @@ export function LoginPage() {
             <h2 className="text-sm font-semibold">Demo users</h2>
             <Badge tone="amber">development mode only</Badge>
           </div>
-          <p className="mb-4 text-xs text-muted">Click a person to sign in as them. You can switch user at any time from your profile menu (bottom left), and each browser tab can be a different person.</p>
+          <p className="mb-4 text-xs text-muted">Click a person to sign in as them. You can switch user at any time from the <b>Demo</b> menu, and each browser tab can be a different person.</p>
           <div className="grid gap-4 sm:grid-cols-2">
             {GROUPS.map(([group, ids]) => (
               <div key={group} className="shadow-soft rounded-2xl bg-surface/80 p-3 ring-1 ring-line backdrop-blur">

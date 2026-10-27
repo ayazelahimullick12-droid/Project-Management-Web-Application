@@ -1,6 +1,11 @@
 /**
  * Routes (one per screen) and the data refresh wiring.
  * Whenever the demo data or the signed-in user changes, all screens refetch.
+ *
+ * Two views share the same addresses: the Simple view (src/simple/, the default) and the Full view
+ * (src/components/Layout.tsx and src/pages/). <ByView> picks the page for the current view, so the
+ * Simple / Full switch keeps you on the same page. Pages without a Simple version yet show their
+ * Full version inside the Simple frame.
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect, type ReactNode } from 'react'
@@ -8,7 +13,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-route
 import { subscribe } from './demo/store'
 import { subscribeSession } from './demo/session'
 import { useSessionUserId } from './api/hooks'
-import { useThemeClass } from './components/prefs'
+import { usePrefs, useTextSize, useThemeClass } from './components/prefs'
 import { AppShell } from './components/Layout'
 import { ToastProvider } from './components/toast'
 import { LoginPage } from './pages/LoginPage'
@@ -29,6 +34,13 @@ import { AdminPage } from './pages/AdminPage'
 import { AuditPage } from './pages/AuditPage'
 import { OpenQuestionsPage, HowItWorksPage } from './pages/InfoPages'
 import { PrintPage } from './pages/PrintPage'
+import { SimpleShell } from './simple/SimpleShell'
+import { TodoPage } from './simple/TodoPage'
+import { ProjectsPage } from './simple/ProjectsPage'
+import { SimpleProjectPage } from './simple/ProjectPage'
+import { SimpleDocumentPage } from './simple/DocumentPage'
+import { SimpleQuestionsPage } from './simple/QuestionsPage'
+import { HelpPage } from './simple/HelpPage'
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity, retry: false, refetchOnWindowFocus: false } } })
 
@@ -45,11 +57,25 @@ function DataRefresh() {
   return null
 }
 
-/** Light or dark mode on <html>. The print view is always light, like paper. */
+/** Light or dark mode and the text size on <html>. The print view is always light and normal size, like paper. */
 function Theme() {
   const location = useLocation()
-  useThemeClass(location.pathname.startsWith('/print/'))
+  const print = location.pathname.startsWith('/print/')
+  useThemeClass(print)
+  useTextSize(print)
   return null
+}
+
+/** The Simple or Full frame, as chosen with the Simple / Full switch. */
+function Shell() {
+  const { view } = usePrefs()
+  return view === 'simple' ? <SimpleShell /> : <AppShell />
+}
+
+/** The page for the current view. */
+function ByView({ simple, full }: { simple: ReactNode; full: ReactNode }) {
+  const { view } = usePrefs()
+  return <>{view === 'simple' ? simple : full}</>
 }
 
 function RequireLogin({ children }: { children: ReactNode }) {
@@ -69,14 +95,19 @@ export function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/print/:versionId" element={<RequireLogin><PrintPage /></RequireLogin>} />
-            <Route element={<RequireLogin><AppShell /></RequireLogin>}>
-              <Route path="/" element={<DashboardPage />} />
+            <Route element={<RequireLogin><Shell /></RequireLogin>}>
+              <Route path="/" element={<ByView simple={<TodoPage />} full={<DashboardPage />} />} />
+              <Route path="/projects" element={<ProjectsPage />} />
+              <Route path="/questions" element={<ByView simple={<SimpleQuestionsPage />} full={<Navigate to="/my-work?tab=questions" replace />} />} />
+              <Route path="/reports" element={<DashboardPage />} />
+              <Route path="/help" element={<HelpPage />} />
               <Route path="/archive" element={<ArchivePage />} />
               <Route path="/projects/new" element={<NewProjectPage />} />
-              <Route path="/projects/:pid" element={<ProjectHomePage />} />
+              <Route path="/projects/:pid" element={<ByView simple={<SimpleProjectPage />} full={<ProjectHomePage />} />} />
               <Route path="/projects/:pid/team" element={<TeamPage />} />
               <Route path="/projects/:pid/intake" element={<IntakePage />} />
-              <Route path="/projects/:pid/docs/:type" element={<DocumentPage />} />
+              <Route path="/projects/:pid/docs/:type" element={<ByView simple={<SimpleDocumentPage />} full={<DocumentPage />} />} />
+              <Route path="/projects/:pid/docs/:type/tools" element={<DocumentPage />} />
               <Route path="/projects/:pid/changes" element={<ChangesPage />} />
               <Route path="/projects/:pid/decisions" element={<DecisionsPage />} />
               <Route path="/projects/:pid/chat" element={<ChatRedirect />} />

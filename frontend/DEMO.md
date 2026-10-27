@@ -5,10 +5,12 @@ A walkthrough of the prototype for a BRAC audience. To show every feature, use `
 Before you start:
 
 - Run `npm run dev` and open the app in a wide browser window.
+- The app opens in the **Simple view**. This script uses the **Full view**: click **Full** in the
+  top bar. (To show the Simple view, see Part 0 of `FEATURE_TOUR.md`.)
 - In the demo clock menu (bottom left, above your name), click **Reset demo data**, then set
   **AI speed** to `fast`.
-- Switch people with your profile menu at the bottom left. Each step says who to be. The
-  sun/moon button next to the search box switches between light and dark mode.
+- Switch people with the demo clock menu or your profile menu at the bottom left. Each step says
+  who to be. The sun/moon button next to the search box switches between light and dark mode.
 - For a product-style demo, leave **Show prototype notes** off (demo clock menu). For a spec review,
   turn it on: “In the real app…” notes and open-question markers appear on the screens.
 - **Ctrl+K** jumps to any project, document or page.

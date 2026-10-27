@@ -76,3 +76,14 @@ One line each: the decision, then the reason.
 - Dark mode is the viewer's choice (System by default), kept in this browser: a one-click sun/moon button next to search (and on the login page), "dark"/"light" in Ctrl+K, and Light/Dark/System in the profile menu. The print/PDF view is always light.
 - Activity on Home comes from the audit log (sign-ins left out); the "health" label is computed from the next step: Needs attention, Delayed (waiting more than 2 days), Waiting, On track, Complete.
 
+## Simple view (27 October 2026)
+
+- Two views of the same pages, Simple (default) and Full, with a switch — the supervisor asked for less on each page; people who work in the app all day keep every tool. The same page addresses are used, so switching never loses your place.
+- Simple is the default for everyone, including the PM team — the same person can switch to Full when they need the tools; the choice is remembered per browser.
+- The Simple view uses plain words (Project facts, Business requirements, Ask for changes, problem) while the Full view keeps the spec's terms — the spec's terms are still shown in brackets where people may know them (BRD, SRS).
+- The To do list merges waiting items with the project's next step for the person's team (for example "Write the Proposal with AI" for the PM team) and sorts by how long things have waited.
+- On a Simple document page only one notice is shown at a time, in this order: needs updating, scope decision, someone else editing, unsaved edits, suggested fact changes, why it cannot be sent yet.
+- "What changed" compares the current version with the one reviewers last saw (the version that got "Ask for changes", or else the previous version), section by section.
+- Editing, history, compare, summaries and traceability open the Full document tools at `/docs/<type>/tools` — they are used by the PM team, who are comfortable with the full tools.
+- Light colours are now the default (dark and System remain); text size can be raised by 12.5% or 25%.
+

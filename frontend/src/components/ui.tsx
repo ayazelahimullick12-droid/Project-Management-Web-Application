@@ -21,14 +21,16 @@ const VARIANT: Record<Variant, string> = {
   success: 'bg-leaf text-white shadow-sm shadow-leaf/25 hover:brightness-110 disabled:bg-leaf/40 disabled:shadow-none',
 }
 
-export function Button({ variant = 'secondary', size = 'md', className, why, children, ...rest }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: 'sm' | 'md'; why?: string }) {
+const SIZE = { sm: 'h-7 px-2.5 text-xs', md: 'h-9 px-3.5 text-sm', lg: 'h-12 px-6 text-base' } as const
+
+export function Button({ variant = 'secondary', size = 'md', className, why, children, ...rest }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: keyof typeof SIZE; why?: string }) {
   return (
     <button
       type="button"
       title={rest.disabled && why ? why : rest.title}
       className={clsx(
         'inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition active:scale-[0.98] disabled:cursor-not-allowed disabled:active:scale-100',
-        size === 'sm' ? 'h-7 px-2.5 text-xs' : 'h-9 px-3.5 text-sm',
+        SIZE[size],
         VARIANT[variant],
         className,
       )}
@@ -52,9 +54,9 @@ export function Guarded({ check, children, ...rest }: Omit<Parameters<typeof But
   )
 }
 
-export function LinkButton({ to, children, variant = 'secondary', size = 'md', className }: { to: string; children: ReactNode; variant?: Variant; size?: 'sm' | 'md'; className?: string }) {
+export function LinkButton({ to, children, variant = 'secondary', size = 'md', className }: { to: string; children: ReactNode; variant?: Variant; size?: keyof typeof SIZE; className?: string }) {
   return (
-    <Link to={to} className={clsx('inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition active:scale-[0.98]', size === 'sm' ? 'h-7 px-2.5 text-xs' : 'h-9 px-3.5 text-sm', VARIANT[variant], className)}>
+    <Link to={to} className={clsx('inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition active:scale-[0.98]', SIZE[size], VARIANT[variant], className)}>
       {children}
     </Link>
   )

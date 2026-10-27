@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import { api } from '../api'
 import { useApi, useSessionUserId } from '../api/hooks'
-import { setPref, useIsDark } from './prefs'
+import { setPref, useIsDark, usePrefs } from './prefs'
 
 interface Item {
   label: string
@@ -18,7 +18,11 @@ interface Item {
 }
 
 const PAGES: Item[] = [
-  { label: 'Home', hint: 'Page', to: '/' },
+  { label: 'Home (To do)', hint: 'What is waiting on you', to: '/' },
+  { label: 'Projects', hint: 'All your projects', to: '/projects' },
+  { label: 'Questions for you', hint: 'Answer the Q/A questions one at a time', to: '/questions' },
+  { label: 'Reports', hint: 'All projects at a glance (Owner and Admin)', to: '/reports' },
+  { label: 'Help', hint: 'How do I…', to: '/help' },
   { label: 'My work', hint: 'Approvals, questions and tests waiting on you', to: '/my-work' },
   { label: 'Inbox', hint: 'Notifications', to: '/notifications' },
   { label: 'Messages', hint: 'Project channels and direct messages', to: '/messages' },
@@ -49,6 +53,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
   const navigate = useNavigate()
   const { data: projects } = useApi(['my-projects', uid], api.projects.myProjects, !!uid)
   const dark = useIsDark()
+  const { view } = usePrefs()
   const [q, setQ] = useState('')
   const [i, setI] = useState(0)
   const input = useRef<HTMLInputElement>(null)
@@ -58,12 +63,13 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
       ...PAGES,
       { label: dark ? 'Switch to light mode' : 'Switch to dark mode', hint: 'Appearance (theme, dark, light)', run: () => setPref('theme', dark ? 'light' : 'dark') },
       { label: 'Use the computer’s light or dark setting', hint: 'Appearance (theme, system)', run: () => setPref('theme', 'system') },
+      { label: view === 'simple' ? 'Switch to the Full view' : 'Switch to the Simple view', hint: 'Simple: one job per page · Full: every tool on screen', run: () => setPref('view', view === 'simple' ? 'full' : 'simple') },
     ]
     for (const p of (projects ?? []).filter((x) => x.status === 'active'))
       for (const [label, path] of PROJECT_PAGES) all.push({ label: path ? `${p.name} › ${label}` : p.name, hint: path ? 'Project page' : `Project · ${p.role}`, to: `/projects/${p.id}${path}` })
     const words = q.toLowerCase().split(/\s+/).filter(Boolean)
     return all.filter((it) => words.every((w) => `${it.label} ${it.hint}`.toLowerCase().includes(w))).slice(0, 9)
-  }, [projects, q, dark])
+  }, [projects, q, dark, view])
 
   useEffect(() => {
     if (open) {

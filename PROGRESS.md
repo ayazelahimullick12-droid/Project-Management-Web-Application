@@ -74,3 +74,13 @@ Then follow `frontend/DEMO.md`.
 - Seed: `seed/messages.json` adds direct messages and unread markers; project messages can carry reactions.
 - Checked: 65 rule tests pass, production build passes; dashboard, Messages (channel and DM), dock windows, calls, light and dark mode and the phone layout were checked in the browser.
 
+## 27 October 2026 — Simple view (less to take in per page), with a Simple / Full switch
+
+- Supervisor feedback: most users are over 35 and use the app now and then; there was too much on each page and navigation was hard.
+- New **Simple view** (default), in `src/simple/`: a top bar with To do · Projects · Messages · Help; one job per page; plain words; text of at least 16px, large buttons; one status sentence, one "Your next step" box, at most one notice, and the main buttons in a bar at the bottom; everything else under More.
+- Pages built for the Simple view so far: To do (Home), Projects, Project, Document (reading, reviewing, approving), Questions (one at a time), Help. Other pages open their Full version inside the Simple frame.
+- **Simple | Full** switch in the top bar (Simple) and the sidebar (Full), and in Ctrl+K; it keeps you on the same page. Text size setting (A / A+ / A++); light colours by default; with larger text the top bar moves its four places to a second row.
+- The Full view is unchanged apart from the switch and the shared menus. In the Simple view there are no floating chat windows: chats open on the Messages page.
+- Checked: 65 rule tests pass, production build passes; To do, Projects, Project, Document (as PM and as deputy reviewer), Questions (answering, "I don't know"), Messages, the switch in both directions, dark mode, larger text and the phone layout were checked in the browser.
+- Next: Simple versions of intake, testing (one test at a time), problem reports, and Messages without hover-only actions.
+

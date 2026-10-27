@@ -30,6 +30,31 @@ copy of the dummy data in their own browser.
 
 ## Using it
 
+The app has **two views** of the same pages, switched with **Simple | Full** in the top bar (or
+the sidebar). The switch keeps you on the page you are on, and is remembered in this browser.
+
+**Simple view** (the default) is for people who use the app now and then. It keeps the load on
+each page low:
+
+- A top bar with four places: **To do · Projects · Messages · Help**, plus your profile and the
+  **Demo** menu. Nothing floats over the page; AI progress shows as a strip under the top bar.
+- **To do** (Home): only what you have to do, oldest first, as plain sentences with one button
+  each. "Nothing to do right now" when there is nothing. Updates are folded away; the Owner and
+  Admin find the portfolio dashboard under **Reports**.
+- **Project**: which step it is at, **Your turn** (or who it is waiting for), the documents so far,
+  and only the areas that matter at this stage. Team, changes and the activity log are under More.
+- **Document**: a status sentence, your next step, at most one notice, "What changed since
+  version N", the text (select text to comment; comments open on request) and the main buttons in
+  a bar at the bottom. Editing, history, compare, summaries and downloads are under **More** (they
+  open the full document tools).
+- **Questions**: one question at a time, a large answer box and **I don't know**.
+- Plain words (Project facts, Business requirements, Ask for changes…), text of at least 16px,
+  large buttons, a **text size** setting (profile menu), light colours by default.
+- Pages without a Simple version yet (intake, testing, defects, team, changes, admin) open their
+  Full version inside the Simple frame.
+
+**Full view** shows every tool, for people who use the app all day:
+
 - **Home** is a dashboard: numbers at a glance (waiting on you, documents in review, open
   questions, defects, decisions), what is waiting on you and for how long, your recent
   conversations, a card per project (health, progress, next step, heads) and the last two weeks of
@@ -47,10 +72,11 @@ copy of the dummy data in their own browser.
   bubbles on the right and **Seen** under your last one.
 - **Ctrl+K** (or the search box) jumps to any project, document or page.
 - **Dark mode**: the sun/moon button next to the search box (also on the login page, and "dark" in Ctrl+K) switches between light and dark. The profile menu (bottom left) also offers **System**, which follows the computer.
-- **Your profile menu** (bottom left): theme, and **Switch user**. Each
+- **Your profile menu** (bottom left): text size, theme, and **Switch user**. Each
   browser tab can be a different person, so two windows side by side can show the edit lock and the
   live read-only view.
-- **Demo controls** (the clock above your name): move time forward to see reminders and the
+- **Demo controls** (the clock above your name in the Full view, the **Demo** button in the Simple
+  view): switch user, move time forward to see reminders and the
   1-hour edit-lock timeout, change the AI speed, **Reset demo data**, and **Show prototype notes**
   (off by default; turn it on for spec reviews to see the "In the real app…" notes and
   open-question markers).
@@ -74,6 +100,8 @@ frontend/
     api/         the only way screens read or change data                ← the "backend" boundary
     demo/        everything simulated: browser storage, fake AI, clock   ← deleted later
     pages/       one file or folder per screen
+    simple/      the Simple view: top bar, To do, Projects, Project, Document, Questions, Help,
+                 and words.ts (the plain words it uses)
     components/  shared pieces (buttons, badges, approval panel, editor helpers…)
       chat/      the chat dock, conversation list and chat thread (used on every page)
     theme/       brand.ts — BRAC colours and fonts in one place
@@ -98,6 +126,8 @@ Three folders matter most:
 | I want to… | Edit |
 | --- | --- |
 | Change BRAC colours or the logo text | `src/theme/brand.ts` (and `public/favicon.svg`) |
+| Change the Simple view's wording | `src/simple/words.ts` |
+| Make the Full view the default | `view` in `DEFAULTS`, `src/components/prefs.ts` |
 | Change dark-mode colours | `brand.dark` in `src/theme/brand.ts`; status colours in `src/index.css` (`.dark`) |
 | Change demo direct messages or what shows as unread | `seed/messages.json` |
 | Change dummy projects, people or documents | files in `seed/` (the browser resets automatically when they change) |

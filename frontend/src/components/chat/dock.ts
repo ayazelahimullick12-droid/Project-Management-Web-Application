@@ -4,6 +4,7 @@
  * are minimised, and which call is on screen. Kept per browser tab (sessionStorage).
  */
 import { useSyncExternalStore } from 'react'
+import { readPrefs } from '../prefs'
 
 interface DockState {
   open: boolean // the conversation list is expanded
@@ -51,11 +52,11 @@ export function useDock(): DockState {
 const small = () => window.matchMedia('(max-width: 767px)').matches
 
 /**
- * Opens a chat in a floating window (or on the Messages page on small screens).
+ * Opens a chat in a floating window (or on the Messages page on small screens and in the Simple view).
  * `navigate` is passed in because this file is not a React component.
  */
 export function openChat(chatId: string, navigate?: (to: string) => void) {
-  if (small() || location.pathname.startsWith('/messages')) {
+  if (small() || readPrefs().view === 'simple' || location.pathname.startsWith('/messages')) {
     navigate?.(`/messages/${chatId}`)
     return
   }
