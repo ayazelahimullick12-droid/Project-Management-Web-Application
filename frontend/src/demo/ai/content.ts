@@ -17,7 +17,7 @@ export interface CannedAi {
     suggestions: { kind: string; factKey: string; factLabel: string; text: string; sourceProjectId: string; sourceDocType: DocType; sectionTitle: string; highlights: string[] }[]
   }
   regen?: Record<string, string>
-  requirements?: Partial<Record<'CHARTER' | 'BRD' | 'SRS', (string | null)[][]>>
+  requirements?: Partial<Record<'PROPOSAL' | 'BRD' | 'SRS', (string | null)[][]>>
   transcript?: { segments: { speaker: string; raw: string; corrected: string }[]; decisions: { text: string; factKey?: string }[] }
 }
 
@@ -28,7 +28,8 @@ export function cannedFor(slug: string): CannedAi | undefined {
   return Object.entries(jsons).find(([path]) => path.endsWith(`/${slug}.json`))?.[1]
 }
 
-export function cannedDoc(slug: string, type: DocType): string | undefined {
+/** The pre-written text for a document. 'CHARTER' is the Charter part of the Proposal & Charter. */
+export function cannedDoc(slug: string, type: DocType | 'CHARTER'): string | undefined {
   return Object.entries(docs).find(([path]) => path.endsWith(`/${slug}/${type.toLowerCase()}.md`))?.[1]
 }
 

@@ -14,6 +14,7 @@ import { updateForFacts } from '../demo/ai/agents'
 import { actAsHead, can, headOf, TEAM_LABEL } from '../rules/permissions'
 import { DOC_LABEL, PIPELINE } from '../rules/pipeline'
 import { routeTeam } from '../rules/qa'
+import { peopleCheck, questionNeeds } from '../rules/people'
 import { act, ensure, fail, me, nameOf, projectOf, read } from './core'
 import { audit, notify, teamMembers } from './effects'
 import { afterNewVersion } from './documents'
@@ -59,14 +60,19 @@ export async function listChanges(pid: ID) {
 
 /** Starts a change request: the Q/A agent asks only about what changed (routed as usual). */
 export function createChangeRequestIn(s: DemoState, p: Project, input: { title: string; description: string; trigger: 'edit' | 'decision' | 'defect'; sourceLabel: string; factKeys: string[] }, userId: ID, at: string): ID {
+  const keys = input.factKeys.length ? input.factKeys : ['scope_in']
+  const teamFor = (key: string) => {
+    const def = s.factCatalog.find((d) => d.key === key)
+    return def ? routeTeam(def) : 'STAKEHOLDER'
+  }
+  ensure(peopleCheck(p, questionNeeds([...new Set(keys.map(teamFor))])))
   const id = newId('cr')
   const roundId = newId('round')
   s.changeRequests.push({ id, projectId: p.id, title: input.title, description: input.description, trigger: input.trigger, sourceLabel: input.sourceLabel, status: 'questions', roundId, changedFactKeys: input.factKeys, impact: [], createdAt: at, createdBy: userId })
   s.rounds.push({ id: roundId, projectId: p.id, purpose: 'change_request', number: 1, status: 'open', startedAt: at, changeRequestId: id })
-  const keys = input.factKeys.length ? input.factKeys : ['scope_in']
   for (const key of keys) {
     const def = s.factCatalog.find((d) => d.key === key)
-    const team = def ? routeTeam(def) : 'STAKEHOLDER'
+    const team = teamFor(key)
     const current = p.facts.find((f) => f.key === key)?.value
     s.questions.push({
       id: newId('q'), projectId: p.id, roundId, factKey: key, team,

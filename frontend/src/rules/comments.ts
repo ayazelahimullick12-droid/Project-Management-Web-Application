@@ -7,7 +7,7 @@
  */
 import type { ApprovalChain, Comment, ID, Project, Section, Team } from '../types'
 import { ROLE_TEAM } from './approval'
-import { isOwner, memberOf, no, yes, type Check } from './permissions'
+import { isOwner, memberOf, no, yes, type Check, inTeam, membershipsOf } from './permissions'
 import { markdownToPlain, normalize } from './text'
 
 /**
@@ -45,25 +45,25 @@ export function commentTeam(p: Project, userId: ID): Team | 'OWNER' | undefined 
 
 /**
  * Can this user comment on (or suggest wording for) a version?
- * Members of a team whose head has already approved this version cannot.
+ * Members of a team whose head has already approved this version cannot. Someone with roles in
+ * several teams may comment while any of their teams still may.
  */
 export function canComment(p: Project, userId: ID | null, chainsForVersion: ApprovalChain[]): Check {
   if (!userId) return no('Sign in first.')
   if (p.status === 'archived') return no('This project is archived, so it is read-only.')
-  const team = commentTeam(p, userId)
-  if (!team) return no('Only project members can comment.')
-  if (team === 'OWNER' || team === 'PM') return yes
-  const approvedByOwnHead = chainsForVersion.some(
-    (ch) => ch.status !== 'cancelled' && ch.steps.some((s) => ROLE_TEAM[s.role] === team && (s.status === 'approved' || s.status === 'carried_over')),
-  )
-  if (approvedByOwnHead) return no('Your team’s head has already approved this version, so your team can no longer comment on it. Your head can use Request changes if something needs action.')
+  const teams = membershipsOf(p, userId).map((m) => m.team)
+  if (!teams.length) return isOwner(p, userId) ? yes : no('Only project members can comment.')
+  if (teams.includes('PM')) return yes
+  const approvedByHeadOf = (team: string) =>
+    chainsForVersion.some((ch) => ch.status !== 'cancelled' && ch.steps.some((s) => ROLE_TEAM[s.role] === team && (s.status === 'approved' || s.status === 'carried_over')))
+  if (teams.every(approvedByHeadOf)) return no('Your team’s head has already approved this version, so your team can no longer comment on it. Your head can use Request changes if something needs action.')
   return yes
 }
 
 /** Ticking a comment resolved: PM team only. */
 export function canTick(p: Project, userId: ID | null): Check {
   if (p.status === 'archived') return no('This project is archived, so it is read-only.')
-  return memberOf(p, userId)?.team === 'PM' ? yes : no('Only PM team members can resolve comments.')
+  return inTeam(p, userId, 'PM') ? yes : no('Only PM team members can resolve comments.')
 }
 
 /** Confirming or reopening a Pending check comment: any member of the author's team. */
@@ -71,8 +71,8 @@ export function canCheckPending(p: Project, userId: ID | null, comment: Comment)
   if (p.status === 'archived') return no('This project is archived, so it is read-only.')
   if (comment.status !== 'pending_check') return no('This comment is not pending check.')
   if (!userId) return no('Sign in first.')
-  const team = commentTeam(p, userId)
-  if (userId === comment.authorId || (team && team === comment.authorTeam)) return yes
+  const teams: string[] = membershipsOf(p, userId).map((m) => m.team)
+  if (userId === comment.authorId || teams.includes(comment.authorTeam) || (comment.authorTeam === 'OWNER' && isOwner(p, userId))) return yes
   return no('Only members of the comment author’s team can confirm or reopen it.')
 }
 

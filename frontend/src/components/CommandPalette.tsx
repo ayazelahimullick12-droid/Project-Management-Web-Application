@@ -37,8 +37,7 @@ const PAGES: Item[] = [
 const PROJECT_PAGES: [string, string][] = [
   ['Overview', ''],
   ['Intake & facts', '/intake'],
-  ['Proposal', '/docs/PROPOSAL'],
-  ['Charter', '/docs/CHARTER'],
+  ['Proposal & Charter', '/docs/PROPOSAL'],
   ['BRD', '/docs/BRD'],
   ['SRS', '/docs/SRS'],
   ['SQA', '/testing/SQA'],

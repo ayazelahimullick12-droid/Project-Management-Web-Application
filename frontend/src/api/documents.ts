@@ -10,7 +10,8 @@ import { now, nowIso } from '../demo/clock'
 import { newId } from '../demo/ids'
 import { runJob } from '../demo/jobs'
 import { draftDocument, detectFactChanges, regenerateSection, requirementsFromCanned, requirementsFromText, scopeCheck as simulateScopeCheck, summaries } from '../demo/ai/agents'
-import { approve as approveRule, canAct, CHAIN_CONFIG, cancel, currentStep, minorCorrectionChain, newChain, requestChanges as requestChangesRule, ROLE_LABEL, ROLE_TEAM, sendCheck, sign as signRule } from '../rules/approval'
+import { missingPeople } from '../rules/people'
+import { approve as approveRule, canAct, chainNeeds, CHAIN_CONFIG, cancel, currentStep, minorCorrectionChain, newChain, requestChanges as requestChangesRule, ROLE_LABEL, ROLE_TEAM, sendCheck, sign as signRule } from '../rules/approval'
 import { blockingCounts, canCheckPending, canComment, canTick, carryForward, commentTeam } from '../rules/comments'
 import { actAsHead, can, headOf, headRecipient, inTeam, isSqa, memberOf, TEAM_LABEL, type Check } from '../rules/permissions'
 import { activeChain, canGenerate, chainsOf, DOC_LABEL, docStatus, isComplete, laterTypes, PIPELINE, previousComplete } from '../rules/pipeline'
@@ -131,6 +132,9 @@ export async function getDocument(pid: ID, type: DocType) {
         switchTemplate: pm.ok && (p.templateVersions[type] ?? 1) < latestTemplate,
       },
       complete: isComplete(ctx, type),
+      // Every head the approval chain needs; checked before "Send for approval" (see sendCheck).
+      missing: missingPeople(p, chainNeeds(type)),
+      canAddPeople: can.addPeople(p, user.id, t).ok,
     }
   })
 }
@@ -214,7 +218,7 @@ export async function generate(pid: ID, type: DocType) {
 
 /** Keeps the numbered requirements (OBJ/BR/SR) in step with the document text. */
 function updateRequirements(s: DemoState, p: Project, type: DocType, sections: Section[], firstDraft: boolean) {
-  if (type !== 'CHARTER' && type !== 'BRD' && type !== 'SRS') return
+  if (type !== 'PROPOSAL' && type !== 'BRD' && type !== 'SRS') return
   let reqs = requirementsFromText(p, type, sections)
   if (!reqs.length && firstDraft) reqs = requirementsFromCanned(p, type)
   if (!reqs.length) return
@@ -642,8 +646,7 @@ export async function decideSuggestion(sugId: ID, accept: boolean) {
 // ─── Approval ───────────────────────────────────────────────────────────
 
 const NEXT_STEP: Partial<Record<DocType, string>> = {
-  PROPOSAL: 'The Proposal is approved and frozen. The Charter can now be generated.',
-  CHARTER: 'The Charter is signed. Next: the business processes Q/A round, then the BRD.',
+  PROPOSAL: 'The Proposal & Charter is signed. Next: the business processes Q/A round, then the BRD.',
   BRD: 'The BRD is signed. Next: the technical Q/A round (tech team), then the SRS.',
   SRS: 'The SRS is signed. SQA can start: draft the SQA test cases.',
   SQA_SIGNOFF: 'SQA is signed off. The build is released to UAT.',
@@ -852,7 +855,7 @@ export async function buildTraceability(pid: ID) {
     apply: (s) => {
       s.traceLinksDone[pid] = true
       const reqs = s.requirements.filter((r) => r.projectId === pid)
-      const unlinked = reqs.filter((r) => r.docType !== 'CHARTER' && (!r.parentId || !reqs.some((x) => x.id === r.parentId)))
+      const unlinked = reqs.filter((r) => r.docType !== 'PROPOSAL' && (!r.parentId || !reqs.some((x) => x.id === r.parentId)))
       return unlinked.length ? `${unlinked.length} requirement${unlinked.length > 1 ? 's have' : ' has'} no link and ${unlinked.length > 1 ? 'are' : 'is'} flagged.` : 'Every requirement is linked.'
     },
   })

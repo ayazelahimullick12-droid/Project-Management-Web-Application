@@ -8,19 +8,17 @@ import type { DocStatus } from '../rules/pipeline'
 
 /** Document names, with the short spec name in brackets where people may know it. */
 export const DOC_NAME: Record<DocType, string> = {
-  PROPOSAL: 'Project proposal',
-  CHARTER: 'Project charter',
+  PROPOSAL: 'Proposal and charter',
   BRD: 'Business requirements (BRD)',
   SRS: 'Software requirements (SRS)',
   SQA_SIGNOFF: 'Technical testing sign-off',
   UAT_SIGNOFF: 'User testing sign-off',
 }
 
-/** The eight steps of a project, in plain words. */
+/** The seven steps of a project, in plain words. */
 export const STEP_NAME: Record<string, string> = {
   INTAKE: 'Gathering information',
-  PROPOSAL: 'Project proposal',
-  CHARTER: 'Project charter',
+  PROPOSAL: 'Proposal and charter',
   BRD: 'Business requirements',
   SRS: 'Software requirements',
   SQA: 'Technical testing',

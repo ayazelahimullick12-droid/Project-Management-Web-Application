@@ -8,7 +8,8 @@ import { now, nowIso } from '../demo/clock'
 import { runJob } from '../demo/jobs'
 import { newId } from '../demo/ids'
 import { extractFacts, questionFor, ragMatches, readUpload } from '../demo/ai/agents'
-import { actAsHead, can, headOf, inTeam, memberOf, TEAM_LABEL } from '../rules/permissions'
+import { actAsHead, can, headOf, inTeam, membershipsOf, TEAM_LABEL } from '../rules/permissions'
+import { FACT_CONFIRMATION_NEEDS, missingPeople, peopleCheck, questionNeeds } from '../rules/people'
 import { factSheetConfirmed, isComplete, roundClosed } from '../rules/pipeline'
 import { atRoundLimit, conflicts, factFromAnswer, factRows, mergeValue, missingFor, requiredBy, roundsOf, routeTeam, settleConflict } from '../rules/qa'
 import { act, ApiError, ensure, fail, me, nameOf, pipelineCtx, projectOf, read } from './core'
@@ -39,7 +40,7 @@ export async function getIntake(pid: ID) {
     const rounds = s.rounds.filter((r) => r.projectId === pid).sort((a, b) => a.startedAt.localeCompare(b.startedAt))
     const questions = s.questions
       .filter((q) => q.projectId === pid)
-      .map((q) => ({ ...q, teamLabel: TEAM_LABEL[q.team], assigneeNames: q.assigneeIds.map((id) => nameOf(s, id)), answeredByName: q.answeredBy ? nameOf(s, q.answeredBy) : undefined, mine: q.assigneeIds.includes(user.id) || q.assigneeIds.some((id) => actAsHead(p, memberOf(p, id)?.team ?? 'PM', user.id, t).actingFor === id) }))
+      .map((q) => ({ ...q, teamLabel: TEAM_LABEL[q.team], assigneeNames: q.assigneeIds.map((id) => nameOf(s, id)), answeredByName: q.answeredBy ? nameOf(s, q.answeredBy) : undefined, mine: q.assigneeIds.includes(user.id) || q.assigneeIds.some((id) => membershipsOf(p, id).some((m) => m.isHead && actAsHead(p, m.team, user.id, t).actingFor === id)) }))
     const run = p.intake.ragRunId ? s.ragRuns.find((r) => r.id === p.intake.ragRunId) : undefined
     const rag = pmTeam && run
       ? {
@@ -61,7 +62,7 @@ export async function getIntake(pid: ID) {
       : undefined
     const open = rounds.filter((r) => r.status === 'open')
     const intakeRounds = roundsOf(s.rounds, pid, 'intake')
-    const charterSigned = isComplete(ctx, 'CHARTER')
+    const charterSigned = isComplete(ctx, 'PROPOSAL') // the Proposal & Charter, signed by the sponsor head
     const brdSigned = isComplete(ctx, 'BRD')
     const nextExtra: ExtraRound | undefined = charterSigned && !roundClosed(ctx, 'brd_business') ? 'brd_business' : brdSigned && !roundClosed(ctx, 'srs_technical') ? 'srs_technical' : undefined
     return {
@@ -83,8 +84,12 @@ export async function getIntake(pid: ID) {
       nextExtra,
       feedback: (p.intake.feedback ?? []).map((f) => ({ ...f, byName: nameOf(s, f.by) })),
       confirmed: factSheetConfirmed(ctx),
+      // Who is missing before the next questions or the confirmation can go out (shown with "Add").
+      missingForQuestions: missingPeople(p, questionNeeds([...new Set(missingFor(p.facts, s.factCatalog, nextExtra ?? 'intake').map(routeTeam))])),
+      missingForConfirmation: missingPeople(p, FACT_CONFIRMATION_NEEDS),
       perms: {
-        editDescription: can.change(p).ok && (memberOf(p, user.id)?.team === 'STAKEHOLDER' || pmTeam),
+        canAddPeople: can.addPeople(p, user.id, t).ok,
+        editDescription: can.change(p).ok && (inTeam(p, user.id, 'STAKEHOLDER') || pmTeam),
         upload: can.memberOrOwner(p, user.id).ok,
         pmTeam,
         pm: pm.ok,
@@ -102,7 +107,7 @@ export async function saveDescription(pid: ID, text: string) {
     const user = me(s)
     const p = projectOf(s, pid)
     ensure(can.change(p))
-    if (!(memberOf(p, user.id)?.team === 'STAKEHOLDER' || isPmTeam(p, user.id))) throw new ApiError(403, 'Stakeholders (and the PM team) write the description.')
+    if (!(inTeam(p, user.id, 'STAKEHOLDER') || isPmTeam(p, user.id))) throw new ApiError(403, 'Stakeholders (and the PM team) write the description.')
     p.intake.description = text
     p.intake.descriptionBy = user.id
     audit(s, { projectId: pid, actorId: user.id, action: 'Description updated', details: `${text.length} characters`, at })
@@ -277,6 +282,8 @@ export async function startRound(pid: ID, purpose: Exclude<RoundPurpose, 'change
   }
   if (s0.rounds.some((r) => r.projectId === pid && r.purpose === purpose && r.status === 'open')) fail('A round is already open. Close it first.')
   const missing = missingFor(p.facts, s0.factCatalog, purpose)
+  // Stop if a team that will get questions has nobody in it yet.
+  ensure(peopleCheck(p, questionNeeds([...new Set(missing.map(routeTeam))])))
   const number = roundsOf(s0.rounds, pid, purpose).length + 1
   return runJob({
     agent: 'qa_questions',
@@ -319,10 +326,7 @@ export async function myQuestions() {
         const p = projectOf(s, q.projectId)
         if (p.status !== 'active') return false
         const direct = q.assigneeIds.includes(user.id)
-        const covering = q.assigneeIds.some((id) => {
-          const m = memberOf(p, id)
-          return m?.isHead && actAsHead(p, m.team, user.id, t).actingFor === id
-        })
+        const covering = q.assigneeIds.some((id) => membershipsOf(p, id).some((m) => m.isHead && actAsHead(p, m.team, user.id, t).actingFor === id))
         return direct || covering
       })
       .map((q) => ({ ...q, open: openRounds.has(q.roundId) && !q.answeredAt, projectName: projectOf(s, q.projectId).name, teamLabel: TEAM_LABEL[q.team], answeredByName: q.answeredBy ? nameOf(s, q.answeredBy) : undefined, roundLabel: ROUND_LABEL[s.rounds.find((r) => r.id === q.roundId)?.purpose ?? 'intake'] }))
@@ -341,10 +345,7 @@ export async function answerQuestion(qid: ID, answer: { text: string; unknown: b
     if (round?.status !== 'open' || q.answeredAt) fail('This question is already closed.')
     let actingFor: ID | undefined
     if (!q.assigneeIds.includes(user.id)) {
-      const covered = q.assigneeIds.find((id) => {
-        const m = memberOf(p, id)
-        return m?.isHead && actAsHead(p, m.team, user.id, t).actingFor === id
-      })
+      const covered = q.assigneeIds.find((id) => membershipsOf(p, id).some((m) => m.isHead && actAsHead(p, m.team, user.id, t).actingFor === id))
       if (!covered) throw new ApiError(403, 'This question was routed to someone else.')
       actingFor = covered
     }
@@ -422,6 +423,7 @@ export async function requestConfirmation(pid: ID) {
     const missing = missingFor(p.facts, s.factCatalog, 'intake')
     if (missing.length && !p.intake.gapsLogged) fail(`${missing.length} fields are still missing. Ask again, or choose “Proceed with gaps logged”.`)
     if (s.rounds.some((r) => r.projectId === pid && r.purpose === 'intake' && r.status === 'open')) fail('Close the open Q/A round first.')
+    ensure(peopleCheck(p, FACT_CONFIRMATION_NEEDS))
     p.intake.confirmRequestedAt = at
     const sh = headOf(p, 'STAKEHOLDER')!
     notify(s, { to: [sh.userId], type: 'factsheet', title: 'Please confirm the Fact Sheet', body: `${p.name}: the Fact Sheet is ready. Confirm it, or comment on what is wrong.`, link: `/projects/${pid}/intake?tab=facts`, projectId: pid, at })

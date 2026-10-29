@@ -8,6 +8,7 @@ import { fmtDateTime } from '../../components/format'
 import { OpenQuestion } from '../../components/OpenQuestion'
 import { Badge, Button, Card, Checkbox, EmptyState, Guarded, Note, Textarea } from '../../components/ui'
 import type { IntakeData } from './IntakePage'
+import { MissingPeople } from '../../components/People'
 
 type Q = IntakeData['questions'][number]
 
@@ -138,6 +139,8 @@ export function QuestionsTab({ data }: { data: IntakeData }) {
                   </div>
                 )}
               </div>
+            ) : data.missingForQuestions.length && data.intakeMissing > 0 && p.intake.analysed && !openIntake ? (
+              <MissingPeople pid={p.id} missing={data.missingForQuestions} canAdd={data.perms.canAddPeople} before="Before the questions can be sent" />
             ) : (
               <Guarded variant="primary" check={data.intakeMissing === 0 && p.intake.analysed ? { ok: false, reason: 'Every required intake field has a value.' } : startCheck} onClick={() => start.run(p.id, 'intake')}>
                 <Play className="h-4 w-4" /> {data.intakeRoundCount ? 'Check again and ask the next round' : 'Start the first round'}

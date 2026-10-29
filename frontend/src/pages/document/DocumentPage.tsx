@@ -14,7 +14,7 @@ import { AiBadge, AiNote } from '../../components/ai'
 import { DiscussButton } from '../../components/chat/ChatThread'
 import { openChat } from '../../components/chat/dock'
 import { DocStatusChip } from '../../components/status'
-import { exportDocx, printUrl, safeName } from '../../components/exports'
+import { downloadItems } from '../../components/exports'
 import { ago } from '../../components/format'
 import { Button, Checkbox, ErrorBox, Field, Guarded, Input, Loading, MenuButton, Modal, Note, Segmented, useTab } from '../../components/ui'
 import { useToast } from '../../components/toast'
@@ -22,6 +22,7 @@ import { Reader, type Selection } from './Reader'
 import { DocEditor } from './Editor'
 import { AnnotateModal, CommentsPanel } from './CommentsPanel'
 import { CompareTab, HistoryTab, SummariesTab, TraceTab } from './DocTabs'
+import { MissingPeople } from '../../components/People'
 
 type DocData = Awaited<ReturnType<typeof api.documents.getDocument>>
 
@@ -247,8 +248,7 @@ export function DocumentPage() {
           <MenuButton
             label={<MoreHorizontal className="h-4 w-4" />}
             items={[
-              { label: 'Download PDF', href: printUrl(current.id) },
-              { label: 'Download Word (.docx)', onClick: () => exportDocx({ project: data.project.name, title: data.label, versionLabel: `Version ${current.number}`, status: data.status.label, sections: current.sections, fileName: `${safeName(data.project.name)}-${safeName(data.label)}-v${current.number}.docx` }) },
+              ...downloadItems(data, current),
               'divider',
               { label: 'Open the discussion in Messages', onClick: () => navigate(`/messages/${data.chatId}`), hidden: !data.chatId },
               { label: 'Version history', onClick: () => setTab('history') },
@@ -317,10 +317,14 @@ export function DocumentPage() {
             The AI proposed {pendingUpdates} Fact Sheet update{pendingUpdates > 1 ? 's' : ''} from edits to this document.
           </Notice>
         )}
-        {sendHint && (
-          <Notice tone="gray" icon={<Info />}>
-            Before sending for approval: {sendHint}
-          </Notice>
+        {sendHint && data.missing.length > 0 && !current.frozen ? (
+          <MissingPeople pid={pid} missing={data.missing} canAdd={data.canAddPeople} before="Before it can be sent for approval" />
+        ) : (
+          sendHint && (
+            <Notice tone="gray" icon={<Info />}>
+              Before sending for approval: {sendHint}
+            </Notice>
+          )
         )}
       </div>
 

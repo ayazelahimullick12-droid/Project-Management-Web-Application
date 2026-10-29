@@ -9,6 +9,7 @@
  */
 import type { ApprovalChain, ApprovalStep, ApproverRole, DocType, ID, Project, Team } from '../types'
 import { actAsHead, headOf, type Check, yes, no } from './permissions'
+import { peopleCheck, type Need } from './people'
 
 export class RuleError extends Error {}
 
@@ -20,8 +21,8 @@ export interface ChainConfig {
 }
 
 export const CHAIN_CONFIG: Record<DocType, ChainConfig> = {
-  PROPOSAL: { steps: ['PM', 'TECH_HEAD', 'STAKEHOLDER_HEAD'], signs: false, sender: 'PM', comments: true },
-  CHARTER: { steps: ['PM', 'TECH_HEAD', 'STAKEHOLDER_HEAD', 'SPONSOR_HEAD'], signs: true, sender: 'PM', comments: true },
+  // Proposal & Charter: one round for both parts; the sponsor head signs the package.
+  PROPOSAL: { steps: ['PM', 'TECH_HEAD', 'STAKEHOLDER_HEAD', 'SPONSOR_HEAD'], signs: true, sender: 'PM', comments: true },
   BRD: { steps: ['PM', 'TECH_HEAD', 'STAKEHOLDER_HEAD', 'SPONSOR_HEAD'], signs: true, sender: 'PM', comments: true },
   SRS: { steps: ['PM', 'TECH_HEAD', 'STAKEHOLDER_HEAD', 'SPONSOR_HEAD'], signs: true, sender: 'PM', comments: true },
   SQA_SIGNOFF: { steps: ['TECH_HEAD'], signs: false, sender: 'SQA', comments: false },
@@ -214,6 +215,7 @@ export function sendCheck(args: {
 }): Check {
   const cfg = CHAIN_CONFIG[args.docType]
   if (args.project.status === 'archived') return no('This project is archived, so it is read-only.')
+  const people = peopleCheck(args.project, chainNeeds(args.docType))
   if (cfg.sender === 'PM') {
     const pm = actAsHead(args.project, 'PM', args.userId, args.now)
     if (!pm.ok) return no('Only the Project Manager can send a version for approval.')
@@ -225,5 +227,14 @@ export function sendCheck(args: {
   if (args.scopeUndecided) return no('The PM must first decide whether the flagged edit is a normal edit or a scope change.')
   if (!args.previousComplete.ok) return args.previousComplete
   if (args.exitCriteria && !args.exitCriteria.ok) return args.exitCriteria
+  // The whole chain is checked before it starts, so it never stalls halfway for a missing head.
+  if (!people.ok) return people
   return yes
 }
+
+/** Who must exist before a document's approval chain can start: every head in the chain. */
+export function chainNeeds(docType: DocType): Need[] {
+  return CHAIN_CONFIG[docType].steps.map((role) => ROLE_NEED[role])
+}
+
+const ROLE_NEED: Record<ApproverRole, Need> = { PM: 'PM', TECH_HEAD: 'TECH_HEAD', STAKEHOLDER_HEAD: 'STAKEHOLDER_HEAD', SPONSOR_HEAD: 'SPONSOR_HEAD' }

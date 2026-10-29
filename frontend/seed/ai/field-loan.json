@@ -21,7 +21,7 @@
         "why": ["Both are tablet apps for field officers", "Both must work offline in villages with weak mobile data", "Same users: field officers and branch managers", "Same divisions (Dhaka, Mymensingh)"],
         "sections": [
           { "docType": "SRS", "sectionKey": "non_functional", "title": "Non-functional requirements", "excerpt": "The app works fully offline and syncs to the Collection Server every 30 minutes when a connection is available." },
-          { "docType": "CHARTER", "sectionKey": "risks", "title": "Risks, assumptions and constraints", "excerpt": "Field officers may resist moving from paper; run paper and app side by side for two weeks at 10 pilot branches." },
+          { "docType": "PROPOSAL", "sectionKey": "charter_risks", "title": "Risks, assumptions and constraints", "excerpt": "Field officers may resist moving from paper; run paper and app side by side for two weeks at 10 pilot branches." },
           { "docType": "SRS", "sectionKey": "hosting", "title": "Hosting and devices", "excerpt": "Tablets are managed with TabSecure MDM so the app can be updated remotely and wiped if lost." }
         ]
       },
@@ -30,7 +30,7 @@
         "score": 0.71,
         "why": ["Same users (field officers and branch managers)", "Uses loan application and approval data", "Similar objective: faster loan processing"],
         "sections": [
-          { "docType": "CHARTER", "sectionKey": "objectives", "title": "Objectives and success criteria", "excerpt": "Cut loan processing time from 7 working days to 2 working days for at least 90% of applications." },
+          { "docType": "PROPOSAL", "sectionKey": "charter_objectives", "title": "Objectives and success criteria", "excerpt": "Cut loan processing time from 7 working days to 2 working days for at least 90% of applications." },
           { "docType": "BRD", "sectionKey": "reports", "title": "Reporting needs", "excerpt": "Branch managers need a daily list of pending loan applications and their age." }
         ]
       }
@@ -45,13 +45,13 @@
       {
         "kind": "risk", "factKey": "risks", "factLabel": "Key risks",
         "text": "Field officers may resist moving from paper. Run paper and the app side by side for two weeks at 10 pilot branches, with a field champion in each branch.",
-        "sourceProjectId": "p-collect", "sourceDocType": "CHARTER", "sectionTitle": "Risks, assumptions and constraints",
+        "sourceProjectId": "p-collect", "sourceDocType": "PROPOSAL", "sectionTitle": "Risks, assumptions and constraints",
         "highlights": ["two weeks", "10 pilot branches"]
       },
       {
         "kind": "objective", "factKey": "success_criteria", "factLabel": "Success criteria",
         "text": "Cut loan processing time from 7 working days to 2 working days for at least 90% of applications in the pilot branches.",
-        "sourceProjectId": "p-dash", "sourceDocType": "CHARTER", "sectionTitle": "Objectives and success criteria",
+        "sourceProjectId": "p-dash", "sourceDocType": "PROPOSAL", "sectionTitle": "Objectives and success criteria",
         "highlights": ["7 working days", "2 working days", "90%"]
       },
       {
@@ -72,7 +72,7 @@
     "PROPOSAL:objectives": "1. **Faster loans:** bring the time from application to disbursement down from about 9 working days, meeting the success criteria below.\n2. **Complete applications:** the app checks every required field before an application can be submitted.\n3. **Same-day approval:** branch managers approve in the app on the day the application is entered.\n\n**Success criteria:** {{fact:success_criteria}}"
   },
   "requirements": {
-    "CHARTER": [
+    "PROPOSAL": [
       ["OBJ-1", "Reduce loan processing time in the pilot branches."],
       ["OBJ-2", "Make every submitted loan application complete and checked."],
       ["OBJ-3", "Let branch managers approve applications on the same day."]

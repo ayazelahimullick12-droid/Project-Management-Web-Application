@@ -12,7 +12,7 @@ import type {
   Execution, Fact, FactDef, Member, Message, Project, Requirement, Section, Settings, Team, Template, TestCase, TestRun, User,
 } from '../types'
 import { CHAIN_CONFIG, ROLE_TEAM } from '../rules/approval'
-import { DOC_LABEL } from '../rules/pipeline'
+import { CHARTER_PREFIX, DOC_LABEL } from '../rules/pipeline'
 import { contextAround, markdownToPlain, normalize } from '../rules/text'
 import { buildReportSections, reportStats } from '../rules/signoffReport'
 import { audit, notify } from '../api/effects'
@@ -94,7 +94,7 @@ export async function buildSeedState(): Promise<DemoState> {
       createdAt: T(raw.createdAt),
       members: membersFrom(raw.team),
       away: (raw.away ?? []).map((a: Raw) => ({ ...a, from: T(a.from), to: T(a.to) })),
-      templateVersions: { PROPOSAL: 1, CHARTER: 1, BRD: 1, SRS: 1 },
+      templateVersions: { PROPOSAL: 1, BRD: 1, SRS: 1 },
       facts: (raw.facts ?? []).map((f: Raw) => factFrom(f, catalog)),
       intake: { ...raw.intake },
       finished: raw.finished,
@@ -133,8 +133,11 @@ export async function buildSeedState(): Promise<DemoState> {
       s.docs.push(doc)
       s.chats.push({ id: `${doc.id}-chat`, projectId: p.id, kind: 'document', docId: doc.id, title: `${DOC_LABEL[type]} chat` })
       const template = templates.find((t) => t.docType === type)
-      const file = Object.entries(docFiles).find(([path]) => path.endsWith(`/${p.slug}/${d.file}`))?.[1] ?? ''
-      let sections: Section[] = parseSections(file).map((sec) => ({
+      // "files": the Proposal & Charter has two files; the second one's section keys get the charter_ prefix.
+      const fileNames: string[] = d.files ?? [d.file]
+      const fileText = (name: string) => Object.entries(docFiles).find(([path]) => path.endsWith(`/${p.slug}/${name}`))?.[1] ?? ''
+      const raws = fileNames.flatMap((name, i) => parseSections(fileText(name)).map((sec) => ({ ...sec, key: i > 0 ? CHARTER_PREFIX + sec.key : sec.key })))
+      let sections: Section[] = raws.map((sec) => ({
         id: `${doc.id}:${sec.key}`, key: sec.key, title: sec.title, content: sec.content,
         factKeys: template?.sections.find((t) => t.key === sec.key)?.factKeys ?? [],
       }))

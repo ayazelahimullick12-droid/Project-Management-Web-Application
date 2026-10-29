@@ -1,6 +1,9 @@
 /**
  * Simple view · one document. Reading comes first:
  *   status sentence → your next step (if any) → at most one notice → what changed → the text.
+ * The Proposal & Charter shows three tabs: Proposal · Charter · Slides (made automatically).
+ * If the approval chain needs people who are not on the project yet, the notice says who and
+ * offers "Add …" (for the Owner and the PM).
  * Comments open on request (select text to comment). Approve / Ask for changes / Send sit in the
  * bar at the bottom. Editing, history, compare, summaries and downloads are under More: they open
  * the full document tools on the same page address plus /tools.
@@ -14,7 +17,10 @@ import { api } from '../api'
 import { useAction, useApi, useNow, useSessionUserId } from '../api/hooks'
 import { ApprovalActions } from '../components/ApprovalPanel'
 import { Dropdown } from '../components/Dropdown'
-import { exportDocx, printUrl, safeName } from '../components/exports'
+import { downloadItems } from '../components/exports'
+import { MissingPeople } from '../components/People'
+import { sectionPart } from '../rules/pipeline'
+import { SummariesTab } from '../pages/document/DocTabs'
 import { ago } from '../components/format'
 import { Button, ErrorBox, LinkButton, Loading } from '../components/ui'
 import { Reader, type Selection } from '../pages/document/Reader'
@@ -72,6 +78,7 @@ export function SimpleDocumentPage() {
   const [showComments, setShowComments] = useState(false)
   const [annotating, setAnnotating] = useState<{ kind: 'comment' | 'suggest'; sel: Selection | null } | null>(null)
   const [active, setActive] = useState<string | undefined>()
+  const [tab, setTab] = useState<'proposal' | 'charter' | 'slides'>('proposal')
   const { data, isLoading, error } = useApi(['doc', pid, type, uid], () => api.documents.getDocument(pid, type as DocType))
   const generate = useAction(api.documents.generate, { success: 'The AI is writing it section by section. Progress is shown at the top of the page.' })
   const decideScope = useAction(api.documents.decideScope, { success: 'Decision recorded.' })
@@ -124,7 +131,9 @@ export function SimpleDocumentPage() {
 
   // At most one notice: the most important one.
   let notice: { tone: Tone; text: ReactNode; actions?: ReactNode } | undefined
-  if (doc.outOfSync && data.perms.pm) notice = { tone: 'problem', text: `This document needs updating: ${doc.outOfSync.cause}.`, actions: <LinkButton to={tools} size="lg">Update it</LinkButton> }
+  const needPeople = data.perms.pm && !chain && !current.frozen && data.missing.length > 0
+  if (needPeople) notice = undefined // shown below as "Before it can be sent for approval, add …"
+  else if (doc.outOfSync && data.perms.pm) notice = { tone: 'problem', text: `This document needs updating: ${doc.outOfSync.cause}.`, actions: <LinkButton to={tools} size="lg">Update it</LinkButton> }
   else if (current.scopeCheck?.flagged && !current.scopeCheck.decision && data.perms.decideScope)
     notice = {
       tone: 'problem',
@@ -144,7 +153,11 @@ export function SimpleDocumentPage() {
   // What changed since the version people last saw.
   const prevNo = lastReviewed ?? (current.number > 1 ? current.number - 1 : undefined)
   const prev = data.versions.find((v) => v.number === prevNo)
-  const changed = prev ? current.sections.filter((s) => prev.sections.find((x) => x.key === s.key)?.content !== s.content).map((s) => s.title) : []
+  const isPackage = current.sections.some((x) => sectionPart(x.key) === 'charter')
+  const changed = prev
+    ? current.sections.filter((x) => prev.sections.find((y) => y.key === x.key)?.content !== x.content).map((x) => (isPackage ? `${sectionPart(x.key) === 'charter' ? 'Charter' : 'Proposal'}: ${x.title}` : x.title))
+    : []
+  const shown = isPackage && tab !== 'slides' ? current.sections.filter((x) => sectionPart(x.key) === tab) : current.sections
 
   const openComments = data.comments.filter((c) => c.status === 'open' || c.status === 'pending_check').length
   const highlights = [
@@ -195,6 +208,8 @@ export function SimpleDocumentPage() {
       {canSend && <NextStep>It is ready. Send it for approval with the button at the bottom of the screen.</NextStep>}
       {minorReady && <NextStep>The requested changes were made. If it was only a small fix, the approvals can continue from where they stopped (button at the bottom).</NextStep>}
 
+      {needPeople && <MissingPeople pid={pid} missing={data.missing} canAdd={data.canAddPeople} before="Before it can be sent for approval" large />}
+
       {notice && (
         <div className="rounded-2xl bg-surface p-5 ring-1 ring-line">
           <StatusLineInner tone={notice.tone}>{notice.text}</StatusLineInner>
@@ -214,6 +229,19 @@ export function SimpleDocumentPage() {
       )}
 
       <div>
+        {isPackage && (
+          <div role="tablist" aria-label="Part" className="mb-4 inline-flex rounded-xl bg-ink/[0.06] p-1">
+            {(['proposal', 'charter', 'slides'] as const).map((t) => (
+              <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={clsx('rounded-lg px-5 py-2 text-base font-medium transition', tab === t ? 'bg-surface text-ink shadow-sm dark:bg-ink/15' : 'text-muted hover:text-ink')}>
+                {t === 'proposal' ? 'Proposal' : t === 'charter' ? 'Charter' : 'Slides'}
+              </button>
+            ))}
+          </div>
+        )}
+        {tab === 'slides' && isPackage ? (
+          <SummariesTab data={data} />
+        ) : (
+        <>
         <div className="mb-3 flex flex-wrap items-center gap-3">
           <span className="text-base text-muted">
             Version {current.number} · {current.authorId ? 'saved' : 'written by the AI'} {ago(current.createdAt, now)}
@@ -228,7 +256,7 @@ export function SimpleDocumentPage() {
         <div className={clsx('grid gap-6', showComments && 'lg:grid-cols-[minmax(0,1fr)_360px]')}>
           <article className="min-w-0 rounded-2xl bg-surface px-6 py-8 text-[1.0625rem] ring-1 ring-line md:px-12 [&_.md]:text-[1.0625rem]">
             <Reader
-              sections={current.sections}
+              sections={shown}
               regenerated={current.regeneratedSectionIds}
               highlights={highlights}
               canAnnotate={data.perms.comment.ok}
@@ -247,6 +275,8 @@ export function SimpleDocumentPage() {
             </aside>
           )}
         </div>
+        </>
+        )}
       </div>
 
       <ActionBar
@@ -255,10 +285,9 @@ export function SimpleDocumentPage() {
             items={[
               { label: data.perms.pmTeam ? 'Edit, history and other tools' : 'History and other tools', to: tools },
               { label: 'Compare versions', to: `${tools}?tab=compare` },
-              { label: 'Summary and slides', to: `${tools}?tab=summaries`, hidden: data.type.endsWith('SIGNOFF') },
+              { label: 'Summary and slides', to: `${tools}?tab=summaries`, hidden: data.type.endsWith('SIGNOFF') || isPackage },
               { label: 'Requirements links (traceability)', to: `${tools}?tab=trace`, hidden: data.type !== 'SRS' },
-              { label: 'Download PDF', href: printUrl(current.id) },
-              { label: 'Download Word (.docx)', onClick: () => exportDocx({ project: data.project.name, title: data.label, versionLabel: `Version ${current.number}`, status: data.status.label, sections: current.sections, fileName: `${safeName(data.project.name)}-${safeName(data.label)}-v${current.number}.docx` }) },
+              ...downloadItems(data, current),
               { label: 'Discuss in the document chat', to: `/messages/${data.chatId}`, hidden: !data.chatId },
             ]}
           />

@@ -10,7 +10,8 @@ import { newId } from '../demo/ids'
 import { runJob } from '../demo/jobs'
 import { draftTestCase, signoffSummary, similarDefects, writeDefect as aiWriteDefect } from '../demo/ai/agents'
 import { CHAIN_CONFIG, ROLE_LABEL } from '../rules/approval'
-import { actAsHead, can, headOf, headRecipient, inTeam, isDeveloper, isSqa, memberOf, type Check } from '../rules/permissions'
+import { missingPeople, testingNeeds } from '../rules/people'
+import { actAsHead, can, headOf, headRecipient, inTeam, isDeveloper, isSqa, type Check } from '../rules/permissions'
 import { activeChain, chainsOf, DOC_LABEL, docStatus, previousComplete } from '../rules/pipeline'
 import { buildReportSections, reportStats } from '../rules/signoffReport'
 import { allowedTransitions, buildAvailable, canBeAssigned, checkTransition, coverage, exitCriteria, knownIssues, latestResults, markReadyForRetest, releaseCheck, requirementsFor, transitionFor, UNRESOLVED } from '../rules/testing'
@@ -31,8 +32,7 @@ function canWriteTests(p: Project, userId: ID, stage: TestStage): Check {
 function canRaise(p: Project, userId: ID, stage: TestStage): Check {
   if (p.status === 'archived') return { ok: false, reason: 'This project is archived, so it is read-only.' }
   if (stage === 'SQA') return isSqa(p, userId) ? { ok: true } : { ok: false, reason: 'Only SQA testers raise SQA defects.' }
-  const team = memberOf(p, userId)?.team
-  return team === 'STAKEHOLDER' || team === 'PM' ? { ok: true } : { ok: false, reason: 'UAT defects are raised by stakeholders and the PM team.' }
+  return inTeam(p, userId, 'STAKEHOLDER') || inTeam(p, userId, 'PM') ? { ok: true } : { ok: false, reason: 'UAT defects are raised by stakeholders and the PM team.' }
 }
 
 function nextKey(s: DemoState, pid: ID, prefix: string, list: { key: string; projectId: ID }[]): string {
@@ -96,7 +96,10 @@ export async function getTesting(pid: ID, stage: TestStage) {
       members: p.members.map((m) => ({ ...m, name: nameOf(s, m.userId) })),
       severities: SEVERITIES,
       blocking,
+      // Who testing needs (testers, developers, heads); shown with "Add" until they are on the team.
+      missing: missingPeople(p, testingNeeds(stage)),
       perms: {
+        canAddPeople: can.addPeople(p, user.id, t).ok,
         writeTests: canWriteTests(p, user.id, stage),
         confirmList: actAsHead(p, headTeam, user.id, t),
         registerBuild: p.status === 'active' && (isDeveloper(p, user.id) || actAsHead(p, 'TECH', user.id, t).ok),
@@ -323,8 +326,7 @@ export async function createRun(pid: ID, stage: TestStage, input: { buildId: ID;
     if (!b || !buildAvailable(b, stage)) fail(stage === 'UAT' ? 'This build has not been released to UAT yet.' : 'Choose a build.')
     if (!input.assignments.length) fail('Choose at least one test case.')
     for (const a of input.assignments) {
-      const team = memberOf(p, a.userId)
-      const ok = stage === 'SQA' ? !!team?.isSqa : team?.team === 'STAKEHOLDER' || team?.team === 'PM'
+      const ok = stage === 'SQA' ? isSqa(p, a.userId) : inTeam(p, a.userId, 'STAKEHOLDER') || inTeam(p, a.userId, 'PM')
       if (!ok) fail(`${nameOf(s, a.userId)} cannot run ${stage} tests.`)
     }
     const run = { id: newId('run'), projectId: pid, stage, buildId: b.id, name: input.name.trim() || `${stage} run on build ${b.version}`, createdBy: user.id, createdAt: at }
@@ -383,15 +385,18 @@ function createDefectIn(s: DemoState, p: Project, stage: TestStage, input: NewDe
   if (!input.title.trim()) fail('Give the defect a title.')
   const build = s.builds.find((b) => b.id === input.buildId) ?? s.builds.filter((b) => b.projectId === p.id && buildAvailable(b, stage)).at(-1)
   if (!build) fail('There is no build to test yet.')
-  const m = memberOf(p, userId)!
   const tc = s.testCases.find((x) => x.id === input.testCaseId)
+  const reporterTeam = stage === 'SQA' ? 'SQA' : inTeam(p, userId, 'STAKEHOLDER') ? 'STAKEHOLDER' : 'PM'
   const d: Defect = {
     id: newId('def'), projectId: p.id, stage, key: nextKey(s, p.id, stage, s.defects), title: input.title.trim(), steps: input.steps, expected: input.expected, actual: input.actual, severity: input.severity, status: 'New',
-    reporterId: userId, reporterTeam: m.isSqa ? 'SQA' : m.team, testCaseId: input.testCaseId, requirementId: input.requirementId ?? tc?.requirementIds[0], foundInBuildId: build.id,
+    reporterId: userId, reporterTeam, testCaseId: input.testCaseId, requirementId: input.requirementId ?? tc?.requirementIds[0], foundInBuildId: build.id,
     reopenCount: 0, ai: !!input.ai, watchers: [userId], files: input.files ?? [], comments: [], history: [{ by: userId, at, text: `Raised by ${nameOf(s, userId)} in build ${build.version} (${input.severity})${input.ai ? ' — written with the AI defect writer' : ''}` }], createdAt: at, updatedAt: at,
   }
   s.defects.push(d)
-  const triagers = [headOf(p, 'PM')!.userId, headOf(p, 'TECH')!.userId].map((id) => headRecipient(p, id, t))
+  const triagers = (['PM', 'TECH'] as const).flatMap((team) => {
+    const head = headOf(p, team)
+    return head ? [headRecipient(p, head.userId, t, team)] : []
+  })
   notify(s, { to: triagers, type: 'defect', title: `New defect to triage: ${d.key}`, body: `${p.name}: ${d.title} (${d.severity}).`, link: defectLink(d), projectId: p.id, at, exclude: userId })
   audit(s, { projectId: p.id, actorId: userId, action: 'Defect raised', details: `${d.key} (${d.severity}): ${d.title}`, at })
   return d.id

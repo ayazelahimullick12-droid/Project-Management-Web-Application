@@ -220,8 +220,12 @@ export interface RagSuggestion {
 
 // ─── Templates and documents ────────────────────────────────────────────
 
-export type DocType = 'PROPOSAL' | 'CHARTER' | 'BRD' | 'SRS' | 'SQA_SIGNOFF' | 'UAT_SIGNOFF'
-export const MAIN_DOCS: DocType[] = ['PROPOSAL', 'CHARTER', 'BRD', 'SRS']
+/**
+ * PROPOSAL is the "Proposal & Charter" package: one document with two parts, written and approved
+ * together (the Charter's sections have keys starting with "charter_", see rules/pipeline.ts).
+ */
+export type DocType = 'PROPOSAL' | 'BRD' | 'SRS' | 'SQA_SIGNOFF' | 'UAT_SIGNOFF'
+export const MAIN_DOCS: DocType[] = ['PROPOSAL', 'BRD', 'SRS']
 
 export interface TemplateSection {
   key: string
@@ -587,7 +591,7 @@ export type TestResult = 'not_run' | 'pass' | 'fail' | 'blocked'
 export interface Requirement {
   id: string // e.g. OBJ-1, BR-03, SR-07
   projectId: ID
-  docType: 'CHARTER' | 'BRD' | 'SRS'
+  docType: 'PROPOSAL' | 'BRD' | 'SRS' // objectives (OBJ-) come from the Charter part of the Proposal & Charter
   text: string
   parentId?: string // SRS → BRD, BRD → Charter objective
   notTestable?: { reason: string; by: ID; at: string }

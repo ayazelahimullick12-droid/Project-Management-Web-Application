@@ -3,17 +3,19 @@
  *
  * Spec: SPEC.md "Document pipeline" (order, what each document needs first, restarting the
  * pipeline, Out of sync) and SPEC_SQA_UAT.md "The two stages".
+ *
+ * The Proposal and the Charter are written and approved in ONE step, as one package
+ * ("Proposal & Charter", doc type PROPOSAL). The slide deck is made from it automatically.
  */
 import type { ApprovalChain, Doc, DocType, DocVersion, FactSheetVersion, ID, Project, QARound } from '../types'
 import { CHAIN_CONFIG, ROLE_LABEL, currentStep } from './approval'
 import { no, yes, type Check } from './permissions'
 
-export type Stage = 'INTAKE' | 'PROPOSAL' | 'CHARTER' | 'BRD' | 'SRS' | 'SQA' | 'UAT' | 'COMPLETE'
-export const STAGES: Stage[] = ['INTAKE', 'PROPOSAL', 'CHARTER', 'BRD', 'SRS', 'SQA', 'UAT', 'COMPLETE']
+export type Stage = 'INTAKE' | 'PROPOSAL' | 'BRD' | 'SRS' | 'SQA' | 'UAT' | 'COMPLETE'
+export const STAGES: Stage[] = ['INTAKE', 'PROPOSAL', 'BRD', 'SRS', 'SQA', 'UAT', 'COMPLETE']
 export const STAGE_LABEL: Record<Stage, string> = {
   INTAKE: 'Intake',
-  PROPOSAL: 'Proposal',
-  CHARTER: 'Charter',
+  PROPOSAL: 'Proposal & Charter',
   BRD: 'BRD',
   SRS: 'SRS',
   SQA: 'SQA',
@@ -22,11 +24,10 @@ export const STAGE_LABEL: Record<Stage, string> = {
 }
 
 /** Every step of the pipeline in order. Sign-offs count as later documents (SPEC_SQA_UAT.md). */
-export const PIPELINE: DocType[] = ['PROPOSAL', 'CHARTER', 'BRD', 'SRS', 'SQA_SIGNOFF', 'UAT_SIGNOFF']
+export const PIPELINE: DocType[] = ['PROPOSAL', 'BRD', 'SRS', 'SQA_SIGNOFF', 'UAT_SIGNOFF']
 
 export const DOC_LABEL: Record<DocType, string> = {
-  PROPOSAL: 'Project Proposal',
-  CHARTER: 'Project Charter',
+  PROPOSAL: 'Proposal & Charter',
   BRD: 'BRD',
   SRS: 'SRS',
   SQA_SIGNOFF: 'SQA sign-off',
@@ -34,12 +35,21 @@ export const DOC_LABEL: Record<DocType, string> = {
 }
 
 export const DOC_SHORT: Record<DocType, string> = {
-  PROPOSAL: 'Proposal',
-  CHARTER: 'Charter',
+  PROPOSAL: 'Proposal & Charter',
   BRD: 'BRD',
   SRS: 'SRS',
   SQA_SIGNOFF: 'SQA sign-off',
   UAT_SIGNOFF: 'UAT sign-off',
+}
+
+/** Sections of the Charter part of the Proposal & Charter have keys starting with this. */
+export const CHARTER_PREFIX = 'charter_'
+export type DocPart = 'proposal' | 'charter'
+export const PART_LABEL: Record<DocPart, string> = { proposal: 'Project Proposal', charter: 'Project Charter' }
+
+/** Which part of the Proposal & Charter a section belongs to. */
+export function sectionPart(key: string): DocPart {
+  return key.startsWith(CHARTER_PREFIX) ? 'charter' : 'proposal'
 }
 
 /** Everything about one project the pipeline rules need. */
@@ -115,7 +125,7 @@ export function canGenerate(ctx: PipelineCtx, type: DocType): Check {
 export function projectStage(ctx: PipelineCtx): Stage {
   if (ctx.project.finished) return 'COMPLETE'
   if (!factSheetConfirmed(ctx)) return 'INTAKE'
-  const map: Record<DocType, Stage> = { PROPOSAL: 'PROPOSAL', CHARTER: 'CHARTER', BRD: 'BRD', SRS: 'SRS', SQA_SIGNOFF: 'SQA', UAT_SIGNOFF: 'UAT' }
+  const map: Record<DocType, Stage> = { PROPOSAL: 'PROPOSAL', BRD: 'BRD', SRS: 'SRS', SQA_SIGNOFF: 'SQA', UAT_SIGNOFF: 'UAT' }
   for (const t of PIPELINE) if (!isComplete(ctx, t)) return map[t]
   return 'COMPLETE'
 }

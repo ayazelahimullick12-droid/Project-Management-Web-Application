@@ -1,6 +1,8 @@
 /**
  * Editing the four teams: members, one head per team, one deputy per head, SQA tags.
- * Used by the new project wizard. One person can be in only one team (SPEC.md "Roles").
+ * Used when starting a project. A person may be in several teams (the page warns about it);
+ * empty teams are fine, because people can be added when a step needs them.
+ * starterId: the person starting the project, who is always the PM (shown, not editable).
  */
 import { Crown, Plus, ShieldCheck, Trash2, UserCheck } from 'lucide-react'
 import { useState } from 'react'
@@ -9,25 +11,33 @@ import { TEAMS } from '../types'
 import { HEAD_LABEL, TEAM_LABEL } from '../rules/permissions'
 import { Avatar, Badge, Button, Select } from '../components/ui'
 
-export function TeamEditor({ members, onChange, users, lockPm }: { members: Member[]; onChange: (m: Member[]) => void; users: User[]; lockPm?: boolean }) {
+export function TeamEditor({ members, onChange, users, lockPm, starterId }: { members: Member[]; onChange: (m: Member[]) => void; users: User[]; lockPm?: boolean; starterId?: string }) {
   const [adding, setAdding] = useState<Record<Team, string>>({ PM: '', TECH: '', STAKEHOLDER: '', SPONSOR: '' })
   const name = (id: string) => users.find((u) => u.id === id)?.name ?? id
   const set = (fn: (m: Member[]) => Member[]) => onChange(fn(structuredClone(members)))
-  const inTeam = (id: string) => members.find((m) => m.userId === id)
+  const teamsOf = (id: string) => members.filter((m) => m.userId === id).map((m) => m.team)
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
       {TEAMS.map((team) => {
         const list = members.filter((m) => m.team === team)
+        const starterHere = team === 'PM' && !!starterId
         return (
           <div key={team} className="rounded-xl bg-surface p-3 ring-1 ring-line">
             <div className="mb-2 flex items-center justify-between">
               <div className="text-sm font-semibold">{TEAM_LABEL[team]}</div>
-              {!list.some((m) => m.isHead) && <Badge tone="red">needs a head</Badge>}
+              {!list.some((m) => m.isHead) && !starterHere && <Badge>no head yet</Badge>}
             </div>
             <ul className="mb-2 space-y-1">
+              {starterHere && (
+                <li className="flex items-center gap-2 rounded-md px-1 py-1">
+                  <Avatar name={name(starterId!)} id={starterId} size={24} />
+                  <span className="min-w-0 flex-1 truncate text-sm">{name(starterId!)} (you)</span>
+                  <Badge tone="magenta"><Crown className="h-3 w-3" /> {HEAD_LABEL.PM}</Badge>
+                </li>
+              )}
               {list.map((m) => (
-                <li key={m.userId} className="flex items-center gap-2 rounded-md px-1 py-1 hover:bg-canvas">
+                <li key={`${m.userId}-${team}`} className="flex items-center gap-2 rounded-md px-1 py-1 hover:bg-canvas">
                   <Avatar name={name(m.userId)} id={m.userId} size={24} />
                   <span className="min-w-0 flex-1 truncate text-sm">{name(m.userId)}</span>
                   {m.isHead && <Badge tone="magenta"><Crown className="h-3 w-3" /> {HEAD_LABEL[team]}</Badge>}
@@ -44,12 +54,12 @@ export function TeamEditor({ members, onChange, users, lockPm }: { members: Memb
                     </button>
                   )}
                   {team === 'TECH' && !m.isHead && (
-                    <button title="Toggle SQA tag" className="rounded p-1 text-muted hover:text-violet-700" onClick={() => set((ms) => ms.map((x) => (x.userId === m.userId ? { ...x, isSqa: !x.isSqa } : x)))}>
+                    <button title="Toggle SQA tag" className="rounded p-1 text-muted hover:text-violet-700" onClick={() => set((ms) => ms.map((x) => (x.userId === m.userId && x.team === 'TECH' ? { ...x, isSqa: !x.isSqa } : x)))}>
                       <ShieldCheck className="h-3.5 w-3.5" />
                     </button>
                   )}
                   {!(lockPm && team === 'PM' && m.isHead) && (
-                    <button title="Remove" className="rounded p-1 text-muted hover:text-red-600" onClick={() => set((ms) => ms.filter((x) => x.userId !== m.userId))}>
+                    <button title="Remove" className="rounded p-1 text-muted hover:text-red-600" onClick={() => set((ms) => ms.filter((x) => !(x.userId === m.userId && x.team === team)))}>
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   )}
@@ -62,11 +72,12 @@ export function TeamEditor({ members, onChange, users, lockPm }: { members: Memb
                 {users
                   .filter((u) => !u.deactivated)
                   .map((u) => {
-                    const other = inTeam(u.id)
+                    const elsewhere = teamsOf(u.id).filter((t) => t !== team)
+                    const here = teamsOf(u.id).includes(team) || (team === 'PM' && u.id === starterId)
                     return (
-                      <option key={u.id} value={u.id} disabled={!!other}>
+                      <option key={u.id} value={u.id} disabled={here}>
                         {u.name} — {u.title}
-                        {other ? ` (already in ${TEAM_LABEL[other.team]})` : ''}
+                        {elsewhere.length ? ` (also in ${elsewhere.map((t) => TEAM_LABEL[t]).join(', ')})` : ''}
                         {u.external ? ' (outside BRAC)' : ''}
                       </option>
                     )
@@ -76,7 +87,7 @@ export function TeamEditor({ members, onChange, users, lockPm }: { members: Memb
                 size="sm"
                 disabled={!adding[team]}
                 onClick={() => {
-                  set((ms) => [...ms, { userId: adding[team], team, isHead: !ms.some((x) => x.team === team && x.isHead) }])
+                  set((ms) => [...ms, { userId: adding[team], team, isHead: !(team === 'PM' && starterId) && !ms.some((x) => x.team === team && x.isHead) }])
                   setAdding({ ...adding, [team]: '' })
                 }}
               >
@@ -87,7 +98,7 @@ export function TeamEditor({ members, onChange, users, lockPm }: { members: Memb
         )
       })}
       <p className="text-xs text-muted md:col-span-2">
-        <Crown className="inline h-3 w-3" /> make head · <UserCheck className="inline h-3 w-3" /> make deputy (acts for the head while they are Away) · <ShieldCheck className="inline h-3 w-3" /> tag a tech member as SQA tester. A person already in one team is greyed out in the others.
+        <Crown className="inline h-3 w-3" /> make head · <UserCheck className="inline h-3 w-3" /> make deputy (acts for the head while they are Away) · <ShieldCheck className="inline h-3 w-3" /> tag a tech member as SQA tester. Someone can be in more than one team, but they then approve more than once.
       </p>
     </div>
   )

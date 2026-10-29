@@ -5,7 +5,7 @@
  * outcomes), "Sign-off" (exit criteria) and "Changes during testing".
  */
 import type { Build, Defect, DefectStatus, Execution, ID, Project, Requirement, Severity, TestCase, TestListConfirmation, TestRun, TestStage } from '../types'
-import { actAsHead, isSqa, memberOf, no, yes, type Check } from './permissions'
+import { actAsHead, isSqa, memberOf, no, yes, type Check, inTeam, membershipIn } from './permissions'
 
 /** Statuses where the defect still needs work. */
 export const UNRESOLVED: DefectStatus[] = ['New', 'Open', 'In progress', 'Fixed', 'Ready for retest', 'Reopened']
@@ -61,11 +61,10 @@ function actorsFor(d: Defect, ctx: DefectCtx): { actors: Actor[]; actingFor?: ID
     actingFor = actingFor ?? tech.actingFor
   }
   if (ctx.userId && d.assigneeId === ctx.userId) out.push('assignee')
-  const m = memberOf(ctx.project, ctx.userId)
-  if (m) {
+  if (memberOf(ctx.project, ctx.userId)) {
     // "The reporter's team": SQA defects → SQA-tagged members; UAT defects → the reporter's team.
     if (d.stage === 'SQA' && isSqa(ctx.project, ctx.userId)) out.push('reporter_team')
-    if (d.stage === 'UAT' && m.team === d.reporterTeam && !(m.team === 'TECH')) out.push('reporter_team')
+    if (d.stage === 'UAT' && d.reporterTeam !== 'SQA' && d.reporterTeam !== 'TECH' && inTeam(ctx.project, ctx.userId, d.reporterTeam)) out.push('reporter_team')
     if (isSqa(ctx.project, ctx.userId)) out.push('sqa')
   }
   return { actors: out, actingFor }
@@ -103,8 +102,8 @@ export function transitionFor(d: Defect, to: DefectStatus): Transition | undefin
 
 /** Who may be assigned to fix defects: developers only (not SQA testers). */
 export function canBeAssigned(p: Project, userId: ID): Check {
-  const m = memberOf(p, userId)
-  if (!m || m.team !== 'TECH') return no('Defects are assigned to developers in the tech team.')
+  const m = membershipIn(p, userId, 'TECH')
+  if (!m) return no('Defects are assigned to developers in the tech team.')
   if (m.isSqa) return no('SQA testers cannot be assigned defects to fix. Testers and developers stay separate.')
   return yes
 }

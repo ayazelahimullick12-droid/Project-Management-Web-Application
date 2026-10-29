@@ -8,6 +8,7 @@ import { FactChip } from '../../components/status'
 import { fmtDateTime } from '../../components/format'
 import { Badge, Button, Card, Field, Guarded, Input, Modal, Note, Select, Table, Td, Textarea } from '../../components/ui'
 import type { IntakeData } from './IntakePage'
+import { MissingPeople } from '../../components/People'
 
 const ROUND_HINT: Record<string, string> = { brd_business: 'asked before the BRD', srs_technical: 'asked before the SRS' }
 
@@ -94,7 +95,10 @@ export function FactsTab({ data }: { data: IntakeData }) {
             {latest ? `Latest version: v${latest.number} (${latest.note})` : 'No saved version yet'} · {data.facts.filter((f) => f.status === 'filled').length} filled · {data.facts.filter((f) => f.status === 'missing').length} missing · {data.facts.filter((f) => f.status === 'assumed').length} assumed · {data.conflicts.length} conflicting
           </div>
         </div>
-        {!data.confirmed && data.perms.pm && !p.intake.confirmRequestedAt && (
+        {!data.confirmed && data.perms.pm && !p.intake.confirmRequestedAt && data.missingForConfirmation.length > 0 && (
+          <MissingPeople pid={p.id} missing={data.missingForConfirmation} canAdd={data.perms.canAddPeople} before="Before the Fact Sheet can be sent for confirmation" />
+        )}
+        {!data.confirmed && data.perms.pm && !p.intake.confirmRequestedAt && !data.missingForConfirmation.length && (
           <Button variant="primary" onClick={() => request.run(p.id)}>
             <Send className="h-4 w-4" /> Send for confirmation
           </Button>

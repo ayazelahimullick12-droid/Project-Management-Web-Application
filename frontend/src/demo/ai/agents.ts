@@ -12,6 +12,7 @@ import type { Defect, DocType, Fact, FactDef, Project, Requirement, Section, Tem
 import { fillPlaceholders, markdownToPlain, normalize } from '../../rules/text'
 import { parseSections } from '../markdownSections'
 import { cannedDoc, cannedFor } from './content'
+import { CHARTER_PREFIX } from '../../rules/pipeline'
 
 const sentences = (text: string) => text.replace(/\s+/g, ' ').match(/[^.!?]+[.!?]+(\s|$)|[^.!?]+$/g)?.map((s) => s.trim()).filter(Boolean) ?? []
 
@@ -108,6 +109,9 @@ export function draftDocument(project: Project, type: DocType, template: Templat
   }
   const canned = cannedDoc(project.slug, type)
   const cannedSections = canned ? parseSections(canned) : []
+  // The Proposal & Charter: the Charter's pre-written text is a second file; its keys get the prefix.
+  const cannedCharter = type === 'PROPOSAL' ? cannedDoc(project.slug, 'CHARTER') : undefined
+  if (cannedCharter) cannedSections.push(...parseSections(cannedCharter).map((x) => ({ ...x, key: CHARTER_PREFIX + x.key })))
   return template.sections.map((ts) => {
     const c = cannedSections.find((s) => s.key === ts.key)
     if (c) return { key: ts.key, title: ts.title, content: fillPlaceholders(c.content, project.name, value), factKeys: ts.factKeys }
@@ -221,14 +225,14 @@ export function summaries(docLabel: string, projectName: string, versionNumber: 
 
 // ─── Traceability agent ─────────────────────────────────────────────────
 
-export function requirementsFromCanned(project: Project, type: 'CHARTER' | 'BRD' | 'SRS'): Requirement[] {
+export function requirementsFromCanned(project: Project, type: 'PROPOSAL' | 'BRD' | 'SRS'): Requirement[] {
   const rows = cannedFor(project.slug)?.requirements?.[type] ?? []
   return rows.map((r) => ({ id: String(r[0]), projectId: project.id, docType: type, text: String(r[1]), parentId: r[2] ?? undefined }))
 }
 
 /** Pulls numbered requirements (OBJ-1, BR-01, SR-01…) out of a document's text. */
-export function requirementsFromText(project: Project, type: 'CHARTER' | 'BRD' | 'SRS', sections: Section[]): Requirement[] {
-  const prefix = type === 'CHARTER' ? 'OBJ' : type === 'BRD' ? 'BR' : 'SR'
+export function requirementsFromText(project: Project, type: 'PROPOSAL' | 'BRD' | 'SRS', sections: Section[]): Requirement[] {
+  const prefix = type === 'PROPOSAL' ? 'OBJ' : type === 'BRD' ? 'BR' : 'SR' // objectives come from the Charter part
   const out: Requirement[] = []
   for (const s of sections) {
     for (const line of s.content.split('\n')) {

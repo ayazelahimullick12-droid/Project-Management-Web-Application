@@ -6,6 +6,11 @@
  *
  * Every check returns { ok, reason, actingFor }. The api layer refuses actions that fail
  * (like a backend would) and the screens use the same checks to hide or disable buttons.
+ *
+ * One person may hold several roles in a project (for example tech head and stakeholder head).
+ * The app warns about it, because that person then approves more than once (see teamWarnings).
+ * So a person can have several memberships: use membershipsOf / inTeam rather than memberOf
+ * when the team matters.
  */
 import type { ID, Member, Project, Team, User } from '../types'
 
@@ -32,16 +37,23 @@ export const HEAD_LABEL: Record<Team, string> = {
   SPONSOR: 'Sponsor head',
 }
 
+/** The person's first role in the project (enough to know whether they are a member). */
 export function memberOf(p: Project, userId: ID | null | undefined): Member | undefined {
   return userId ? p.members.find((m) => m.userId === userId) : undefined
 }
 
-export function teamOf(p: Project, userId: ID | null | undefined): Team | undefined {
-  return memberOf(p, userId)?.team
+/** Every role the person holds in the project. */
+export function membershipsOf(p: Project, userId: ID | null | undefined): Member[] {
+  return userId ? p.members.filter((m) => m.userId === userId) : []
+}
+
+/** The person's role in one team, if they have one. */
+export function membershipIn(p: Project, userId: ID | null | undefined, team: Team): Member | undefined {
+  return membershipsOf(p, userId).find((m) => m.team === team)
 }
 
 export function inTeam(p: Project, userId: ID | null | undefined, team: Team): boolean {
-  return teamOf(p, userId) === team
+  return !!membershipIn(p, userId, team)
 }
 
 export function isOwner(p: Project, userId: ID | null | undefined): boolean {
@@ -61,27 +73,30 @@ export function isAway(p: Project, userId: ID, now: Date): boolean {
 }
 
 export function isSqa(p: Project, userId: ID | null | undefined): boolean {
-  const m = memberOf(p, userId)
-  return !!m && m.team === 'TECH' && !!m.isSqa
+  return !!membershipIn(p, userId, 'TECH')?.isSqa
 }
 
 /** Tech team members without the SQA tag act as developers (SPEC_SQA_UAT.md). */
 export function isDeveloper(p: Project, userId: ID | null | undefined): boolean {
-  const m = memberOf(p, userId)
-  return !!m && m.team === 'TECH' && !m.isSqa
+  const m = membershipIn(p, userId, 'TECH')
+  return !!m && !m.isSqa
 }
 
 /** A short label for someone's role in a project, e.g. "Tech head" or "Deputy · Stakeholder head". */
 export function roleLabel(p: Project, userId: ID): string {
-  if (isOwner(p, userId) && !memberOf(p, userId)) return 'Project Owner'
-  const m = memberOf(p, userId)
-  if (!m) return 'Not a member'
-  let label = m.isHead ? HEAD_LABEL[m.team] : m.isDeputy ? `Deputy ${HEAD_LABEL[m.team].toLowerCase()}` : TEAM_LABEL[m.team].replace(/s$/, '') + ' member'
-  if (m.team === 'STAKEHOLDER' && !m.isHead && !m.isDeputy) label = 'Stakeholder'
-  if (m.team === 'SPONSOR' && !m.isHead && !m.isDeputy) label = 'Sponsor'
-  if (m.team === 'TECH' && !m.isHead && !m.isDeputy) label = m.isSqa ? 'SQA tester' : 'Developer'
-  if (isOwner(p, userId)) label += ' · Owner'
-  return label
+  const roles = membershipsOf(p, userId).map(memberLabel)
+  if (isOwner(p, userId)) roles.push(roles.length ? 'Owner' : 'Project Owner')
+  return roles.length ? roles.join(' · ') : 'Not a member'
+}
+
+/** One role in words, e.g. "Tech head", "Deputy stakeholder head", "SQA tester". */
+export function memberLabel(m: Member): string {
+  if (m.isHead) return HEAD_LABEL[m.team]
+  if (m.isDeputy) return `Deputy ${HEAD_LABEL[m.team].toLowerCase()}`
+  if (m.team === 'STAKEHOLDER') return 'Stakeholder'
+  if (m.team === 'SPONSOR') return 'Sponsor'
+  if (m.team === 'TECH') return m.isSqa ? 'SQA tester' : 'Developer'
+  return 'PM team member'
 }
 
 /**
@@ -101,9 +116,13 @@ export function actAsHead(p: Project, team: Team, userId: ID | null | undefined,
   return no(`Only the ${HEAD_LABEL[team].toLowerCase()} can do this${deputy ? ' (or their deputy while they are Away)' : ''}.`)
 }
 
-/** Who receives a head's notifications right now: the deputy while the head is Away. */
-export function headRecipient(p: Project, headUserId: ID, now: Date): { to: ID; forUserId?: ID } {
-  const m = memberOf(p, headUserId)
+/**
+ * Who receives a head's notifications right now: the deputy while the head is Away.
+ * Pass the team when known (a person may head more than one team).
+ */
+export function headRecipient(p: Project, headUserId: ID, now: Date, team?: Team): { to: ID; forUserId?: ID } {
+  const mine = membershipsOf(p, headUserId)
+  const m = (team ? mine.find((x) => x.team === team) : undefined) ?? mine.find((x) => x.isHead) ?? mine[0]
   if (m && (m.isHead || m.isDeputy) && isAway(p, headUserId, now)) {
     const deputy = m.isHead ? deputyOf(p, m.team) : undefined
     if (deputy) return { to: deputy.userId, forUserId: headUserId }
@@ -121,9 +140,15 @@ export const can = {
   change(p: Project): Check {
     return p.status === 'archived' ? no('This project is archived, so it is read-only.') : yes
   },
+  /** Replacing and removing people: the Owner. */
   manageTeam(p: Project, userId: ID | null): Check {
     if (p.status === 'archived') return no('This project is archived, so it is read-only.')
-    return isOwner(p, userId) ? yes : no('Only the Project Owner can change the team.')
+    return isOwner(p, userId) ? yes : no('Only the Project Owner can replace or remove people.')
+  },
+  /** Adding people (and making someone a head, deputy or SQA tester): the Owner or the PM. */
+  addPeople(p: Project, userId: ID | null, now: Date): Check {
+    if (p.status === 'archived') return no('This project is archived, so it is read-only.')
+    return isOwner(p, userId) || actAsHead(p, 'PM', userId, now).ok ? yes : no('Only the Project Owner or the Project Manager can add people.')
   },
   archive(p: Project, userId: ID | null): Check {
     if (p.status === 'archived') return no('Already archived.')
@@ -153,4 +178,33 @@ export function canMarkDecision(chat: { kind: 'project' | 'document' | 'direct' 
   if (chat.kind === 'direct') return no('Decisions are marked in the project chat or a document chat, so it is clear which project they belong to.')
   if (!chat.projectId) return no('Decisions belong to a project.')
   return yes
+}
+
+/**
+ * Real problems with a team (these block saving). A project may start with one person, so empty
+ * teams and missing heads are fine here: the app asks for them when a step needs them.
+ */
+export function teamProblems(members: Member[]): string[] {
+  const problems: string[] = []
+  const TEAMS: Team[] = ['PM', 'TECH', 'STAKEHOLDER', 'SPONSOR']
+  for (const team of TEAMS) {
+    const inTeam_ = members.filter((m) => m.team === team)
+    if (inTeam_.filter((m) => m.isHead).length > 1) problems.push(`${TEAM_LABEL[team]} can have only one head.`)
+    if (inTeam_.filter((m) => m.isDeputy).length > 1) problems.push(`${TEAM_LABEL[team]} can have only one deputy.`)
+    if (inTeam_.some((m) => m.isHead && m.isDeputy)) problems.push(`The head of the ${TEAM_LABEL[team]} cannot also be its deputy.`)
+    if (new Set(inTeam_.map((m) => m.userId)).size !== inTeam_.length) problems.push(`Someone is listed twice in the ${TEAM_LABEL[team]}.`)
+  }
+  if (members.some((m) => m.isSqa && m.team !== 'TECH')) problems.push('Only tech team members can be tagged SQA.')
+  if (members.some((m) => m.isSqa && m.isHead)) problems.push('The tech head is not tagged SQA.')
+  return problems
+}
+
+/**
+ * People with more than one role. Allowed, but the screens warn, because that person then
+ * approves more than once and could approve their own work.
+ */
+export function teamWarnings(members: Member[]): { userId: ID; roles: string[] }[] {
+  const byUser = new Map<ID, Member[]>()
+  for (const m of members) byUser.set(m.userId, [...(byUser.get(m.userId) ?? []), m])
+  return [...byUser].filter(([, ms]) => ms.length > 1).map(([userId, ms]) => ({ userId, roles: ms.map(memberLabel) }))
 }

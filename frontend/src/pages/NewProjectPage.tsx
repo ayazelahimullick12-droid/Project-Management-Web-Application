@@ -1,145 +1,89 @@
 /**
- * New project wizard: details → PM → teams, heads and deputies → invite.
- * SPEC.md "Project setup". The person creating the project becomes its Owner.
+ * Starting a project. One person is enough: whoever starts it becomes the Project Owner and the
+ * Project Manager. Adding other people now is optional; the app asks for them when a step needs
+ * them (questions, approvals, testing). They can also be added from the Team page at any time.
  */
-import { Check } from 'lucide-react'
+import { ChevronDown, UserRound } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
 import type { Member } from '../types'
 import { api } from '../api'
-import { useAction, useApi } from '../api/hooks'
+import { useAction, useApi, useSessionUserId } from '../api/hooks'
 import { validateTeam } from '../api/projects'
-import { HEAD_LABEL, TEAM_LABEL } from '../rules/permissions'
-import { OpenQuestion } from '../components/OpenQuestion'
-import { Button, Card, Field, Input, Note, PageHeader, Select, Textarea } from '../components/ui'
+import { teamWarnings } from '../rules/permissions'
+import { Button, Card, Field, Input, Note, PageHeader, Textarea } from '../components/ui'
 import { TeamEditor } from './TeamEditor'
-
-const STEPS = ['Details', 'Project Manager', 'Teams and heads', 'Review and invite']
 
 export function NewProjectPage() {
   const navigate = useNavigate()
+  const uid = useSessionUserId()
   const { data: users } = useApi(['users'], api.projects.users)
   const { data: templates } = useApi(['team-templates'], api.projects.teamTemplates)
-  const [step, setStep] = useState(0)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [members, setMembers] = useState<Member[]>([])
-  const create = useAction(api.projects.createProject, { success: 'Project created. Invitations sent in-app and by email.', onDone: (id) => navigate(`/projects/${id}`) })
-  const pm = members.find((m) => m.team === 'PM' && m.isHead)
-  const problems = validateTeam(members)
-  const name_ = (id: string) => users?.find((u) => u.id === id)?.name ?? id
-
-  const setPm = (id: string) => {
-    const rest = members.filter((m) => !(m.team === 'PM' && m.isHead) && m.userId !== id)
-    setMembers(id ? [{ userId: id, team: 'PM', isHead: true }, ...rest] : rest)
-  }
+  const [withPeople, setWithPeople] = useState(false)
+  const create = useAction(api.projects.createProject, { success: 'Project started. You are its Owner and Project Manager.', onDone: (id) => navigate(`/projects/${id}`) })
+  const me = users?.find((u) => u.id === uid)
+  // The starter is always the PM; anyone else chosen here joins too.
+  const others = members.filter((m) => !(m.userId === uid && m.team === 'PM'))
+  const problems = validateTeam(others)
+  const warnings = teamWarnings([{ userId: uid ?? '', team: 'PM', isHead: true }, ...others])
+  const nameOf = (id: string) => users?.find((u) => u.id === id)?.name ?? id
 
   return (
-    <div>
-      <PageHeader title="New project" subtitle="You will be the Project Owner: you set up the team now and can change anyone later." actions={<OpenQuestion id="owner-member" />} />
-      <ol className="mb-6 flex flex-wrap gap-2">
-        {STEPS.map((s, i) => (
-          <li key={s} className={clsx('flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium', i === step ? 'bg-brand text-white' : i < step ? 'bg-leaf-soft text-leaf' : 'bg-surface text-muted ring-1 ring-line')}>
-            {i < step ? <Check className="h-3 w-3" /> : <span>{i + 1}</span>} {s}
-          </li>
-        ))}
-      </ol>
+    <div className="max-w-3xl">
+      <PageHeader title="Start a project" subtitle="You only need a name to start. Other people can join now or later." />
+      <Card>
+        <Field label="Project name">
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Mobile Savings Collection" autoFocus />
+        </Field>
+        <Field label="Short description" hint="One or two sentences. The full request is written on the Intake page.">
+          <Textarea value={description} onChange={(e) => setDescription(e.target.value)} />
+        </Field>
+        <Note tone="blue" icon={<UserRound className="h-4 w-4" />}>
+          You ({me?.name}) will be the <b>Project Owner</b> and the <b>Project Manager</b>. When a step needs someone else (stakeholders to answer questions, heads to approve, testers), the app asks you to add them. You can hand the PM role to someone else later.
+        </Note>
 
-      {step === 0 && (
-        <Card className="max-w-2xl">
-          <Field label="Project name">
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Mobile Savings Collection" autoFocus />
-          </Field>
-          <Field label="Short description" hint="One or two sentences. The stakeholders will write the full request on the Intake page.">
-            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} />
-          </Field>
-          <div className="flex justify-end">
-            <Button variant="primary" disabled={!name.trim()} onClick={() => setStep(1)}>
-              Next
-            </Button>
+        <button type="button" onClick={() => setWithPeople(!withPeople)} className="mt-4 flex items-center gap-2 text-sm font-medium text-brand">
+          <ChevronDown className={clsx('h-4 w-4 transition', !withPeople && '-rotate-90')} /> Add people now (optional)
+        </button>
+        {withPeople && users && (
+          <div className="mt-3">
+            {!!templates?.length && (
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <span className="text-sm text-muted">Load a saved team:</span>
+                {templates.map((t) => (
+                  <Button key={t.id} size="sm" onClick={() => setMembers(structuredClone(t.members).map((m) => (m.team === 'PM' ? { ...m, isHead: false } : m)))}>
+                    {t.name}
+                  </Button>
+                ))}
+              </div>
+            )}
+            <TeamEditor members={others} onChange={setMembers} users={users} starterId={uid ?? undefined} />
           </div>
-        </Card>
-      )}
-
-      {step === 1 && (
-        <Card className="max-w-2xl">
-          <Field label="Project Manager" hint="The PM is the head of the PM team and the first approver of every document.">
-            <Select value={pm?.userId ?? ''} onChange={(e) => setPm(e.target.value)}>
-              <option value="">Choose the PM…</option>
-              {users?.filter((u) => !u.deactivated).map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name} — {u.title}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <div className="flex justify-between">
-            <Button onClick={() => setStep(0)}>Back</Button>
-            <Button variant="primary" disabled={!pm} onClick={() => setStep(2)}>
-              Next
-            </Button>
-          </div>
-        </Card>
-      )}
-
-      {step === 2 && users && (
-        <div>
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <span className="text-sm text-muted">Load a saved team template:</span>
-            {templates?.map((t) => (
-              <Button key={t.id} size="sm" onClick={() => setMembers(structuredClone(t.members))}>
-                {t.name}
-              </Button>
-            ))}
-            {!templates?.length && <span className="text-xs text-muted">none yet</span>}
-          </div>
-          <TeamEditor members={members} onChange={setMembers} users={users} />
-          {problems.length > 0 && (
-            <Note tone="amber" className="mt-4">
-              Before continuing: {problems.join(' ')}
-            </Note>
-          )}
-          <div className="mt-4 flex justify-between">
-            <Button onClick={() => setStep(1)}>Back</Button>
-            <Button variant="primary" disabled={problems.length > 0} onClick={() => setStep(3)}>
-              Next
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {step === 3 && (
-        <Card className="max-w-3xl" title="Review and invite">
-          <div className="mb-4">
-            <div className="text-lg font-semibold">{name}</div>
-            <div className="text-sm text-muted">{description}</div>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {(['PM', 'TECH', 'STAKEHOLDER', 'SPONSOR'] as const).map((team) => (
-              <div key={team} className="rounded-md bg-canvas p-3 text-sm">
-                <div className="mb-1 font-medium">{TEAM_LABEL[team]}</div>
-                {members
-                  .filter((m) => m.team === team)
-                  .map((m) => (
-                    <div key={m.userId} className="text-xs">
-                      {name_(m.userId)} {m.isHead && <b>· {HEAD_LABEL[team]}</b>} {m.isDeputy && '· deputy'} {m.isSqa && '· SQA'}
-                    </div>
-                  ))}
+        )}
+        {problems.length > 0 && (
+          <Note tone="red" className="mt-4">
+            Before starting: {problems.join(' ')}
+          </Note>
+        )}
+        {warnings.length > 0 && (
+          <Note tone="amber" className="mt-4">
+            {warnings.map((w) => (
+              <div key={w.userId}>
+                {nameOf(w.userId)} would have several roles ({w.roles.join(', ')}). They would approve more than once, and could approve their own work.
               </div>
             ))}
-          </div>
-          <Note tone="blue" className="mt-4">
-            Every member gets an in-app notification and an email (see the Mailbox). The project then appears on the dashboard at stage <b>Intake</b>.
           </Note>
-          <div className="mt-4 flex justify-between">
-            <Button onClick={() => setStep(2)}>Back</Button>
-            <Button variant="primary" disabled={create.pending || problems.length > 0} onClick={() => create.run({ name, description, members })}>
-              Create project and send invitations
-            </Button>
-          </div>
-        </Card>
-      )}
+        )}
+        <div className="mt-5 flex justify-end">
+          <Button variant="primary" disabled={!name.trim() || problems.length > 0 || create.pending} onClick={() => create.run({ name, description, members: others })}>
+            Start the project
+          </Button>
+        </div>
+      </Card>
     </div>
   )
 }

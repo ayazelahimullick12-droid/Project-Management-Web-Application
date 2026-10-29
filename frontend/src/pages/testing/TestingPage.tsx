@@ -19,6 +19,7 @@ import { OpenQuestion } from '../../components/OpenQuestion'
 import { Badge, Button, Card, EmptyState, ErrorBox, Field, Guarded, Input, Loading, Modal, Note, PageHeader, Select, Table, Tabs, Td, Textarea, useTab } from '../../components/ui'
 import { useToast } from '../../components/toast'
 import { MoveDialog, NewDefectModal } from './DefectForms'
+import { MissingPeople } from '../../components/People'
 
 type TData = Awaited<ReturnType<typeof api.testing.getTesting>>
 
@@ -508,6 +509,7 @@ export function TestingPage() {
         title={stage === 'SQA' ? 'SQA: testing by the SQA team' : 'UAT: testing by business users'}
         subtitle={stage === 'SQA' ? 'Checks the system was built correctly against the SRS. Comes first; business users only get builds that SQA has passed.' : 'Checks the system works for real business tasks, against the BRD. Starts after the SQA sign-off.'}
       />
+      <MissingPeople pid={pid} missing={data.missing} canAdd={data.perms.canAddPeople} before={stage === 'SQA' ? 'Before technical testing (SQA) can run' : 'Before user testing (UAT) can run'} className="mb-4" />
       {!data.stageReady.ok && <Note tone="amber" className="mb-4">{stage === 'SQA' ? 'SQA starts after the SRS is signed.' : 'UAT starts after the SQA sign-off is approved.'} {data.stageReady.reason} {stage === 'UAT' && 'UAT test cases can be prepared and confirmed already.'}</Note>}
       <Tabs
         value={tab}

@@ -3,6 +3,7 @@
  * The libraries are loaded only when needed, to keep the app light.
  */
 import { brand } from '../theme/brand'
+import { PART_LABEL, sectionPart, type DocPart } from '../rules/pipeline'
 
 const hex = (c: string) => c.replace('#', '')
 
@@ -81,5 +82,25 @@ function download(blob: Blob, name: string) {
   setTimeout(() => URL.revokeObjectURL(url), 2000)
 }
 
-export const printUrl = (versionId: string, kind: 'doc' | 'onepager' = 'doc') => `/print/${versionId}?kind=${kind}`
+/** The print view (save as PDF). For the Proposal & Charter, `part` prints only the Proposal or only the Charter. */
+export const printUrl = (versionId: string, kind: 'doc' | 'onepager' = 'doc', part?: DocPart) => `/print/${versionId}?kind=${kind}${part ? `&part=${part}` : ''}`
+
+/**
+ * The download choices for a document version. The Proposal & Charter can be downloaded as one
+ * PDF, or each part on its own (PDF or Word), because they are often sent to different people.
+ */
+export function downloadItems(doc: { project: { name: string }; label: string; status: { label: string } }, v: { id: string; number: number; sections: { key: string; title: string; content: string }[] }) {
+  const word = (title: string, sections: typeof v.sections) => () =>
+    exportDocx({ project: doc.project.name, title, versionLabel: `Version ${v.number}`, status: doc.status.label, sections, fileName: `${safeName(doc.project.name)}-${safeName(title)}-v${v.number}.docx` })
+  const isPackage = v.sections.some((s) => sectionPart(s.key) === 'charter')
+  if (!isPackage) return [{ label: 'Download PDF', href: printUrl(v.id) }, { label: 'Download Word (.docx)', onClick: word(doc.label, v.sections) }]
+  const part = (p: DocPart) => v.sections.filter((s) => sectionPart(s.key) === p)
+  return [
+    { label: 'Download both as one PDF', href: printUrl(v.id) },
+    { label: 'Download the Proposal as PDF', href: printUrl(v.id, 'doc', 'proposal') },
+    { label: 'Download the Charter as PDF', href: printUrl(v.id, 'doc', 'charter') },
+    { label: 'Download the Proposal as Word', onClick: word(PART_LABEL.proposal, part('proposal')) },
+    { label: 'Download the Charter as Word', onClick: word(PART_LABEL.charter, part('charter')) },
+  ]
+}
 export const safeName = (s: string) => s.replace(/[^\w\- ]+/g, '').replace(/\s+/g, '-')

@@ -5,12 +5,13 @@
  * Away, team templates), "Dashboard" and "Archive".
  */
 import type { DemoState, ID, Member, Project, Team, TestStage } from '../types'
-import { MAIN_DOCS, TEAMS } from '../types'
+import { MAIN_DOCS } from '../types'
 import { newId } from '../demo/ids'
+import { now } from '../demo/clock'
 import { getSessionUserId, setSessionUserId } from '../demo/session'
 import { reassign } from '../rules/approval'
 import { blockingCounts } from '../rules/comments'
-import { actAsHead, can, HEAD_LABEL, headOf, headRecipient, isAway, isDeveloper, isOwner, isSqa, memberOf, roleLabel, TEAM_LABEL } from '../rules/permissions'
+import { actAsHead, can, HEAD_LABEL, headOf, headRecipient, inTeam, isAway, isDeveloper, isOwner, isSqa, memberLabel, memberOf, membershipIn, membershipsOf, roleLabel, TEAM_LABEL, teamProblems, teamWarnings } from '../rules/permissions'
 import { docOf, docStatus, factSheetConfirmed, projectStage, STAGE_LABEL, STAGES, type DocStatus } from '../rules/pipeline'
 import { UNRESOLVED } from '../rules/testing'
 import { act, ApiError, ensure, fail, me, nameOf, pipelineCtx, projectOf, read } from './core'
@@ -105,7 +106,7 @@ function visibleProjects(s: DemoState, userId: ID): Project[] {
 
 export function summarize(s: DemoState, p: Project, userId: ID, t: Date): ProjectSummary {
   const ctx = pipelineCtx(s, p.id)
-  const docs: DocCard[] = (['PROPOSAL', 'CHARTER', 'BRD', 'SRS', 'SQA_SIGNOFF', 'UAT_SIGNOFF'] as const).map((type) => {
+  const docs: DocCard[] = (['PROPOSAL', 'BRD', 'SRS', 'SQA_SIGNOFF', 'UAT_SIGNOFF'] as const).map((type) => {
     const doc = docOf(ctx, type)
     const counts = doc ? blockingCounts(s.comments, doc.id) : { open: 0, pending: 0 }
     return {
@@ -145,8 +146,8 @@ function healthOf(next: NextStep, t: Date): ProjectSummary['health'] {
   return { label: 'On track', tone: 'green' }
 }
 
-const DOC_NAME: Record<string, string> = { PROPOSAL: 'Proposal', CHARTER: 'Charter', BRD: 'BRD', SRS: 'SRS', SQA_SIGNOFF: 'SQA sign-off', UAT_SIGNOFF: 'UAT sign-off' }
-const STAGE_DOC: Record<string, DocCard['type']> = { PROPOSAL: 'PROPOSAL', CHARTER: 'CHARTER', BRD: 'BRD', SRS: 'SRS', SQA: 'SQA_SIGNOFF', UAT: 'UAT_SIGNOFF' }
+const DOC_NAME: Record<string, string> = { PROPOSAL: 'Proposal & Charter', BRD: 'BRD', SRS: 'SRS', SQA_SIGNOFF: 'SQA sign-off', UAT_SIGNOFF: 'UAT sign-off' }
+const STAGE_DOC: Record<string, DocCard['type']> = { PROPOSAL: 'PROPOSAL', BRD: 'BRD', SRS: 'SRS', SQA: 'SQA_SIGNOFF', UAT: 'UAT_SIGNOFF' }
 
 /** What should happen next, from the project's stage and the status of its current document. */
 function nextStep(s: DemoState, p: Project, stage: ReturnType<typeof projectStage>, docs: DocCard[], t: Date): NextStep {
@@ -265,9 +266,12 @@ export interface ProjectView {
     actsAsPm: boolean
     isSqa: boolean
     isDeveloper: boolean
-    canManageTeam: boolean
+    canManageTeam: boolean // replace and remove people (Owner)
+    canAddPeople: boolean // add people, make heads and deputies (Owner or PM)
     away: boolean
   }
+  /** People with more than one role (allowed, with a warning). */
+  warnings: { userId: ID; name: string; roles: string[] }[]
   factSheetConfirmed: boolean
   testing: Record<TestStage, { tests: number; run: number; passed: number; defectsOpen: number; status: string }>
   openItems: { label: string; count: number; link: string }[]
@@ -306,13 +310,15 @@ export async function getProject(pid: ID): Promise<ProjectView> {
         team: m?.team,
         isOwner: isOwner(p, user.id),
         isAdmin: !!user.isAdmin,
-        isPmTeam: m?.team === 'PM',
+        isPmTeam: inTeam(p, user.id, 'PM'),
         actsAsPm: actAsHead(p, 'PM', user.id, t).ok,
         isSqa: isSqa(p, user.id),
         isDeveloper: isDeveloper(p, user.id),
         canManageTeam: can.manageTeam(p, user.id).ok,
+        canAddPeople: can.addPeople(p, user.id, t).ok,
         away: isAway(p, user.id, t),
       },
+      warnings: teamWarnings(p.members).map((w) => ({ ...w, name: nameOf(s, w.userId) })),
       factSheetConfirmed: factSheetConfirmed(pipelineCtx(s, pid)),
       testing,
       openItems: [
@@ -340,30 +346,23 @@ function testingStatus(s: DemoState, pid: ID, stage: TestStage, summary: Project
 
 // ─── New project wizard ─────────────────────────────────────────────────
 
-export function validateTeam(members: Member[]): string[] {
-  const problems: string[] = []
-  const seen = new Map<ID, Team>()
-  for (const m of members) {
-    const prev = seen.get(m.userId)
-    if (prev && prev !== m.team) problems.push(`A person can only be in one team: someone is in both ${TEAM_LABEL[prev]} and ${TEAM_LABEL[m.team]}.`)
-    seen.set(m.userId, m.team)
-  }
-  for (const team of TEAMS) {
-    const heads = members.filter((m) => m.team === team && m.isHead)
-    if (heads.length === 0) problems.push(`Mark a ${HEAD_LABEL[team].toLowerCase()}.`)
-    if (heads.length > 1) problems.push(`${TEAM_LABEL[team]} can have only one head.`)
-    if (members.filter((m) => m.team === team && m.isDeputy).length > 1) problems.push(`${TEAM_LABEL[team]} can have only one deputy.`)
-  }
-  if (members.some((m) => m.isSqa && m.team !== 'TECH')) problems.push('Only tech team members can be tagged SQA.')
-  return problems
-}
+/** Real problems with a team (see teamProblems in rules/permissions.ts). Empty teams are fine. */
+export const validateTeam = teamProblems
 
-export async function createProject(input: { name: string; description: string; members: Member[] }): Promise<ID> {
+/**
+ * Starts a project. One person is enough: whoever starts it becomes the Project Owner and the
+ * Project Manager (they can hand the PM role to someone else later). Anyone else is optional now;
+ * the app asks for them when a step needs them (see rules/people.ts).
+ */
+export async function createProject(input: { name: string; description: string; members?: Member[] }): Promise<ID> {
   return act((s, t, at) => {
     const user = me(s)
     if (!input.name.trim()) fail('Give the project a name.')
-    const problems = validateTeam(input.members)
+    const others = (input.members ?? []).filter((m) => !(m.userId === user.id && m.team === 'PM')).map((m) => (m.team === 'PM' ? { ...m, isHead: false } : m))
+    const members: Member[] = [{ userId: user.id, team: 'PM', isHead: true }, ...others]
+    const problems = validateTeam(members)
     if (problems.length) fail(problems[0])
+    input = { ...input, members }
     const id = newId('p')
     const p: Project = {
       id,
@@ -373,7 +372,7 @@ export async function createProject(input: { name: string; description: string; 
       ownerId: user.id,
       status: 'active',
       createdAt: at,
-      members: input.members,
+      members,
       away: [],
       templateVersions: Object.fromEntries(MAIN_DOCS.map((d) => [d, Math.max(...s.templates.filter((x) => x.docType === d).map((x) => x.version))])),
       facts: [],
@@ -382,9 +381,9 @@ export async function createProject(input: { name: string; description: string; 
     s.projects.push(p)
     s.chats.push({ id: `${id}-chat`, projectId: id, kind: 'project', title: 'Project chat' })
     s.messages.push({ id: newId('msg'), chatId: `${id}-chat`, authorId: null, kind: 'system', body: `Project created by ${user.name}.`, createdAt: at })
-    for (const m of input.members)
-      notify(s, { to: [m.userId], type: 'invite', title: `You were added to ${p.name}`, body: `${user.name} added you as ${roleLabel(p, m.userId)}.`, link: `/projects/${id}`, projectId: id, at, exclude: user.id })
-    audit(s, { projectId: id, actorId: user.id, action: 'Project created', details: `${p.name} with ${input.members.length} members`, at })
+    for (const userId of new Set(others.map((m) => m.userId)))
+      notify(s, { to: [userId], type: 'invite', title: `You were added to ${p.name}`, body: `${user.name} added you as ${roleLabel(p, userId)}.`, link: `/projects/${id}`, projectId: id, at, exclude: user.id })
+    audit(s, { projectId: id, actorId: user.id, action: 'Project created', details: others.length ? `${p.name} with ${new Set(members.map((m) => m.userId)).size} people` : `${p.name}, started alone (Owner and PM: ${user.name})`, at })
     void t
     return id
   })
@@ -401,78 +400,104 @@ export async function saveTeamTemplate(pid: ID, name: string) {
   return act((s, _t, at) => {
     const user = me(s)
     const p = projectOf(s, pid)
-    ensure(can.manageTeam(p, user.id))
+    ensure(can.addPeople(p, user.id, now()))
     if (!name.trim()) fail('Give the template a name.')
     s.teamTemplates.push({ id: newId('tt'), ownerId: user.id, name: name.trim(), members: structuredClone(p.members) })
     audit(s, { projectId: pid, actorId: user.id, action: 'Team template saved', details: name, at })
   })
 }
 
-// ─── Team changes (Owner) ───────────────────────────────────────────────
+// ─── Team changes ───────────────────────────────────────────────────────
+// Adding people and making heads, deputies or SQA testers: the Owner or the PM.
+// Replacing and removing people: the Owner. A person may hold several roles (the screens warn).
 
-function teamChange(pid: ID, fn: (s: DemoState, p: Project, at: string, t: Date, ownerName: string) => string) {
+type Who = 'add' | 'owner'
+
+function teamChange(pid: ID, who: Who, fn: (s: DemoState, p: Project, at: string, t: Date, actorName: string) => string) {
   return act((s, t, at) => {
     const user = me(s)
     const p = projectOf(s, pid)
-    ensure(can.manageTeam(p, user.id))
+    ensure(who === 'owner' ? can.manageTeam(p, user.id) : can.addPeople(p, user.id, t))
     const details = fn(s, p, at, t, user.name)
-    const problems = validateTeam(p.members).filter((x) => !x.startsWith('Mark a'))
+    const problems = validateTeam(p.members)
     if (problems.length) fail(problems[0])
     audit(s, { projectId: pid, actorId: user.id, action: 'Role change', details, at })
   })
 }
 
-export async function addMember(pid: ID, userId: ID, team: Team) {
-  return teamChange(pid, (s, p, at, _t, owner) => {
-    const existing = memberOf(p, userId)
-    if (existing) fail(`${nameOf(s, userId)} is already in ${TEAM_LABEL[existing.team]}. One person can hold only one role in a project.`)
-    p.members.push({ userId, team })
-    notify(s, { to: [userId], type: 'role', title: `You were added to ${p.name}`, body: `${owner} added you to the ${TEAM_LABEL[team]}.`, link: `/projects/${p.id}`, projectId: p.id, at })
-    return `${nameOf(s, userId)} added to ${TEAM_LABEL[team]}`
+function roleIn(s: DemoState, p: Project, userId: ID, team: Team) {
+  const m = membershipIn(p, userId, team)
+  if (!m) fail(`${nameOf(s, userId)} is not in the ${TEAM_LABEL[team]}.`)
+  return m
+}
+
+export type NewRole = 'member' | 'head' | 'deputy' | 'sqa'
+
+/** Adds someone to a team, as a member, the head, the deputy or (tech team) an SQA tester. */
+export async function addMember(pid: ID, userId: ID, team: Team, role: NewRole = 'member') {
+  return teamChange(pid, 'add', (s, p, at, _t, actor) => {
+    const user = s.users.find((u) => u.id === userId)
+    if (!user || user.deactivated) fail('Choose an active user.')
+    if (membershipIn(p, userId, team)) fail(`${nameOf(s, userId)} is already in the ${TEAM_LABEL[team]}.`)
+    if (role === 'sqa' && team !== 'TECH') fail('Only tech team members can be tagged SQA.')
+    const m: Member = { userId, team }
+    p.members.push(m)
+    if (role === 'head') setHead(s, p, m, at)
+    if (role === 'deputy') setDeputy(p, m)
+    if (role === 'sqa') m.isSqa = true
+    notify(s, { to: [userId], type: 'role', title: `You were added to ${p.name}`, body: `${actor} added you as ${memberLabel(m).toLowerCase()}.`, link: `/projects/${p.id}`, projectId: p.id, at })
+    return `${nameOf(s, userId)} added as ${memberLabel(m)}`
   })
 }
 
-export async function removeMember(pid: ID, userId: ID) {
-  return teamChange(pid, (s, p) => {
-    const m = memberOf(p, userId)
-    if (!m) fail('Not a member.')
+export async function removeMember(pid: ID, userId: ID, team: Team) {
+  return teamChange(pid, 'owner', (s, p) => {
+    const m = roleIn(s, p, userId, team)
     if (m.isHead) fail('Replace the head with someone else first (use “Replace”).')
-    p.members = p.members.filter((x) => x.userId !== userId)
-    return `${nameOf(s, userId)} removed from ${TEAM_LABEL[m.team]}`
+    p.members = p.members.filter((x) => x !== m)
+    return `${nameOf(s, userId)} removed from ${TEAM_LABEL[team]}`
   })
 }
 
-/** Makes someone the head of their team. A pending approval moves to them on the same version. */
-export async function makeHead(pid: ID, userId: ID) {
-  return teamChange(pid, (s, p, at, _t, owner) => {
-    const m = memberOf(p, userId)
-    if (!m) fail('Not a member.')
-    const old = headOf(p, m.team)
-    for (const x of p.members) if (x.team === m.team) x.isHead = false
-    m.isHead = true
-    m.isDeputy = false
-    moveHeadWork(s, p, m.team, old?.userId, userId, at)
-    notify(s, { to: [userId], type: 'role', title: `You are now ${HEAD_LABEL[m.team].toLowerCase()} of ${p.name}`, body: `${owner} made you ${HEAD_LABEL[m.team].toLowerCase()}. Anything waiting for the previous head now waits for you.`, link: `/projects/${p.id}`, projectId: p.id, at })
-    return `${nameOf(s, userId)} is now ${HEAD_LABEL[m.team]}${old ? ` (replacing ${nameOf(s, old.userId)})` : ''}`
+function setHead(s: DemoState, p: Project, m: Member, at: string) {
+  const old = headOf(p, m.team)
+  for (const x of p.members) if (x.team === m.team) x.isHead = false
+  m.isHead = true
+  m.isDeputy = false
+  m.isSqa = false
+  moveHeadWork(s, p, m.team, old?.userId, m.userId, at)
+  return old
+}
+
+function setDeputy(p: Project, m: Member) {
+  if (m.isHead) fail('The head cannot also be the deputy.')
+  for (const x of p.members) if (x.team === m.team) x.isDeputy = false
+  m.isDeputy = true
+}
+
+/** Makes someone the head of a team. A pending approval moves to them on the same version. */
+export async function makeHead(pid: ID, userId: ID, team: Team) {
+  return teamChange(pid, 'add', (s, p, at, _t, actor) => {
+    const m = roleIn(s, p, userId, team)
+    const old = setHead(s, p, m, at)
+    notify(s, { to: [userId], type: 'role', title: `You are now ${HEAD_LABEL[team].toLowerCase()} of ${p.name}`, body: `${actor} made you ${HEAD_LABEL[team].toLowerCase()}. Anything waiting for the previous head now waits for you.`, link: `/projects/${p.id}`, projectId: p.id, at })
+    return `${nameOf(s, userId)} is now ${HEAD_LABEL[team]}${old ? ` (replacing ${nameOf(s, old.userId)})` : ''}`
   })
 }
 
-export async function makeDeputy(pid: ID, userId: ID) {
-  return teamChange(pid, (s, p, at, _t, owner) => {
-    const m = memberOf(p, userId)
-    if (!m) fail('Not a member.')
-    if (m.isHead) fail('The head cannot also be the deputy.')
-    for (const x of p.members) if (x.team === m.team) x.isDeputy = false
-    m.isDeputy = true
-    notify(s, { to: [userId], type: 'role', title: `You are now deputy ${HEAD_LABEL[m.team].toLowerCase()} in ${p.name}`, body: `${owner} made you deputy. You act for the head while they are Away.`, link: `/projects/${p.id}`, projectId: p.id, at })
-    return `${nameOf(s, userId)} is now deputy ${HEAD_LABEL[m.team]}`
+export async function makeDeputy(pid: ID, userId: ID, team: Team) {
+  return teamChange(pid, 'add', (s, p, at, _t, actor) => {
+    const m = roleIn(s, p, userId, team)
+    setDeputy(p, m)
+    notify(s, { to: [userId], type: 'role', title: `You are now deputy ${HEAD_LABEL[team].toLowerCase()} in ${p.name}`, body: `${actor} made you deputy. You act for the head while they are Away.`, link: `/projects/${p.id}`, projectId: p.id, at })
+    return `${nameOf(s, userId)} is now deputy ${HEAD_LABEL[team]}`
   })
 }
 
 export async function toggleSqa(pid: ID, userId: ID) {
-  return teamChange(pid, (s, p) => {
-    const m = memberOf(p, userId)
-    if (!m || m.team !== 'TECH') fail('Only tech team members can be tagged SQA.')
+  return teamChange(pid, 'add', (s, p) => {
+    const m = membershipIn(p, userId, 'TECH')
+    if (!m) fail('Only tech team members can be tagged SQA.')
     if (m.isHead) fail('The tech head is not tagged SQA.')
     m.isSqa = !m.isSqa
     return `${nameOf(s, userId)} ${m.isSqa ? 'tagged' : 'no longer tagged'} SQA`
@@ -480,18 +505,16 @@ export async function toggleSqa(pid: ID, userId: ID) {
 }
 
 /** Replace a person with someone else in the same position (member, head or deputy). */
-export async function replacePerson(pid: ID, oldId: ID, newId_: ID) {
-  return teamChange(pid, (s, p, at, _t, owner) => {
-    const m = memberOf(p, oldId)
-    if (!m) fail('Not a member.')
-    const other = memberOf(p, newId_)
-    if (other) fail(`${nameOf(s, newId_)} is already in ${TEAM_LABEL[other.team]}. One person can hold only one role in a project.`)
+export async function replacePerson(pid: ID, oldId: ID, newId_: ID, team: Team) {
+  return teamChange(pid, 'owner', (s, p, at, _t, owner) => {
+    const m = roleIn(s, p, oldId, team)
+    if (membershipIn(p, newId_, team)) fail(`${nameOf(s, newId_)} is already in the ${TEAM_LABEL[team]}.`)
     m.userId = newId_
     if (m.isHead) moveHeadWork(s, p, m.team, oldId, newId_, at)
-    for (const q of s.questions.filter((q) => q.projectId === p.id && !q.answeredAt)) q.assigneeIds = q.assigneeIds.map((x) => (x === oldId ? newId_ : x))
-    for (const d of s.defects.filter((d) => d.projectId === p.id && d.assigneeId === oldId)) d.assigneeId = newId_
-    notify(s, { to: [newId_], type: 'role', title: `A role was reassigned to you in ${p.name}`, body: `${owner} gave you ${nameOf(s, oldId)}'s role (${roleLabel(p, newId_)}).`, link: `/projects/${p.id}`, projectId: p.id, at })
-    return `${nameOf(s, oldId)} replaced by ${nameOf(s, newId_)} (${roleLabel(p, newId_)})`
+    for (const q of s.questions.filter((q) => q.projectId === p.id && !q.answeredAt && q.team === team)) q.assigneeIds = q.assigneeIds.map((x) => (x === oldId ? newId_ : x))
+    if (team === 'TECH') for (const d of s.defects.filter((d) => d.projectId === p.id && d.assigneeId === oldId)) d.assigneeId = newId_
+    notify(s, { to: [newId_], type: 'role', title: `A role was reassigned to you in ${p.name}`, body: `${owner} gave you ${nameOf(s, oldId)}'s role (${memberLabel(m)}).`, link: `/projects/${p.id}`, projectId: p.id, at })
+    return `${nameOf(s, oldId)} replaced by ${nameOf(s, newId_)} (${memberLabel(m)})`
   })
 }
 
@@ -510,12 +533,15 @@ export async function setAway(pid: ID, userId: ID, fromIso: string | null, to: s
     const user = me(s)
     const p = projectOf(s, pid)
     if (user.id !== userId) ensure(can.manageTeam(p, user.id))
-    const m = memberOf(p, userId)
-    if (!m || (!m.isHead && !m.isDeputy)) fail('Only heads mark themselves Away (their deputy takes over).')
+    const roles = membershipsOf(p, userId).filter((x) => x.isHead || x.isDeputy)
+    const m = roles[0]
+    if (!m) fail('Only heads mark themselves Away (their deputy takes over).')
+    const noDeputy = roles.find((r) => r.isHead && !p.members.some((x) => x.team === r.team && x.isDeputy))
+    if (noDeputy) fail(`Add a deputy to the ${TEAM_LABEL[noDeputy.team]} first: while ${nameOf(s, userId)} is Away, the deputy approves and answers for them.`)
     if (new Date(to) <= new Date(from)) fail('The end date must be after the start date.')
     p.away = p.away.filter((a) => a.userId !== userId)
     p.away.push({ userId, from, to, setBy: user.id })
-    const deputy = p.members.find((x) => x.team === m.team && x.isDeputy)
+    const deputy = p.members.find((x) => roles.some((r) => r.isHead && r.team === x.team) && x.isDeputy)
     if (deputy) notify(s, { to: [deputy.userId], type: 'away', title: `You are covering for ${nameOf(s, userId)}`, body: `${nameOf(s, userId)} is Away until ${new Date(to).toLocaleDateString('en-GB', { timeZone: 'Asia/Dhaka' })}. Their approvals, signatures, questions and reminders come to you.`, link: `/projects/${pid}`, projectId: pid, at })
     audit(s, { projectId: pid, actorId: user.id, action: 'Away set', details: `${nameOf(s, userId)} Away until ${to.slice(0, 10)}`, at })
   })

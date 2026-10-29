@@ -11,6 +11,7 @@ import { brand } from '../theme/brand'
 import { Markdown } from '../components/Markdown'
 import { fmtDateTime } from '../components/format'
 import { Button, ErrorBox, Loading } from '../components/ui'
+import { PART_LABEL, sectionPart, type DocPart } from '../rules/pipeline'
 
 export function PrintPage() {
   const { versionId = '' } = useParams()
@@ -21,7 +22,12 @@ export function PrintPage() {
   if (error || !data) return <ErrorBox error={error} />
   const signed = data.signature
   const status = signed ? 'SIGNED' : data.version.frozen ? 'FROZEN' : 'DRAFT'
-  const sections = signed ? signed.snapshot.sections.map((s, i) => ({ id: String(i), title: s.title, content: s.content })) : data.version.sections
+  // A signed version prints its stored copy (same order as the version's sections, so keys line up).
+  const all = (signed ? signed.snapshot.sections.map((s, i) => ({ id: String(i), title: s.title, content: s.content })) : data.version.sections).map((s, i) => ({ ...s, key: data.version.sections[i]?.key ?? '' }))
+  const part = params.get('part') as DocPart | null
+  const sections = part ? all.filter((s) => sectionPart(s.key) === part) : all
+  const bothParts = !part && all.some((s) => sectionPart(s.key) === 'charter')
+  const title = part ? PART_LABEL[part] : data.label
   const onePager = kind === 'onepager' ? summaries(data.label, data.project.name, data.version.number, data.version.sections) : null
 
   return (
@@ -46,7 +52,7 @@ export function PrintPage() {
             {data.project.name}<br />{data.label} · version {data.version.number}<br />{status}
           </div>
         </header>
-        <h1 className="mb-1 text-3xl font-light uppercase">{onePager ? `${data.label}: one-page summary` : data.label}</h1>
+        <h1 className="mb-1 text-3xl font-light uppercase">{onePager ? `${data.label}: one-page summary` : title}</h1>
         <div className="mb-8 text-sm" style={{ color: brand.muted }}>{data.project.name} · Version {data.version.number} · {fmtDateTime(data.version.createdAt)}</div>
         {onePager ? (
           <>
@@ -54,8 +60,11 @@ export function PrintPage() {
             <Markdown text={onePager.onePager} />
           </>
         ) : (
-          sections.map((s) => (
-            <section key={s.id} className="mb-6 break-inside-avoid-page">
+          sections.map((s, i) => (
+            <section key={s.id} className={i > 0 && bothParts && sectionPart(sections[i - 1].key) !== sectionPart(s.key) ? 'page-break mb-6' : 'mb-6 break-inside-avoid-page'}>
+              {bothParts && (i === 0 || sectionPart(sections[i - 1].key) !== sectionPart(s.key)) && (
+                <div className="mb-4 text-xl font-semibold uppercase" style={{ color: brand.ink }}>Part {sectionPart(s.key) === 'proposal' ? 1 : 2}: {PART_LABEL[sectionPart(s.key)]}</div>
+              )}
               <h2 className="mb-2 text-lg font-semibold" style={{ color: brand.primary }}>{s.title}</h2>
               <Markdown text={s.content} />
             </section>

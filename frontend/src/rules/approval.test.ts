@@ -4,25 +4,23 @@ import { NOW, project } from './fixtures.test-helpers'
 import { yes } from './permissions'
 
 const p = project()
-const chainFor = (docType: 'PROPOSAL' | 'CHARTER') => newChain({ id: 'c1', docId: 'd1', docType, projectId: 'p1', versionId: 'v1', project: p, startedBy: 'pm', now: NOW })
+const chainFor = (docType: 'PROPOSAL' | 'SQA_SIGNOFF') => newChain({ id: 'c1', docId: 'd1', docType, projectId: 'p1', versionId: 'v1', project: p, startedBy: 'pm', now: NOW })
 
 describe('approval chain order and permissions', () => {
-  it('runs PM → tech head → stakeholder head for the Proposal, with no signature', () => {
+  it('runs one round for the Proposal & Charter: PM → tech head → stakeholder head, then the sponsor head signs', () => {
     let c = chainFor('PROPOSAL')
-    expect(c.steps.map((s) => s.role)).toEqual(['PM', 'TECH_HEAD', 'STAKEHOLDER_HEAD'])
-    c = approve(c, p, 'pm', NOW).chain
-    c = approve(c, p, 'tech', NOW).chain
-    const last = approve(c, p, 'sh', NOW)
-    expect(last.finished).toBe(true)
-    expect(last.chain.status).toBe('approved')
-  })
-
-  it('adds the sponsor head signature for the Charter', () => {
-    let c = chainFor('CHARTER')
+    expect(c.steps.map((s) => s.role)).toEqual(['PM', 'TECH_HEAD', 'STAKEHOLDER_HEAD', 'SPONSOR_HEAD'])
     expect(c.steps.at(-1)).toMatchObject({ role: 'SPONSOR_HEAD', sign: true })
     for (const who of ['pm', 'tech', 'sh']) c = approve(c, p, who, NOW).chain
     expect(() => approve(c, p, 'sp', NOW)).toThrow(RuleError)
-    expect(sign(c, p, 'sp', NOW).chain.status).toBe('signed')
+    const signed = sign(c, p, 'sp', NOW)
+    expect(signed.chain.status).toBe('signed')
+  })
+
+  it('has a single approver and no signature for the SQA sign-off', () => {
+    const c = chainFor('SQA_SIGNOFF')
+    expect(c.steps.map((s) => s.role)).toEqual(['TECH_HEAD'])
+    expect(approve(c, p, 'tech', NOW).chain.status).toBe('approved')
   })
 
   it('refuses people who are not the current approver', () => {
@@ -36,7 +34,7 @@ describe('approval chain order and permissions', () => {
     expect(() => requestChanges(c, p, 'tech', '  ', NOW)).toThrow(/comment/)
     const r = requestChanges(c, p, 'tech', 'Hosting section is wrong', NOW).chain
     expect(r.status).toBe('changes_requested')
-    expect(r.steps.map((s) => s.status)).toEqual(['approved', 'changes_requested', 'cancelled'])
+    expect(r.steps.map((s) => s.status)).toEqual(['approved', 'changes_requested', 'cancelled', 'cancelled'])
   })
 })
 
@@ -45,13 +43,13 @@ describe('new version during review', () => {
     const c = approve(chainFor('PROPOSAL'), p, 'pm', NOW).chain
     const cancelled = cancel(c, 'Version 3 replaced version 2', NOW)
     expect(cancelled.status).toBe('cancelled')
-    expect(cancelled.steps.map((s) => s.status)).toEqual(['approved', 'cancelled', 'cancelled'])
+    expect(cancelled.steps.map((s) => s.status)).toEqual(['approved', 'cancelled', 'cancelled', 'cancelled'])
   })
 })
 
 describe('minor correction', () => {
   it('carries earlier approvals over and resumes at the requester', () => {
-    let c = chainFor('CHARTER')
+    let c = chainFor('PROPOSAL')
     c = approve(c, p, 'pm', NOW).chain
     c = approve(c, p, 'tech', NOW).chain
     c = requestChanges(c, p, 'sh', 'Typo in the budget table', NOW).chain
@@ -61,7 +59,7 @@ describe('minor correction', () => {
   })
 
   it('is only possible after changes were requested', () => {
-    expect(() => minorCorrectionChain(chainFor('CHARTER'), { id: 'c2', versionId: 'v2', project: p, startedBy: 'pm', now: NOW })).toThrow(RuleError)
+    expect(() => minorCorrectionChain(chainFor('PROPOSAL'), { id: 'c2', versionId: 'v2', project: p, startedBy: 'pm', now: NOW })).toThrow(RuleError)
   })
 })
 
@@ -116,4 +114,10 @@ describe('sending for approval', () => {
   it('needs the scope decision first', () => expect(sendCheck({ ...base, scopeUndecided: true }).ok).toBe(false))
   it('allows re-approving a frozen version that is out of sync', () => expect(sendCheck({ ...base, versionFrozen: true, outOfSync: true }).ok).toBe(true))
   it('lets an SQA member send the SQA sign-off', () => expect(sendCheck({ ...base, docType: 'SQA_SIGNOFF', userId: 'sqa', isSqaMember: true }).ok).toBe(true))
+  it('checks the whole chain first: stops and names every missing head', () => {
+    const alone = project({ members: [{ userId: 'pm', team: 'PM', isHead: true }] })
+    const r = sendCheck({ ...base, project: alone })
+    expect(r.ok).toBe(false)
+    expect(r.reason).toBe('Add a tech head, a stakeholder head and a sponsor head to the project first.')
+  })
 })

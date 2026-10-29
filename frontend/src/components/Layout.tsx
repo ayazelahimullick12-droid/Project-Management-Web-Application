@@ -203,9 +203,9 @@ function ProjectTree({ pid, chatUnread }: { pid: string; chatUnread: number }) {
         Intake &amp; facts
       </NavItem>
       {group('Documents')}
-      {(['PROPOSAL', 'CHARTER', 'BRD', 'SRS'] as const).map((t) => (
+      {(['PROPOSAL', 'BRD', 'SRS'] as const).map((t) => (
         <NavItem key={t} to={`${base}/docs/${t}`} indent dot={DOT[doc(t) ?? 'not_started']}>
-          {t === 'PROPOSAL' ? 'Proposal' : t === 'CHARTER' ? 'Charter' : t}
+          {t === 'PROPOSAL' ? 'Proposal & Charter' : t}
         </NavItem>
       ))}
       {group('Testing')}

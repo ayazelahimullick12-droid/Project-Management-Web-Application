@@ -45,7 +45,7 @@ export function SimpleProjectPage() {
   const status = projectStatus(summary, mine, now)
   const nameOf = (id?: string) => data.members.find((m) => m.member.userId === id)?.name ?? 'someone'
   const myTeam = data.members.find((m) => m.member.userId === uid)?.member.team
-  const stageDoc: Record<string, DocType> = { PROPOSAL: 'PROPOSAL', CHARTER: 'CHARTER', BRD: 'BRD', SRS: 'SRS', SQA: 'SQA_SIGNOFF', UAT: 'UAT_SIGNOFF' }
+  const stageDoc: Record<string, DocType> = { PROPOSAL: 'PROPOSAL', BRD: 'BRD', SRS: 'SRS', SQA: 'SQA_SIGNOFF', UAT: 'UAT_SIGNOFF' }
   const docs = summary.docs.filter((d) => d.status.key !== 'not_started' || stageDoc[summary.stage] === d.type)
   const later = summary.docs.filter((d) => !docs.includes(d))
   const docLink = (type: DocType) => (type.endsWith('SIGNOFF') ? `/projects/${pid}/testing/${type === 'SQA_SIGNOFF' ? 'SQA' : 'UAT'}?tab=signoff` : `/projects/${pid}/docs/${type}`)

@@ -9,6 +9,7 @@ import { fmtDateTime } from '../../components/format'
 import { Badge, Button, Card, EmptyState, Guarded, Note, Textarea } from '../../components/ui'
 import { ROUND_LABEL } from '../../api/intake'
 import type { IntakeData } from './IntakePage'
+import { MissingPeople } from '../../components/People'
 
 export function OverviewTab({ data, goTo }: { data: IntakeData; goTo: (t: string) => void }) {
   const p = data.project
@@ -37,10 +38,14 @@ export function OverviewTab({ data, goTo }: { data: IntakeData; goTo: (t: string
             <div className="mb-2 text-sm">
               {data.nextExtra === 'brd_business' ? 'Before the BRD, the Q/A agent asks the stakeholders how the work is done today and how it should work.' : 'Before the SRS, the Q/A agent asks the tech team the technical questions.'}
             </div>
-            {data.perms.pm && (
-              <Button variant="primary" size="sm" onClick={() => startExtra.run(p.id, data.nextExtra!)}>
-                <Play className="h-3.5 w-3.5" /> Start the round
-              </Button>
+            {data.missingForQuestions.length > 0 ? (
+              <MissingPeople pid={p.id} missing={data.missingForQuestions} canAdd={data.perms.canAddPeople} before="Before these questions can be sent" />
+            ) : (
+              data.perms.pm && (
+                <Button variant="primary" size="sm" onClick={() => startExtra.run(p.id, data.nextExtra!)}>
+                  <Play className="h-3.5 w-3.5" /> Start the round
+                </Button>
+              )
             )}
           </Note>
         )}
