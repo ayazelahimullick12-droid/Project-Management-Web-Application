@@ -65,17 +65,17 @@ export function HowItWorksPage() {
         </Card>
         <Card title="What is simulated in this prototype">
           <ul className="list-disc space-y-1 pl-5 text-sm">
-            <li>All AI results are pre-written, shown after a short progress panel.</li>
+            <li>The AI is real but small: a local model in LM Studio writes short answers (Admin → Settings chooses the model). Every AI result is labelled until a person checks it.</li>
             <li>Emails appear in the in-app Mailbox; nothing is sent.</li>
-            <li>OCR and Bangla transcription show pre-written results.</li>
+            <li>OCR of PDF, Word and scanned files, and Bangla transcription, show pre-written results. Plain text files are really read.</li>
             <li>Calls are a mock screen (your own camera and screen share work if you allow them).</li>
-            <li>Data lives in this browser only. Reset it from the clock menu.</li>
+            <li>Data lives in one file on this laptop (frontend/data/db.json), shared by every open tab. Start again from the Demo menu.</li>
             <li>A demo clock lets you move time forward to see reminders and lock timeouts.</li>
           </ul>
         </Card>
         <Card title="What is real logic">
           <ul className="list-disc space-y-1 pl-5 text-sm">
-            <li>Who can do what, deputies and Away, one role per person.</li>
+            <li>Who can do what, deputies and Away, and asking for people when a step needs them.</li>
             <li>The approval chain, minor correction, Request changes, re-approval in order.</li>
             <li>Comment carry-forward and Pending check.</li>
             <li>Working-hours reminder times.</li>

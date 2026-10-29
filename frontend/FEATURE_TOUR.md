@@ -14,10 +14,16 @@ you on the same page, so you can flip between the two at any point to compare.
 
 ## Before you start
 
-1. Run the app (`npm run dev` in `frontend/`) and open it in a wide browser window.
+1. Start LM Studio with `qwen2.5-coder-0.5b-instruct` and `text-embedding-nomic-embed-text-v1.5`
+   loaded and its server running (Developer tab). Run the app (`npm run dev` in `frontend/`) and
+   open it in a wide browser window.
 2. Sign in as anyone. Open the **Demo** menu (the **Demo** button at the top right in the Simple
-   view; the clock above your name in the Full view) and click **Reset demo data**. Then set
-   **AI speed** to `fast`.
+   view; the clock above your name in the Full view): it should say **AI (LM Studio): connected**.
+   The app starts with no projects: click **Start again → With demo projects**. Then set **Speed of
+   the simulated steps** to `fast` (only file reading and call transcripts are simulated).
+   - The AI is real: its wording, and sometimes the facts it picks out, change from run to run.
+     The steps say what to look for, not the exact text. Every AI result is labelled AI until a
+     person accepts or edits it.
 3. Every account's password is **demo1234**. On the login page you can also just click a person.
 4. **Switch person** at any time from the **Demo** menu → pick someone from the list. You do not
    need to sign out.
@@ -45,7 +51,7 @@ The three active projects have the same team, so each person has the same role e
 | **Rokeya Begum** | Stakeholder head (**Away** in Branch Cash) | Confirming the Fact Sheet, approving documents, confirming the UAT test list |
 | **Jahid Hasan** | Deputy stakeholder head | Approving **as deputy** while Rokeya is Away |
 | **Shirin Akhter**, **Habib Ullah** | Stakeholders (UAT testers) | Writing the description, answering questions, commenting, UAT testing, raising defects |
-| **Selim Reza** | Sponsor head | Answering budget questions, **signing** the Charter, BRD and SRS |
+| **Selim Reza** | Sponsor head | Answering budget questions, **signing** the Proposal & Charter, BRD and SRS |
 | **Laila Nasrin** | Deputy sponsor head | Suggestions in Branch Cash |
 | **Grace Mwangi** | Sponsor, outside BRAC | An external member (signs with an email code) |
 | **Mithila Sarker**, **Anwar Hossain**, **Dilruba Yasmin** | People from past projects | Cross-project messages: they see only that one conversation |
@@ -120,22 +126,23 @@ The view most people will use. Show it first, then flip to **Full** to show the 
 
 ## Part 3 — New project and team management (8 min) — Imran
 
-1. Be **Imran**. Click **+** next to Projects (or **New project** on Home). The wizard:
-   1. **Details:** a name and a short description → **Next**.
-   2. **Project Manager:** choose Nusrat → **Next**.
-   3. **Teams and heads:** use **Load a saved team template**, or add people from the
-      directory. Show the head (crown), deputy, and the **SQA** tag on tech members. In the
-      **Add from the user directory** list, people already in another team are greyed out
-      (“already in …”): one role per person.
-   4. **Review and invite** → **Create project and send invitations**.
-2. The new project opens in the **Intake** stage. Members got a notification and an email
-   (**Help & prototype → Mailbox**).
+1. Be **Imran**. Click **+** next to Projects (or **New project** on Home). **Start a project**
+   needs only a name: the person who starts it becomes the **Project Owner** and the **Project
+   Manager**. Open **Add people now (optional)** to show **Load a saved team** and adding people
+   from the directory (head with a crown, deputy, the **SQA** tag). Give one person two roles: a
+   warning says they would approve more than once. Remove them again, then **Start the project**
+   with nobody else.
+2. The new project opens in the **Intake** stage. Show that the app asks for people only when a
+   step needs them: on **Q/A questions**, **Start the first round** stops with “add the
+   stakeholders first” and an **Add** button (the same happens before Fact Sheet confirmation,
+   before **Send for approval** (the whole chain is checked at once) and before testing).
 3. Open the new project's **Team** page (use this project, so the demo projects stay intact):
    - **Add** someone → **Add and notify**.
    - **Replace** a person (a pending approval moves to the new head, on the same version).
    - **Make head**, **Make deputy**, **Toggle SQA tag**, **Remove**.
-   - **Away** on a head: choose an end date. Their deputy now receives approvals, signatures,
-     questions and reminders. **End Away** stops it.
+   - **Away** on a head: choose an end date (the app asks for a deputy first if there is none).
+     Their deputy now receives approvals, signatures, questions and reminders. **End Away** stops
+     it.
    - **Save as team template** (it appears in the wizard next time).
 4. Switch to **Nusrat** and open the Team page: she sees the team but cannot change it. Only the
    Owner can.
@@ -148,30 +155,32 @@ The view most people will use. Show it first, then flip to **Full** to show the 
    - Click **Upload a file** and choose any PDF or image. Open it to see the **extracted text**
      (simulated OCR, English and Bangla).
 2. Be **Nusrat** (PM). Click **Run intake analysis**. The **AI tray** (bottom left) shows the
-   steps: the Q/A agent extracts facts, then the RAG agent searches past projects.
+   steps and seconds: the local model reads the description, then the upload (about 30 seconds in
+   all), then similar past projects are found by meaning (a second or two).
 3. **Fact Sheet** tab: every required field with its value, status (filled, missing, assumed,
-   conflicting), source and the documents that need it. **Number of users** is **conflicting**
-   (the description says 1,200, the upload says 1,450) → **Settle** → **Use this value**.
+   conflicting), source and the documents that need it. **Number of users** is usually
+   **conflicting** (the description says 1,200, the upload says 1,450) → **Settle** → **Use this
+   value**. Fix any fact the small model got wrong with **Edit**.
 4. **Similar projects** tab (PM team only):
-   - A **duplicate warning**: Field Collection Tracker matches 92%. Click **Acknowledge** (rounds
-     cannot start until it is acknowledged).
+   - A **duplicate warning**: Field Collection Tracker matches about 90%. Click **Acknowledge**
+     (rounds cannot start until it is acknowledged).
    - Each match shows why it matched, matching sections, **View full document**, and its members.
      **Rashed Kabir** shows **unavailable** (deactivated).
    - Click **Message** next to **Mithila Sarker**: a chat window opens at the bottom right. Send
      her a question.
-   - **Suggestions:** old-project details are highlighted in yellow. Click **Still true here** or
-     **Replace** for each, then **Accept into the Fact Sheet** (accept the risk and the success
-     criteria). **Reject** another one: it stays in the log.
+   - **Suggestions:** lines from the closest parts of the past project's documents. Old-project
+     details (numbers, days, places) are highlighted in yellow. Click **Still true here** or
+     **Replace** for each, then **Accept into the Fact Sheet**. **Reject** another one: it stays
+     in the log.
    - Back on the **Fact Sheet**, accepted items carry the credit “From Field Collection Tracker
      (PM: Mithila Sarker)”.
-5. **Q/A questions** tab → **Start the first round**. The card shows the routing: business
-   questions go to stakeholders, funding to sponsors, technical ones to the tech team. Only five
-   questions are needed, because the RAG suggestions filled two.
-6. Be **Selim Reza** (sponsor head). **My work → Q/A questions**:
-   - Budget: **Answer** → **Use sample answer (demo)** → save.
-   - Funding source: **Answer** → tick **Unknown**. It is stored as an assumption with the agreed
-     default.
-7. Be **Habib Ullah** (stakeholder). Answer his three questions with **Use sample answer**.
+5. **Q/A questions** tab → **Start the first round**. The AI writes one question per missing field
+   (about a second each). The card shows the routing: business questions go to stakeholders,
+   funding to sponsors, technical ones to the tech team.
+6. Be **Selim Reza** (sponsor head). **My work → Q/A questions** (if he has questions):
+   - One: **Answer** → **Use sample answer (demo)** → save.
+   - Another: **Answer** → tick **Unknown**. It is stored as an assumption with the agreed default.
+7. Be **Habib Ullah** (stakeholder). Answer his questions with **Use sample answer**.
 8. Be **Nusrat**. **Q/A questions → Close round**. (If something was left unanswered, show
    **Ask again** and **Proceed with gaps logged**. The round limit is set by the Admin.)
 9. **Fact Sheet → Send for confirmation**.
@@ -181,23 +190,29 @@ The view most people will use. Show it first, then flip to **Full** to show the 
     - Optionally **Comment on what is wrong** → **Send to the PM team** (Nusrat sees it on the
       Description and files tab).
     - **Confirm Fact Sheet**. This saves Fact Sheet version 1, and the project's next step
-      becomes “Generate the Proposal”. (Comparing versions is shown in Part 7.)
+      becomes “Write the Proposal & Charter”. (Comparing versions is shown in Part 7.)
 
-## Part 5 — The Proposal: drafting, comments, editing, versions, approval (15 min) — Field Loan
+## Part 5 — The Proposal & Charter: drafting, comments, editing, versions, approval (15 min) — Field Loan
 
-1. Be **Nusrat**. Open **Proposal** → **Generate with AI**. The AI writes it section by section
-   from the confirmed facts. The header shows **AI draft**.
-2. Be **Habib**. In the **Document** view, select a sentence in **Scope** → **Comment**, use
+The Project Proposal and the Project Charter are one package, written and approved together.
+
+1. Be **Nusrat**. Open **Proposal & Charter** → **Generate with AI**. The AI writes it section by
+   section from the confirmed facts (about 20 seconds; the AI tray counts the sections). The
+   header shows **AI draft**. Each section is short on purpose: a few sentences or bullets. The
+   Charter part has numbered objectives (OBJ-1…). The summary and slides are made in the
+   background. In the Simple view the document has three tabs: **Proposal · Charter · Slides**.
+2. Be **Habib**. In the **Document** view, select a sentence in **Objectives and scope** → **Comment**, use
    **Tag people** to tag Rafiq, and send. Select other text → **Suggest wording**. Both appear in
    the **Comments** rail on the right. (Rafiq gets an in-app notification and an email.)
 3. Be **Nusrat**. **Send for approval** (top right) is greyed out with the reason: there is an open
    comment. Open comments and comments pending a check block the chain.
 4. Be **Rafiq Hasan** (PM team), ideally in a second window:
    - In the rail, **Accept** Habib's suggestion: it goes into the draft.
-   - Click **Edit**. Open **Rewrite with AI** on Objectives, type an instruction, **Rewrite**, then
-     **Accept** the diff.
-   - Change the sentence Habib commented on, then **Save version** with a message. The scope check
-     says the edit touches objectives.
+   - Click **Edit**. Open **Rewrite with AI** on a section, type an instruction (for example “make
+     it shorter”), **Rewrite** (about 5 seconds), then **Accept** the diff.
+   - Change the sentence Habib commented on, and change a date or the budget in **Timeline and
+     budget**. Click **Save version**: the AI checks whether the edit changes objectives,
+     deliverables, budget or timeline (a few seconds) and gives its reason.
    - Habib's comment becomes **Pending check**, because its text changed.
 5. **Edit lock** (two windows): while Rafiq is editing, Nusrat's window says Rafiq is editing.
    Show **Show live edits**. Nusrat can **Force-unlock** from the **…** menu. Demo clock menu →
@@ -210,45 +225,46 @@ The view most people will use. Show it first, then flip to **Full** to show the 
    team can no longer comment, because his head has approved this version.
 9. Optional: **Request changes** and minor correction. Be **Rokeya** → **Request changes** with a
    comment. Be **Nusrat** → **Edit**, fix the text, **Save version** → **Declare minor
-   correction**. The AI checks the scope. If scope is untouched, earlier approvals carry over and
+   correction**. The app checks the scope. If scope is untouched, earlier approvals carry over and
    the chain resumes with Rokeya, who sees the diff. If scope is touched, it is refused and the
    full chain runs again.
-10. Be **Rokeya** → **Approve**. In the rail, the **Approval** tab shows each reviewer with a tick.
-11. Show the other views of the document (the switch above the text):
+10. Be **Rokeya** → **Approve**.
+11. Be **Selim Reza** (sponsor head) → **Approve and sign** → choose **password**, type
+    `demo1234`, and sign. The sponsor signs the whole package. The record says it is an
+    electronic approval record, not a CCA-certified signature. The version is now **frozen**. In
+    the rail, the **Approval** tab shows each reviewer with a tick.
+12. Show the other views of the document (the switch above the text):
     - **History:** every version. **View**, **Changes**, **Restore**.
     - **Compare:** any two versions side by side.
     - **Summary:** one-page summary, very short summary and slides, each labelled “AI summary of
-      version N”. **Download PPTX**.
-    - **…** menu: **Download PDF**, **Download Word (.docx)**.
+      version N”. **Make them again** asks the AI for a new one. **Download PPTX**.
+    - **…** menu: **Download PDF**, **Download Word (.docx)** — for the whole package, or the
+      Proposal or the Charter alone.
 
-## Part 6 — Charter, BRD and SRS: signing, extra rounds, traceability (optional, 15 min) — Field Loan
+## Part 6 — BRD and SRS: signing, extra rounds, traceability (optional, 15 min) — Field Loan
 
 This part takes Field Loan to signed documents. Each document follows the same pattern as the
-Proposal, with signing at the end.
+Proposal & Charter, with signing at the end.
 
-1. **Charter:** be **Nusrat** → **Charter → Generate with AI** → **Send for approval** →
-   **Approve**. Be **Arif** → **Approve**. Be **Rokeya** → **Approve**.
-2. Be **Selim Reza** (sponsor head) → **Approve and sign** → choose **password**, type
-   `demo1234`, and sign. The record says it is an electronic approval record, not a
-   CCA-certified signature. The version is now **frozen**.
-3. Be **Nusrat** → **Intake & facts**: a banner asks for the **business processes** round before
+1. Be **Nusrat** → **Intake & facts**: a banner asks for the **business processes** round before
    the BRD → **Start the round**. Be **Habib** and **Shirin** → answer. Be **Nusrat** →
    **Close round**.
-4. **BRD:** generate, approve (Nusrat, Arif, Rokeya) and sign (Selim). This time, sign with
+2. **BRD:** generate (about 20 seconds; each business requirement BR-01… names the Charter
+   objective it supports), approve (Nusrat, Arif, Rokeya) and sign (Selim). This time, sign with
    **Email one-time code** → **Send me a code** → open **Help & prototype → Mailbox** in your
    second window → copy the code → sign.
-5. Before the **SRS**, start the **technical** round (Intake banner). Be **Arif** or **Kamrul** →
+3. Before the **SRS**, start the **technical** round (Intake banner). Be **Arif** or **Kamrul** →
    answer → be **Nusrat** → close it. Then generate, approve and sign the SRS.
-6. **SRS → Traceability → Build the matrix:** each requirement linked to its BRD and Charter
-   parent. An unlinked requirement (SR-08) is flagged.
-7. The project moves to **SQA**. Draft its tests with AI:
+4. **SRS → Traceability → Build the matrix:** each requirement linked to its BRD and Charter
+   parent. Any requirement the AI wrote without a link is flagged.
+5. The project moves to **SQA**. Draft its tests with AI:
    - Be **Tania Ferdous** (SQA) → **SQA → Test cases → Draft test cases with AI**: one draft per
-     SRS requirement, labelled AI until accepted → **Accept all … AI drafts** (or edit one, then
-     **Save and accept**).
+     SRS requirement (about 5 seconds each), labelled AI until accepted → **Accept all … AI
+     drafts** (or edit one, then **Save and accept**).
    - Be **Arif** → **Confirm the list (tech head)**. Testing can now start.
    - UAT works the same way: the PM team drafts UAT tests from the BRD and the stakeholder head
      (Rokeya) confirms the list.
-8. The rest of testing is shown with a project that is already in UAT (Part 8).
+6. The rest of testing is shown with a project that is already in UAT (Part 8).
 
 ## Part 7 — Branch Cash: deputies, signing, Fact Sheet updates, decisions, change requests (12 min)
 
@@ -257,8 +273,8 @@ Proposal, with signing at the end.
    acted for whom.
 2. Be **Selim Reza** → **BRD** → **Approve and sign** with an **Email one-time code** (code in the
    **Mailbox**).
-3. **Charter** (any member): it was sent back by the sponsor (“split the budget”), edited and
-   signed. In the rail's **Approval** tab:
+3. **Proposal & Charter**, Charter tab (any member): it was sent back by the sponsor (“split the
+   budget”), edited and signed. In the rail's **Approval** tab:
    - **Earlier approval rounds** shows the history.
    - **Open the signed PDF (stored copy)**: the stored copy plus a certificate page with SHA-256
      fingerprints.
@@ -272,7 +288,8 @@ Proposal, with signing at the end.
      (**Restore** brings back an older version as a new one.)
 5. **Changes & decisions → Decisions:** decisions marked in chat and found by the AI in a meeting
    transcript.
-   - On one: **Confirm into the Fact Sheet** → choose the fact → **Confirm**.
+   - On one: **Confirm into the Fact Sheet** → **Suggest with AI** (it picks the fact by meaning
+     and writes the value, about a second) → check it → **Confirm**.
    - **Dismiss** another one.
    - On the last one: **It changes scope: start a change request**.
 6. **Change requests:** the new request (or **New change request** → **What is changing?** and
@@ -312,8 +329,9 @@ Proposal, with signing at the end.
    **Release to UAT**. UAT-4 is now ready for its reporter to retest.
 7. Be **Habib** (stakeholder):
    - **My work → Tests** → **Run test** on **UAT-TC-4** → **Fail**. Type a rough note and click
-     **Write**: the AI defect writer fills in steps, expected and actual, and shows a possible
-     duplicate. **Attach a screenshot** → **Raise defect**.
+     **Write**: the AI defect writer fills in the title, steps, expected and actual (a few
+     seconds). If it means the same as an open defect, that one is shown as a possible duplicate
+     (compared by meaning). **Attach a screenshot** → **Raise defect**.
    - Open **UAT-5** (Ready for retest) → **Retest passed: close**.
 8. Be **Nusrat** → **UAT → Defects** (board view):
    - Drag the new defect from **New** to **Open** and choose a developer (triage).
@@ -379,11 +397,15 @@ Be **Farhana Kabir**. Sidebar → **Admin**:
 2. **Users:** **Add user** (with “Outside BRAC (signs with an email one-time code)”),
    **Deactivate** and **Reactivate**. Email and password login; BRAC sign-in can be added later.
 3. **Settings:** working days and hours, holidays, reminder interval, Q/A round limit, edit-lock
-   timeout, severities that block sign-off, duplicate warning threshold, how many similar projects
-   are shown → **Save**.
+   timeout, severities that block sign-off, duplicate warning thresholds, how many similar projects
+   are shown, and the **AI models**: which LM Studio model writes and which compares meaning (the
+   lists come from LM Studio; **Check again** if you just loaded one) → **Save**.
 4. **Import past projects:** name, year, department, members, documents (**Add a document**) →
    **Import and index**. The project becomes a finished project the RAG agent can find.
-5. **AI activity:** every AI call (agent, project, prompt tokens, duration).
+5. **AI activity:** every AI request (agent, project, model, tokens in and out, seconds, and the
+   error if it failed).
+6. To show what happens when the AI is off: stop LM Studio's server and click any AI button. The
+   action stops with “LM Studio is not reachable…” and nothing is changed.
 6. **Audit log:** everything across all projects.
 7. Farhana's **Home** also has the portfolio view (pipeline and stalled items).
 
@@ -409,7 +431,7 @@ Each refusal shows the reason. Show a few:
    the active dashboard. Do this last, or use the project you created in Part 3.
 3. **Help & prototype → Open questions:** what the spec leaves open and what the prototype
    assumes. **How the real app works:** LM Studio, BanglaASR, OCR, embeddings, LiveKit, signing.
-4. Demo clock menu → **Reset demo data** to start over.
+4. Demo clock menu → **Start again** (**Empty** or **With demo projects**) to start over.
 
 ---
 
@@ -419,7 +441,7 @@ Each refusal shows the reason. Show a few:
 | --- | --- |
 | Login, demo users, dark mode, quick search (Ctrl+K), phone layout | 1 |
 | Home dashboard, portfolio view, My work, project overview | 2 |
-| New project wizard, team templates, team changes, Away and deputies | 3, 7 |
+| Starting a project alone, adding people when a step needs them, several roles, team changes, Away and deputies | 3, 7 |
 | Uploads with OCR, intake analysis, Fact Sheet, conflicts, versions | 4 |
 | RAG: similar projects, duplicate warning, suggestions, cross-project messages | 4 |
 | Q/A rounds, routing, “Unknown” answers, round limit, extra rounds | 4, 6 |

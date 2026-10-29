@@ -1,6 +1,6 @@
 /**
  * Reads documents written as Markdown files with one "## Title {#key}" heading per section.
- * Used for the seed documents and the pre-written AI drafts.
+ * Used for the seed documents.
  */
 export interface RawSection {
   key: string

@@ -60,7 +60,7 @@ export function buildReportSections(input: ReportInput): { key: string; title: s
   })
 
   return [
-    { key: 'summary', title: 'Summary', content: `${input.summary}\n\n*AI-generated summary (simulated). All numbers below are counted by the app.*` },
+    { key: 'summary', title: 'Summary', content: `${input.summary}\n\n*AI-generated summary. All numbers below are counted by the app.*` },
     {
       key: 'build',
       title: 'Build and dates',

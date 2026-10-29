@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import type { DefectStatus, Severity, TestStage } from '../../types'
 import { api } from '../../api'
 import type { NewDefect } from '../../api/testing'
-import { useAction, useApi } from '../../api/hooks'
+import { useAction, useApi, useSettled } from '../../api/hooks'
 import { AiBadge, AiNote } from '../../components/ai'
 import { FileButton } from '../../components/FileButton'
 import { Button, Field, Input, Modal, Note, Select, Textarea } from '../../components/ui'
@@ -19,8 +19,8 @@ const SEVERITY_HELP: Record<Severity, string> = {
 export function DefectFields({ pid, stage, value, onChange, tests, fixedTestId }: { pid: string; stage: TestStage; value: NewDefect; onChange: (v: NewDefect) => void; tests: { id: string; key: string; title: string }[]; fixedTestId?: string }) {
   const [note, setNote] = useState('')
   const write = useAction(api.testing.writeDefect, { onDone: (r) => onChange({ ...value, ...r, ai: true }) })
-  const text = `${value.title} ${value.actual}`
-  const { data: dupes } = useApi(['dupes', pid, stage, text], () => api.testing.possibleDuplicates(pid, stage, text), text.trim().length > 8)
+  const text = useSettled(`${value.title} ${value.actual}`.trim(), 900)
+  const { data: dupes } = useApi(['dupes', pid, stage, text], () => api.testing.possibleDuplicates(pid, stage, text), text.length > 8)
   return (
     <div>
       <div className="mb-3 rounded-md bg-violet-50/60 p-3 ring-1 ring-violet-200">
@@ -38,7 +38,7 @@ export function DefectFields({ pid, stage, value, onChange, tests, fixedTestId }
       <Field label="Title"><Input value={value.title} onChange={(e) => onChange({ ...value, title: e.target.value })} /></Field>
       {dupes && dupes.length > 0 && (
         <Note tone="amber" className="mb-3 !text-xs">
-          Possible duplicates (simulated similarity):{' '}
+          Possible duplicates (AI, similar meaning):{' '}
           {dupes.map((x) => (
             <a key={x.id} href={`/projects/${pid}/defects/${x.id}`} target="_blank" rel="noreferrer" className="mr-2 font-medium underline">
               {x.key} {x.title} ({Math.round(x.score * 100)}%)

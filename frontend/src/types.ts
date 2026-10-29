@@ -97,7 +97,7 @@ export interface FactDef {
   label: string
   category: FactCategory
   round: Exclude<RoundPurpose, 'change_request'>
-  question?: string // the question the (simulated) Q/A agent asks when it is missing
+  question?: string // an example question; the Q/A agent writes its own and falls back to this one
   sample?: string // demo helper: a ready answer the presenter can use with one click
   defaultIfUnknown?: string // the agreed default when someone answers "Unknown"
 }
@@ -233,6 +233,7 @@ export interface TemplateSection {
   guidance: string
   factKeys: string[]
   scopeSensitive?: boolean // touches objectives, deliverables, budget or timeline
+  numbered?: 'OBJ' | 'BR' | 'SR' // a numbered list: Charter objectives, BRD or SRS requirements
 }
 
 export interface Template {
@@ -298,6 +299,7 @@ export interface Draft {
   updatedAt: string
   updatedBy: ID
   proposals?: { sectionId: ID; prompt: string; content: string; createdAt: string }[] // AI rewrites waiting for accept/reject
+  scopeCheck?: { key: string; flagged: boolean; sectionTitles: string[]; reason: string } // the AI scope check of this exact text (key)
 }
 
 export interface EditLock {
@@ -549,8 +551,11 @@ export interface AiCall {
   agent: string
   title: string
   promptTokens: number
+  completionTokens?: number
+  model?: string
   durationMs: number
   success: boolean
+  error?: string
   createdAt: string
 }
 
@@ -564,9 +569,11 @@ export interface AiJob {
   status: 'running' | 'done' | 'failed'
   startedAt: string
   startedReal: number // real Date.now() at start, to spot jobs interrupted by a closed tab
+  heartbeatReal?: number // real Date.now() of the last progress, same purpose
   finishedAt?: string
   byUserId: ID
   link?: string
+  ref?: ID // what the job works on, e.g. the document version being summarised
   resultNote?: string
 }
 
@@ -711,8 +718,23 @@ export interface Settings {
   ragDuplicateThreshold: number
   signoffBlocking: Severity[]
   defectDuplicateThreshold: number
-  aiSpeed: 'normal' | 'fast' | 'instant'
+  aiSpeed: 'normal' | 'fast' | 'instant' // only for the parts that are still simulated
   holidays: string[] // YYYY-MM-DD
+  ai: AiSettings
+}
+
+/** Which LM Studio models the app uses (Admin → Settings). */
+export interface AiSettings {
+  model: string // writes text, e.g. "qwen2.5-coder-0.5b-instruct"
+  embedModel: string // compares texts (similar projects, possible duplicate defects)
+}
+
+/** The AI summaries of one document version (made on request; see api/documents.ts makeSummaries). */
+export interface VersionSummary {
+  short: string // one sentence
+  onePager: string // a few bullet points (Markdown)
+  slides: { title: string; bullets: string[] }[]
+  createdAt: string
 }
 
 export interface DemoMeta {
@@ -757,6 +779,7 @@ export interface DemoState {
   audit: AuditEntry[]
   aiCalls: AiCall[]
   jobs: AiJob[]
+  summaries: Record<ID, VersionSummary> // by document version id
   reminders: Record<string, { count: number; lastAt: string }>
   otps: Record<ID, { code: string; expiresAt: string }> // email one-time codes for signing
   chatReads: Record<string, string> // '<userId>:<chatId>' → when that person last read the chat

@@ -7,15 +7,15 @@
 import type { DemoState, Defect, DefectStatus, DocVersion, ID, Project, Severity, TestCase, TestStage } from '../types'
 import { now, nowIso } from '../demo/clock'
 import { newId } from '../demo/ids'
-import { runJob } from '../demo/jobs'
-import { draftTestCase, signoffSummary, similarDefects, writeDefect as aiWriteDefect } from '../demo/ai/agents'
+import { runAiJob } from '../demo/jobs'
+import { draftTestCase, signoffParagraph, similarDefects, writeDefect as aiWriteDefect } from '../ai/agents'
 import { CHAIN_CONFIG, ROLE_LABEL } from '../rules/approval'
 import { missingPeople, testingNeeds } from '../rules/people'
 import { actAsHead, can, headOf, headRecipient, inTeam, isDeveloper, isSqa, type Check } from '../rules/permissions'
 import { activeChain, chainsOf, DOC_LABEL, docStatus, previousComplete } from '../rules/pipeline'
 import { buildReportSections, reportStats } from '../rules/signoffReport'
 import { allowedTransitions, buildAvailable, canBeAssigned, checkTransition, coverage, exitCriteria, knownIssues, latestResults, markReadyForRetest, releaseCheck, requirementsFor, transitionFor, UNRESOLVED } from '../rules/testing'
-import { act, aiPause, ApiError, ensure, fail, me, nameOf, pipelineCtx, projectOf, read } from './core'
+import { act, ApiError, ensure, fail, me, nameOf, pipelineCtx, projectOf, read } from './core'
 import { audit, notify, teamMembers } from './effects'
 import { createChangeRequestIn } from './changes'
 
@@ -171,19 +171,26 @@ export async function draftTests(pid: ID, stage: TestStage) {
   ensure(canWriteTests(p, user.id, stage))
   const uncovered = coverage(stage, s0.requirements.filter((r) => r.projectId === pid), s0.testCases.filter((x) => x.projectId === pid)).filter((c) => !c.tests.length && !c.requirement.notTestable).map((c) => c.requirement)
   if (!uncovered.length) fail(`Every ${stage === 'SQA' ? 'SRS' : 'BRD'} requirement already has a test case (or is Not testable).`)
-  return runJob({
+  return runAiJob({
     agent: 'testcases',
     title: `Drafting ${stage} test cases`,
     projectId: pid,
     byUserId: user.id,
     link: `/projects/${pid}/testing/${stage}?tab=cases`,
-    promptTokens: 500 * uncovered.length,
-    steps: uncovered.slice(0, 6).map((r) => `Drafting a test case for ${r.id}`).concat(uncovered.length > 6 ? [`…and ${uncovered.length - 6} more`] : []),
-    apply: (s) => {
+    steps: uncovered.map((r) => `Drafting a test case for ${r.id}`),
+    work: async (step) => {
+      const drafts = []
+      for (const [i, r] of uncovered.entries()) {
+        step(i)
+        drafts.push(await draftTestCase(stage, r))
+      }
+      return drafts
+    },
+    apply: (s, drafts) => {
       const at = nowIso()
-      for (const r of uncovered) {
+      for (const draft of drafts) {
         const key = nextKey(s, pid, `${stage}-TC`, s.testCases)
-        s.testCases.push({ ...draftTestCase(stage, r), id: newId('tc'), projectId: pid, key, createdBy: null, createdAt: at, history: [{ by: null, at, text: `Drafted by AI from ${r.id}` }] })
+        s.testCases.push({ ...draft, id: newId('tc'), projectId: pid, key, createdBy: null, createdAt: at, history: [{ by: null, at, text: `Drafted by AI from ${draft.requirementIds[0]}` }] })
       }
       const proj = projectOf(s, pid)
       const head = headOf(proj, stage === 'SQA' ? 'TECH' : 'STAKEHOLDER')
@@ -409,16 +416,16 @@ export async function createDefect(pid: ID, stage: TestStage, input: NewDefect) 
 /** AI defect writer (inline, quick): rough note → structured defect for the tester to check. */
 export async function writeDefect(pid: ID, note: string, testCaseId?: ID) {
   if (!note.trim()) fail('Type a short note first.')
-  await aiPause()
-  return act((s, _t, at) => {
-    const tc = s.testCases.find((x) => x.id === testCaseId)
-    s.aiCalls.unshift({ id: newId('ai'), projectId: pid, agent: 'defectwriter', title: 'Defect writer', promptTokens: 400, durationMs: 1400, success: true, createdAt: at })
-    return aiWriteDefect(note, tc)
-  })
+  const tc = await read((s) => s.testCases.find((x) => x.id === testCaseId))
+  return aiWriteDefect(note, tc, { projectId: pid })
 }
 
+/** Open defects that mean the same thing (compared by the AI's embedding model). */
 export async function possibleDuplicates(pid: ID, stage: TestStage, text: string) {
-  return read((s) => similarDefects(text, s.defects.filter((d) => d.projectId === pid && d.stage === stage && UNRESOLVED.includes(d.status)), s.settings.defectDuplicateThreshold).map((x) => ({ id: x.defect.id, key: x.defect.key, title: x.defect.title, status: x.defect.status, score: x.score })))
+  const s = await read((x) => x)
+  const open = s.defects.filter((d) => d.projectId === pid && d.stage === stage && UNRESOLVED.includes(d.status))
+  const found = await similarDefects(text, open, s.settings.defectDuplicateThreshold, { projectId: pid })
+  return found.map((x) => ({ id: x.defect.id, key: x.defect.key, title: x.defect.title, status: x.defect.status, score: x.score }))
 }
 
 export async function moveDefect(defectId: ID, to: DefectStatus, input: { assigneeId?: ID; buildId?: ID; reason?: string; duplicateOfId?: ID; severity?: Severity } = {}) {
@@ -553,15 +560,16 @@ export async function generateReport(pid: ID, stage: TestStage) {
   const builds = s0.builds.filter((b) => b.projectId === pid && buildAvailable(b, stage))
   const build = builds.at(-1)
   if (!build) fail('There is no build in this stage yet.')
-  return runJob({
+  const reportInput = (s: DemoState) => ({ stage, requirements: s.requirements.filter((r) => r.projectId === pid), tests: s.testCases.filter((x) => x.projectId === pid), executions: s.executions.filter((e) => e.projectId === pid), defects: s.defects.filter((d) => d.projectId === pid), blocking: s.settings.signoffBlocking })
+  return runAiJob({
     agent: 'signoff',
     title: `Generating the ${stage} sign-off report`,
     projectId: pid,
     byUserId: user.id,
     link: `/projects/${pid}/testing/${stage}?tab=signoff`,
-    promptTokens: 700,
-    steps: ['Counting test results', 'Counting defects by severity', 'Listing known issues', 'Writing the summary paragraph'],
-    apply: (s) => {
+    steps: ['Writing the summary paragraph'],
+    work: () => signoffParagraph(stage, reportStats(reportInput(s0)), build.version, { projectId: pid }),
+    apply: (s, summary) => {
       const at = nowIso()
       const type = signoffType(stage)
       let doc = s.docs.find((d) => d.projectId === pid && d.type === type)
@@ -569,9 +577,7 @@ export async function generateReport(pid: ID, stage: TestStage) {
         doc = { id: `${pid}-${type}`, projectId: pid, type, title: DOC_LABEL[type] }
         s.docs.push(doc)
       }
-      const input = { stage, requirements: s.requirements.filter((r) => r.projectId === pid), tests: s.testCases.filter((x) => x.projectId === pid), executions: s.executions.filter((e) => e.projectId === pid), defects: s.defects.filter((d) => d.projectId === pid), blocking: s.settings.signoffBlocking }
-      const stats = reportStats(input)
-      const sections = buildReportSections({ ...input, build, users: s.users, summary: signoffSummary(stage, stats, build.version) }).map((x) => ({ id: `${doc!.id}:${x.key}`, key: x.key, title: x.title, content: x.content, factKeys: [] }))
+      const sections = buildReportSections({ ...reportInput(s), build, users: s.users, summary }).map((x) => ({ id: `${doc!.id}:${x.key}`, key: x.key, title: x.title, content: x.content, factKeys: [] }))
       const prev = s.versions.filter((v) => v.docId === doc!.id).sort((a, b) => b.number - a.number)[0]
       const v: DocVersion = { id: newId('ver'), docId: doc.id, projectId: pid, number: (prev?.number ?? 0) + 1, authorId: user.id, message: `Report generated for build ${build.version}`, kind: 'report', sections, buildId: build.id, regeneratedSectionIds: [], factSheetVersion: 0, templateVersion: 0, frozen: false, createdAt: at }
       s.versions.push(v)

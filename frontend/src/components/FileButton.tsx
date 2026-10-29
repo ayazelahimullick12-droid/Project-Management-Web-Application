@@ -1,4 +1,4 @@
-/** A button that opens the file picker. Only the file's name and size are kept (plus small image previews). */
+/** A button that opens the file picker. Only the file's name and size are kept (plus small image previews and the text of small text files). */
 import { Upload } from 'lucide-react'
 import { useRef, type ReactNode } from 'react'
 import { Button } from './ui'
@@ -8,6 +8,7 @@ export interface PickedFile {
   size: number
   type: string
   dataUrl?: string
+  text?: string // plain-text files (.txt, .md, .csv): their text, so the AI can really read them
 }
 
 export function FileButton({ onPick, accept, children, size = 'md', disabled }: { onPick: (f: PickedFile) => void; accept?: string; children?: ReactNode; size?: 'sm' | 'md'; disabled?: boolean }) {
@@ -23,7 +24,9 @@ export function FileButton({ onPick, accept, children, size = 'md', disabled }: 
           const file = e.target.files?.[0]
           e.target.value = ''
           if (!file) return
-          if (file.type.startsWith('image/') && file.size < 400_000) {
+          if ((file.type.startsWith('text/') || /\.(txt|md|csv)$/i.test(file.name)) && file.size < 200_000) {
+            file.text().then((text) => onPick({ name: file.name, size: file.size, type: file.type, text }))
+          } else if (file.type.startsWith('image/') && file.size < 400_000) {
             const reader = new FileReader()
             reader.onload = () => onPick({ name: file.name, size: file.size, type: file.type, dataUrl: String(reader.result) })
             reader.readAsDataURL(file)

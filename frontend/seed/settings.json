@@ -8,10 +8,11 @@
     "lockIdleMinutes": 60,
     "qaRoundLimit": 3,
     "ragTopK": 5,
-    "ragDuplicateThreshold": 0.9,
+    "ragDuplicateThreshold": 0.85,
     "signoffBlocking": ["Critical", "High"],
-    "defectDuplicateThreshold": 0.5,
+    "defectDuplicateThreshold": 0.75,
     "aiSpeed": "normal",
-    "holidays": ["2026-12-16", "2027-02-21", "2027-03-26"]
+    "holidays": ["2026-12-16", "2027-02-21", "2027-03-26"],
+    "ai": { "model": "qwen2.5-coder-0.5b-instruct", "embedModel": "text-embedding-nomic-embed-text-v1.5" }
   }
 }

@@ -71,12 +71,6 @@ export async function act<T>(fn: (s: DemoState, at: Date, iso: string) => T): Pr
   return mutate((s) => fn(s, t, t.toISOString()))
 }
 
-/** Wait a little, like a short AI call (used for quick, inline AI help). */
-export function aiPause(): Promise<void> {
-  const speed = getState().settings.aiSpeed
-  return new Promise((r) => setTimeout(r, speed === 'instant' ? 30 : speed === 'fast' ? 300 : 1400))
-}
-
 export function nameOf(s: DemoState, id: ID | null | undefined): string {
   if (!id) return 'AI'
   return s.users.find((u) => u.id === id)?.name ?? 'Unknown'

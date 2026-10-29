@@ -11,6 +11,7 @@ import { nowIso } from '../demo/clock'
 import { newId } from '../demo/ids'
 import { runJob } from '../demo/jobs'
 import { getState, mutate, resetDemo } from '../demo/store'
+import { aiStatus as aiStatusCheck } from '../ai/client'
 import { tick } from '../demo/worker'
 import { nextWorkingStart } from '../rules/workingHours'
 import { DOC_LABEL } from '../rules/pipeline'
@@ -105,7 +106,7 @@ export async function importLegacy(input: { name: string; year: number; departme
         legacy: { year: input.year, department: input.department, importedBy: user.id, files: input.files, memberNames: input.memberNames },
       })
       input.files.forEach((f, i) => {
-        const guess = (MAIN_DOCS.find((d) => f.toLowerCase().includes(d.toLowerCase())) ?? MAIN_DOCS[Math.min(i, 3)]) as DocType
+        const guess = (MAIN_DOCS.find((d) => f.toLowerCase().includes(d.toLowerCase())) ?? MAIN_DOCS[Math.min(i, MAIN_DOCS.length - 1)]) as DocType
         const docId = `${pid}-${guess}-${i}`
         s.docs.push({ id: docId, projectId: pid, type: guess, title: `${DOC_LABEL[guess]} (imported: ${f})`, currentVersionId: `${docId}-v1` })
         s.versions.push({ id: `${docId}-v1`, docId, projectId: pid, number: 1, authorId: user.id, message: `Imported from ${f}`, kind: 'manual', sections: [{ id: `${docId}:imported`, key: 'imported', title: 'Imported text', content: `Text extracted from ${f} (simulated). In the real app the document is read with python-docx or PyMuPDF and Tesseract, split by section and indexed for the RAG agent.\n\n${input.summary}`, factKeys: [] }], regeneratedSectionIds: [], factSheetVersion: 0, templateVersion: 0, frozen: true, createdAt: at })
@@ -147,8 +148,16 @@ export async function setAiSpeed(speed: Settings['aiSpeed']) {
   })
 }
 
-export async function reset() {
-  await resetDemo()
+/** Starts again: empty (users, settings and templates only), or with the demo projects loaded. */
+export async function reset(withProjects = false) {
+  await resetDemo(withProjects)
+}
+
+/** Is LM Studio running, which models does it offer, and are the chosen ones among them? */
+export async function aiStatus() {
+  const r = await aiStatusCheck()
+  const { model, embedModel } = getState().settings.ai
+  return { ...r, model, embedModel, modelFound: r.models.includes(model), embedFound: r.models.includes(embedModel) }
 }
 
 export async function demoInfo() {

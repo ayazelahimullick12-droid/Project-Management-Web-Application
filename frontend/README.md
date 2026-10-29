@@ -1,12 +1,38 @@
-# BRAC Project Management — clickable prototype
+# BRAC Project Management — prototype
 
-A frontend-only prototype of the app described in `../SPEC.md` and `../SPEC_SQA_UAT.md`.
-Every feature can be clicked through with fictional data. There is no backend and no real AI:
-AI results are pre-written, emails go to an in-app Mailbox, and all data lives in your browser.
+A working prototype of the app described in `../SPEC.md` and `../SPEC_SQA_UAT.md`, for demos on
+this laptop. A small Node server keeps all data in **one JSON file** and passes AI requests to
+**LM Studio** (a local AI model; nothing leaves the laptop). Open several browser tabs and sign in
+as different people: they share the same data and update each other live.
+
+**What the AI really does** (the model in LM Studio): fact extraction from the description and
+text uploads, the Q/A questions, the Proposal & Charter, BRD and SRS (section by section),
+**Rewrite with AI**, the scope check on edits, updating sections for a change request, summaries
+and slides, test cases, the defect writer, the sign-off paragraph and "Suggest with AI" for
+decisions. **Similar past projects**, **possible duplicate defects** and the fact a decision sets
+are found by meaning, with an embedding model.
+
+**Still simulated:** reading PDF, Word and scanned files (OCR; plain `.txt`, `.md` and `.csv`
+files are really read), call transcription, and email (sent to the in-app Mailbox).
+
+Everything the AI writes is kept **short on purpose** (about 2 sentences or 3 bullets per section,
+roughly 200 words per document) so a small model answers in seconds. Measured on this laptop with
+`qwen2.5-coder-0.5b-instruct`: Proposal & Charter (6 sections) about 18 s, BRD about 20 s, SRS
+about 17 s, facts from a description about 10–13 s, one question about 1 s, a rewrite about 5 s,
+a test case about 5 s, summary and slides about 15–25 s (in the background).
+
+If LM Studio is off or does not answer, the action stops with a clear message and nothing is
+changed (no made-up text).
 
 ## Run it
 
-You need Node.js 20 or newer (this machine has v24).
+You need Node.js 20 or newer (this machine has v24) and **LM Studio**.
+
+1. In LM Studio, download and load **`qwen2.5-coder-0.5b-instruct`** (writes text) and
+   **`text-embedding-nomic-embed-text-v1.5`** (compares meaning). Other models can be chosen
+   later in Admin → Settings.
+2. In LM Studio's **Developer** tab, start the server (it listens on http://localhost:1234).
+3. Start the app:
 
 ```bash
 cd frontend
@@ -14,19 +40,32 @@ npm install
 npm run dev
 ```
 
-Open the address it prints (normally http://localhost:5173) and pick a demo user. Every demo
-account uses the password `demo1234`.
+Open the address it prints (normally http://localhost:5173) and pick a person. Every account
+uses the password `demo1234`. The **Demo** menu shows whether LM Studio is connected.
 
 | Command | What it does |
 | --- | --- |
-| `npm run dev` | Starts the prototype with live reload |
-| `npm test` | Runs the business-rule tests (65 tests in `src/rules/`) |
-| `npm run build` | Type-checks and builds static files into `dist/` |
-| `npm run preview` | Serves the built `dist/` folder |
+| `npm run dev` | Starts the app with live reload (Vite plus the data and AI server) |
+| `npm start` | Builds the app, then runs it without Vite on http://localhost:3000 |
+| `npm test` | Runs the tests (business rules in `src/rules/`, reading AI answers in `src/ai/`) |
+| `npm run build` | Type-checks and builds the files into `dist/` |
 
-**Sharing it:** `npm run build` produces plain files in `dist/`. Any static web host can serve
-them (for example an internal web server, Netlify or GitHub Pages). Each visitor gets their own
-copy of the dummy data in their own browser.
+**Where the data is:** `frontend/data/db.json` (not in git). The first start creates it with
+the people, settings and templates and **no projects**. Demo menu → **Start again** offers
+**Empty** or **With demo projects** (the five fictional projects from `seed/`). To start from
+scratch by hand, stop the app and delete `data/db.json`.
+
+**Settings by environment variable** (optional):
+
+| Variable | Default | What it is |
+| --- | --- | --- |
+| `LMSTUDIO_URL` | `http://localhost:1234` | Where LM Studio's server is |
+| `AI_TIMEOUT_MS` | `180000` | How long to wait for one AI answer (milliseconds) |
+| `DATA_FILE` | `data/db.json` | The data file |
+| `PORT` | `3000` | Port for `npm start` |
+
+This prototype is meant for one laptop. There is no real sign-in, so do not put it on a shared
+server.
 
 ## Using it
 
@@ -76,10 +115,13 @@ each page low:
   browser tab can be a different person, so two windows side by side can show the edit lock and the
   live read-only view.
 - **Demo controls** (the clock above your name in the Full view, the **Demo** button in the Simple
-  view): switch user, move time forward to see reminders and the
-  1-hour edit-lock timeout, change the AI speed, **Reset demo data**, and **Show prototype notes**
-  (off by default; turn it on for spec reviews to see the "In the real app…" notes and
-  open-question markers).
+  view): whether LM Studio is connected and which models are used, switch user, move time forward
+  to see reminders and the 1-hour edit-lock timeout, the speed of the simulated steps, **Start
+  again** (empty, or with the demo projects), and **Show prototype notes** (off by default; turn
+  it on for spec reviews to see the "In the real app…" notes and open-question markers).
+- **AI work** runs in the background with its steps and seconds shown (a strip under the top bar
+  in the Simple view, cards at the bottom left in the Full view). Admin → **AI activity** lists
+  every request: model, tokens in and out, time, and any error.
 - **Help & prototype** (in the sidebar): the Mailbox (every email the app would send, including
   signing codes), Open questions, and How the real app works.
 
@@ -94,11 +136,16 @@ LinkedIn/Messenger-style chat.
 
 ```
 frontend/
-  seed/          all dummy data (JSON + one Markdown file per document) — see seed/README.md
+  server/        api.mjs: keeps the data file, tells open tabs about changes, passes AI
+                 requests to LM Studio; index.mjs: runs the built app (npm start)
+  data/          db.json, the data (created on first start; not in git)
+  seed/          the starting data (JSON + one Markdown file per demo document) — see seed/README.md
   src/
+    ai/          the AI agents: prompts.ts (every instruction and length limit), agents.ts
+                 (asking and reading the answers back), client.ts (talking to LM Studio)
     rules/       the business rules as plain functions, with tests       ← real logic
     api/         the only way screens read or change data                ← the "backend" boundary
-    demo/        everything simulated: browser storage, fake AI, clock   ← deleted later
+    demo/        prototype plumbing: the data copy, AI jobs, worker, clock, simulated OCR and transcripts
     pages/       one file or folder per screen
     simple/      the Simple view: top bar, To do, Projects, Project, Document, Questions, Help,
                  and words.ts (the plain words it uses)
@@ -115,11 +162,17 @@ Three folders matter most:
   starts with a comment naming the spec section it follows. These move to the Python backend
   later; their `*.test.ts` files are the checklist of what to move.
 - **`src/api/`** plays the part of the FastAPI backend. Every action checks permissions with the
-  rules and refuses with a clear message. Today it works on the browser copy of the data; later
-  each function becomes an HTTP call with the same name, and the screens do not change.
-- **`src/demo/`** holds everything fake: `store.ts` (browser storage), `seed.ts` (turns the seed
-  files into data), `ai/` (pre-written AI results), `jobs.ts` (AI progress), `worker.ts`
-  (reminders, lock timeouts), `clock.ts` (time travel).
+  rules and refuses with a clear message. It works on the tab's copy of the data, which
+  `src/demo/store.ts` keeps in step with the server (a change is sent at once; if another tab
+  saved first, it is re-applied on top of the newer data). Later each function becomes an HTTP
+  call with the same name, and the screens do not change.
+- **`src/ai/`** holds the AI agents. Answers are asked for as short labelled lines (not JSON,
+  which costs a small model more words) and read back by `agents.ts`; `agents.test.ts` shows
+  the kinds of answers the 0.5B model gives and how each is read.
+- **`src/demo/`** holds the prototype plumbing: `store.ts` (the data copy), `seed.ts` (turns the
+  seed files into data), `jobs.ts` (background AI jobs with progress), `worker.ts` (reminders,
+  lock timeouts; runs in one tab only), `clock.ts` (time travel), `ai/` (simulated OCR and
+  transcripts).
 
 ## Common changes
 
@@ -130,8 +183,11 @@ Three folders matter most:
 | Make the Full view the default | `view` in `DEFAULTS`, `src/components/prefs.ts` |
 | Change dark-mode colours | `brand.dark` in `src/theme/brand.ts`; status colours in `src/index.css` (`.dark`) |
 | Change demo direct messages or what shows as unread | `seed/messages.json` |
-| Change dummy projects, people or documents | files in `seed/` (the browser resets automatically when they change) |
-| Change what the simulated AI writes | `seed/ai/field-loan.json` and `seed/ai/field-loan/*.md` |
+| Change dummy projects, people or documents | files in `seed/`, then Demo → Start again |
+| Change what the AI is told, or how long its answers may be | `src/ai/prompts.ts` (`LIMITS` holds the length limits) |
+| Use other AI models | Admin → Settings → AI models, or `ai` in `seed/settings.json` |
+| Use LM Studio on another address | the `LMSTUDIO_URL` environment variable |
+| Change the simulated OCR text or call transcript | `seed/ai/field-loan.json` |
 | Change the questions the Q/A agent asks | `seed/catalog.json` (`question`, `sample`, `defaultIfUnknown`) |
 | Change a rule (for example who approves) | `src/rules/…` — then run `npm test` |
 | Change working hours, round limit, blocking severities | Admin → Settings in the app, or `seed/settings.json` |
@@ -148,6 +204,7 @@ frontend.
 ## Turning it into the real app
 
 1. Build the FastAPI backend from `BUILD_PROMPT.md` and `BUILD_PROMPT_SQA_UAT.md`.
-2. Move `src/rules/` into the backend (the tests show what each rule must do).
-3. Make each function in `src/api/` call the backend instead of the browser store.
-4. Delete `src/demo/` and the "simulated" notes.
+2. Move `src/rules/` and `src/ai/` into the backend (the tests show what each must do; the
+   prompts and length limits in `src/ai/prompts.ts` are a tested starting point).
+3. Make each function in `src/api/` call the backend instead of the data copy.
+4. Delete `src/demo/`, `server/` and the "simulated" notes.

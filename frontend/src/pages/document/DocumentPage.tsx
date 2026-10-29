@@ -16,7 +16,7 @@ import { openChat } from '../../components/chat/dock'
 import { DocStatusChip } from '../../components/status'
 import { downloadItems } from '../../components/exports'
 import { ago } from '../../components/format'
-import { Button, Checkbox, ErrorBox, Field, Guarded, Input, Loading, MenuButton, Modal, Note, Segmented, useTab } from '../../components/ui'
+import { Button, Checkbox, ErrorBox, Field, Guarded, Input, Loading, MenuButton, Modal, Note, Segmented, Spinner, useTab } from '../../components/ui'
 import { useToast } from '../../components/toast'
 import { Reader, type Selection } from './Reader'
 import { DocEditor } from './Editor'
@@ -37,7 +37,7 @@ function SaveVersionModal({ data, onClose }: { data: DocData; onClose: () => voi
       onClose={onClose}
       title="Save version"
       footer={
-        <Button variant="primary" disabled={!message.trim() || save.pending || (preview?.flagged && data.perms.pm && !decision)} onClick={() => save.run(data.doc!.id, message, decision || undefined)}>
+        <Button variant="primary" disabled={!preview || !message.trim() || save.pending || (preview.flagged && data.perms.pm && !decision)} onClick={() => save.run(data.doc!.id, message, decision || undefined)}>
           <Save className="h-4 w-4" /> Save version
         </Button>
       }
@@ -45,6 +45,11 @@ function SaveVersionModal({ data, onClose }: { data: DocData; onClose: () => voi
       <Field label="Short message" hint="Shown in the version history, like a commit message.">
         <Input value={message} onChange={(e) => setMessage(e.target.value)} placeholder="e.g. Updated the budget split" autoFocus />
       </Field>
+      {!preview && (
+        <div className="flex items-center gap-2 text-sm text-violet-800">
+          <Spinner className="border-violet-600" /> Checking whether the edit changes scope…
+        </div>
+      )}
       {preview && (
         <div className="space-y-2">
           <div className="text-xs text-muted">Changed sections: {preview.changedTitles.join(', ') || 'none'}</div>

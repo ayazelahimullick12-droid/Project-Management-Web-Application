@@ -1,7 +1,11 @@
 /**
- * The background worker (SIMULATED).
+ * The background worker.
+ *
+ * It runs in ONE open browser tab at a time (a browser lock decides which), so reminders are
+ * not sent twice when several tabs are open. When that tab closes, another one takes over.
  *
  * Every 30 seconds, and right after time travel, it:
+ *  - marks AI jobs interrupted by a closed tab as failed, so they can be run again;
  *  - sends reminders for anything waiting on a person, every 4 working hours
  *    (SPEC.md "Notifications"; working hours in rules/workingHours.ts);
  *  - releases edit locks idle for more than 1 hour (SPEC.md "Editing lock"; the draft is
@@ -17,6 +21,7 @@ import { failInterruptedJobs } from './jobs'
 import { getState, mutate } from './store'
 
 export function tick(): { reminders: number; locksReleased: number } {
+  failInterruptedJobs()
   const s = getState()
   const t = now()
   const due: { key: string; count: number }[] = []
@@ -56,7 +61,11 @@ let started = false
 export function startWorker() {
   if (started) return
   started = true
-  failInterruptedJobs()
-  tick()
-  setInterval(tick, 30_000)
+  const run = () => {
+    tick()
+    setInterval(tick, 30_000)
+  }
+  // The lock is held for as long as this tab is open (the promise never settles).
+  if (navigator.locks) void navigator.locks.request('brac-pm-worker', () => (run(), new Promise<void>(() => {})))
+  else run()
 }

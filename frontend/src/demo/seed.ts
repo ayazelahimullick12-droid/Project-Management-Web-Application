@@ -56,10 +56,18 @@ const SOURCE_LABEL: Record<string, string> = {
   chat: 'Chat decision',
 }
 
-export async function buildSeedState(): Promise<DemoState> {
-  const shift = weekShiftMs(settingsJson.seedNow)
+/**
+ * The starting data.
+ * - Normally EMPTY: the users, settings, fact checklist and templates, but no projects. The clock is
+ *   the real clock.
+ * - withProjects: also the demo projects in seed/projects (and their messages), with the demo
+ *   clock starting on a recent Wednesday morning (Demo menu → Reset → "Load the demo projects").
+ */
+export async function buildSeedState(options: { withProjects?: boolean } = {}): Promise<DemoState> {
+  const withProjects = !!options.withProjects
+  const shift = withProjects ? weekShiftMs(settingsJson.seedNow) : 0
   const T = (iso: string | undefined | null) => (iso ? new Date(new Date(iso).getTime() + shift).toISOString() : (undefined as unknown as string))
-  const seedNow = T(settingsJson.seedNow)
+  const seedNow = withProjects ? T(settingsJson.seedNow) : new Date().toISOString()
   const nowDate = new Date(seedNow)
 
   const catalog = catalogJson as FactDef[]
@@ -77,13 +85,13 @@ export async function buildSeedState(): Promise<DemoState> {
     factSheets: [], rounds: [], questions: [], uploads: [], ragRuns: [], ragSuggestions: [],
     docs: [], versions: [], drafts: [], locks: [], comments: [], suggestions: [], chains: [], signatures: [],
     changeRequests: [], factUpdates: [], chats: [], messages: [], calls: [], transcripts: [], decisions: [],
-    notifications: [], emails: [], audit: [], aiCalls: [], jobs: [], reminders: {}, otps: {}, chatReads: {},
+    notifications: [], emails: [], audit: [], aiCalls: [], jobs: [], summaries: {}, reminders: {}, otps: {}, chatReads: {},
     requirements: [], traceLinksDone: {}, testCases: [], testConfirmations: [], builds: [], testRuns: [], executions: [], defects: [],
   }
 
   const signTasks: Promise<void>[] = []
 
-  for (const raw of Object.values(projectFiles)) {
+  for (const raw of withProjects ? Object.values(projectFiles) : []) {
     const p: Project = {
       id: raw.id,
       slug: raw.slug,
@@ -269,7 +277,7 @@ export async function buildSeedState(): Promise<DemoState> {
     if (raw.testing) loadTesting(s, p, raw.testing, T, head, docByType)
   }
 
-  loadDirectMessages(s, T)
+  if (withProjects) loadDirectMessages(s, T)
 
   await Promise.all(signTasks)
   deriveAudit(s)

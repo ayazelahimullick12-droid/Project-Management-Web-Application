@@ -1,5 +1,5 @@
 /** Version history, compare, AI summaries and the SRS traceability matrix. */
-import { Download, Eye, Flag, GitCompare, Network, RotateCcw } from 'lucide-react'
+import { Download, Eye, Flag, GitCompare, Network, RotateCcw, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { api } from '../../api'
@@ -10,7 +10,7 @@ import { exportPptx, printUrl, safeName } from '../../components/exports'
 import { fmtDateTime } from '../../components/format'
 import { Markdown } from '../../components/Markdown'
 import { OpenQuestion } from '../../components/OpenQuestion'
-import { Badge, Button, Card, EmptyState, Modal, Note, Select, Table, Td } from '../../components/ui'
+import { Badge, Button, Card, EmptyState, Modal, Note, Select, Spinner, Table, Td } from '../../components/ui'
 
 type DocData = Awaited<ReturnType<typeof api.documents.getDocument>>
 
@@ -119,14 +119,36 @@ export function CompareTab({ data }: { data: DocData }) {
   )
 }
 
+function MakeSummaries({ data, again }: { data: DocData; again?: boolean }) {
+  const make = useAction(api.documents.makeSummaries, { success: 'The AI is writing the summary and slides…' })
+  if (data.summarizing) return <span className="inline-flex items-center gap-2 text-sm text-violet-800"><Spinner className="border-violet-600" /> The AI is writing the summary and slides…</span>
+  if (!data.perms.summarize) return null
+  return (
+    <Button size={again ? 'sm' : undefined} variant={again ? undefined : 'primary'} disabled={make.pending} onClick={() => make.run(data.project.id, data.type)}>
+      <Sparkles className="h-4 w-4" /> {again ? 'Make them again' : 'Make the summary and slides'}
+    </Button>
+  )
+}
+
 export function SummariesTab({ data }: { data: DocData }) {
   const d = data.derived
   const v = data.current
-  if (!d || !v) return <EmptyState title="No summaries yet" />
+  if (!v) return <EmptyState title="No summaries yet" />
+  if (!d)
+    return (
+      <EmptyState title={`No summary of version ${v.number} yet`} icon={<Sparkles className="h-6 w-6" />}>
+        <p className="mb-3">The AI writes a short summary, key points and slides after each new version.</p>
+        {data.summaryError && !data.summarizing && <p className="mb-3 text-red-700">The last try did not work: {data.summaryError}</p>}
+        <MakeSummaries data={data} />
+      </EmptyState>
+    )
   return (
     <div className="space-y-4">
       <Note tone="violet">
-        <b>AI summary of version {v.number}</b> — for quick understanding; the full document is the approved text. Approval and signing apply only to the full document. Summaries are regenerated for every saved version.
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span><b>AI summary of version {v.number}</b> — for quick understanding; the full document is the approved text. Approval and signing apply only to the full document.</span>
+          <MakeSummaries data={data} again />
+        </div>
       </Note>
       <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
         <Card title="One-page summary" actions={<a href={printUrl(v.id, 'onepager')} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-brand"><Download className="h-3.5 w-3.5" /> PDF</a>}>
@@ -190,7 +212,7 @@ export function TraceTab({ data }: { data: DocData }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <AiBadge label="Links proposed by AI (simulated)" /> <OpenQuestion id="traceability" />
+        <AiBadge label="Links written by the AI" /> <OpenQuestion id="traceability" />
       </div>
       <Card padded={false}>
         <Table head={['SRS requirement', 'BRD requirement', 'Charter objective', 'SQA tests', 'UAT tests', '']}>

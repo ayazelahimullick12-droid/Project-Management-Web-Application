@@ -3,11 +3,12 @@
  *
  * Spec: SPEC.md "Q/A agent and the Project Fact Sheet" and "RAG agent: reuse from past projects".
  */
-import type { DemoState, Fact, ID, Project, Question, RoundPurpose } from '../types'
+import type { DemoState, Fact, FactDef, FactSource, ID, Project, Question, RoundPurpose } from '../types'
 import { now, nowIso } from '../demo/clock'
-import { runJob } from '../demo/jobs'
+import { runAiJob, runJob } from '../demo/jobs'
 import { newId } from '../demo/ids'
-import { extractFacts, questionFor, ragMatches, readUpload } from '../demo/ai/agents'
+import { questionFor, readUpload } from '../demo/ai/agents'
+import { extractFacts, findSimilarProjects, writeQuestions, type PastProject } from '../ai/agents'
 import { actAsHead, can, headOf, inTeam, membershipsOf, TEAM_LABEL } from '../rules/permissions'
 import { FACT_CONFIRMATION_NEEDS, missingPeople, peopleCheck, questionNeeds } from '../rules/people'
 import { factSheetConfirmed, isComplete, roundClosed } from '../rules/pipeline'
@@ -114,12 +115,13 @@ export async function saveDescription(pid: ID, text: string) {
   })
 }
 
-export async function upload(pid: ID, file: { name: string; size: number; type: string; dataUrl?: string }, context: 'intake' | 'audio' = 'intake') {
+export async function upload(pid: ID, file: { name: string; size: number; type: string; dataUrl?: string; text?: string }, context: 'intake' | 'audio' = 'intake') {
   const s0 = await read((s) => s)
   const user = me(s0)
   const p = projectOf(s0, pid)
   ensure(can.memberOrOwner(p, user.id))
-  const result = readUpload(p, file.name)
+  // Plain-text files are really read; reading PDFs, Word files and scans (OCR) is simulated.
+  const result = file.text?.trim() ? { text: file.text.slice(0, 20_000), pages: 1, ocrUsed: false } : readUpload(p, file.name)
   return runJob({
     agent: 'ocr',
     title: `Reading ${file.name}`,
@@ -144,24 +146,44 @@ export async function runAnalysis(pid: ID) {
   const p = projectOf(s0, pid)
   ensure(can.pmTeam(p, user.id, 'run the intake analysis'))
   if (!p.intake.description.trim()) fail('The stakeholders have not written a description yet.')
-  const uploads = s0.uploads.filter((u) => u.projectId === pid && u.context === 'intake')
-  const extracted = extractFacts(p, s0.factCatalog, uploads.map((u) => u.name))
-  const promptTokens = Math.round((p.intake.description.length + uploads.reduce((n, u) => n + u.extractedText.length, 0)) / 4) + 800
-  return runJob({
+  const uploads = s0.uploads.filter((u) => u.projectId === pid && u.context === 'intake').slice(0, 3)
+  const catalog = s0.factCatalog.filter((d) => d.round === 'intake') // later rounds ask for the rest
+  const steps = ['Reading the stakeholder description', ...uploads.map((u) => `Reading ${u.name}`), 'Checking for conflicting answers']
+  return runAiJob({
     agent: 'qa_extract',
     title: 'Extracting facts from the stakeholders’ information',
     projectId: pid,
     byUserId: user.id,
     link: `/projects/${pid}/intake?tab=facts`,
-    promptTokens,
-    steps: ['Reading the stakeholder description', `Reading ${uploads.length} uploaded file${uploads.length === 1 ? '' : 's'}`, 'Extracting facts with their sources', 'Checking for conflicting answers'],
-    apply: (s) => {
+    steps,
+    work: async (step) => {
+      const found = new Map<string, Fact>()
+      const description: FactSource = { type: 'description', label: 'Stakeholder description' }
+      for (const f of await extractFacts(p, catalog, p.intake.description, 'Facts from the description')) found.set(f.key, newFact(catalog, f, description))
+      for (const [i, u] of uploads.entries()) {
+        step(i + 1)
+        const source: FactSource = { type: 'upload', ref: u.id, label: `Upload: ${u.name}` }
+        for (const f of await extractFacts(p, catalog, u.extractedText, `Facts from ${u.name}`)) {
+          const had = found.get(f.key)
+          if (!had) found.set(f.key, newFact(catalog, f, source))
+          // Two sources give different numbers or dates for the same fact: the PM decides.
+          else if (numbersDiffer(had.value, f.value)) found.set(f.key, { ...had, status: 'conflicting', conflict: [...(had.conflict ?? [{ value: had.value, source: had.source! }]), { value: f.value, source }] })
+        }
+      }
+      step(steps.length - 1)
+      return [...found.values()]
+    },
+    apply: (s, extracted) => {
       const proj = projectOf(s, pid)
       const at = nowIso()
       for (const f of extracted) {
         const i = proj.facts.findIndex((x) => x.key === f.key)
+        const old = proj.facts[i]
         if (i === -1) proj.facts.push(f)
-        else proj.facts[i] = f.status === 'conflicting' ? f : mergeValue(proj.facts[i], f)
+        // Empty, assumed, or an earlier AI reading nobody confirmed: the new reading replaces it.
+        else if (!old.value || old.status === 'missing' || old.status === 'assumed' || (old.ai && (old.source?.type === 'description' || old.source?.type === 'upload'))) proj.facts[i] = f
+        // A person's value stays, unless the new reading gives different numbers or dates.
+        else if (f.status !== 'conflicting' && numbersDiffer(old.value, f.value)) proj.facts[i] = mergeValue(old, f)
       }
       proj.intake.analysed = true
       audit(s, { projectId: pid, actorId: null, action: 'AI generation', details: `Q/A agent extracted ${extracted.length} facts`, at })
@@ -174,20 +196,55 @@ export async function runAnalysis(pid: ID) {
   })
 }
 
+function newFact(catalog: FactDef[], f: { key: string; value: string }, source: FactSource): Fact {
+  const def = catalog.find((d) => d.key === f.key)
+  return { key: f.key, label: def?.label ?? f.key, category: def?.category ?? 'other', value: f.value, status: 'filled', source, ai: true }
+}
+
+/** The numbers and month names in a value ("BDT 1.2 crore, June 2027" → 1.2, june, 2027). */
+const numbersOf = (v: string) =>
+  new Set(
+    (v.toLowerCase().match(/\d[\d,.]*|\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/g) ?? []).map((n) =>
+      /^\d/.test(n) ? n.replace(/[,.]+$/, '').replace(/,/g, '') : n.slice(0, 3), // "September" and "Sep" are the same month
+    ),
+  )
+/** Both values contain numbers or dates (amounts, dates, counts), and they are not the same ones. */
+function numbersDiffer(a: string, b: string) {
+  const A = numbersOf(a)
+  const B = numbersOf(b)
+  return A.size > 0 && B.size > 0 && (A.size !== B.size || [...A].some((n) => !B.has(n)))
+}
+
+/** Finished projects with the text of their documents (latest version of each). */
+function pastProjects(s: DemoState): PastProject[] {
+  return s.projects
+    .filter((x) => x.finished || x.legacy)
+    .map((project) => ({
+      project,
+      sections: s.docs
+        .filter((d) => d.projectId === project.id && d.currentVersionId)
+        .flatMap((d) => (s.versions.find((v) => v.id === d.currentVersionId)?.sections ?? []).map((x) => ({ docType: d.type, key: x.key, title: x.title, content: x.content }))),
+    }))
+}
+
 function runRag(pid: ID, byUserId: ID) {
   return read((s0) => {
     const p = projectOf(s0, pid)
-    const finished = s0.projects.filter((x) => x.finished || x.legacy)
-    const { matches, suggestions } = ragMatches(p, finished, s0.settings.ragTopK)
-    return runJob({
+    const past = pastProjects(s0)
+    const topK = s0.settings.ragTopK
+    return runAiJob({
       agent: 'rag',
       title: 'Searching similar finished projects',
       projectId: pid,
       byUserId,
       link: `/projects/${pid}/intake?tab=rag`,
-      promptTokens: 2400,
-      steps: ['Embedding the new project’s facts and description', `Searching signed documents of ${finished.length} finished projects`, 'Explaining why each project matched', 'Extracting items the stakeholders did not mention', 'Highlighting old-project details'],
-      apply: (s) => {
+      steps: [`Comparing with ${past.length} finished project${past.length === 1 ? '' : 's'}`, 'Reading the closest documents', 'Highlighting old-project details'],
+      work: async (step) => {
+        const r = await findSimilarProjects(p, past, topK)
+        step(2)
+        return r
+      },
+      apply: (s, { matches, suggestions }) => {
         const proj = projectOf(s, pid)
         const at = nowIso()
         const runId = newId('rag')
@@ -285,22 +342,25 @@ export async function startRound(pid: ID, purpose: Exclude<RoundPurpose, 'change
   // Stop if a team that will get questions has nobody in it yet.
   ensure(peopleCheck(p, questionNeeds([...new Set(missing.map(routeTeam))])))
   const number = roundsOf(s0.rounds, pid, purpose).length + 1
-  return runJob({
+  return runAiJob({
     agent: 'qa_questions',
     title: `Q/A round ${number}: ${ROUND_LABEL[purpose]}`,
     projectId: pid,
     byUserId: user.id,
     link: `/projects/${pid}/intake?tab=questions`,
-    promptTokens: 1200 + missing.length * 120,
-    steps: ['Building the checklist from all four templates', `Checking ${s0.factCatalog.filter((d) => d.round === purpose).length} fields`, `Writing questions for ${missing.length} missing field${missing.length === 1 ? '' : 's'}`, 'Routing: business → stakeholders, budget → sponsors, technical → tech team'],
-    apply: (s) => {
+    steps: missing.length ? missing.map((d, i) => `Writing question ${i + 1} of ${missing.length}: ${d.label}`) : ['Checking the Fact Sheet'],
+    work: (step) => {
+      const teamName: Record<string, string> = { STAKEHOLDER: 'stakeholders', SPONSOR: 'sponsors', TECH: 'technical team' }
+      return writeQuestions(p, missing.map((d) => ({ ...d, team: teamName[routeTeam(d)] ?? 'project team' })), step)
+    },
+    apply: (s, written) => {
       const proj = projectOf(s, pid)
       const at = nowIso()
       const roundId = newId('round')
       s.rounds.push({ id: roundId, projectId: pid, purpose, number, status: missing.length ? 'open' : 'closed', startedAt: at, closedAt: missing.length ? undefined : at })
       for (const def of missing) {
         const team = routeTeam(def)
-        const q = questionFor(def)
+        const q = { text: written.get(def.key) ?? questionFor(def).text, sample: def.sample }
         const assignees = proj.members.filter((m) => m.team === team && !m.isSqa).map((m) => m.userId)
         s.questions.push({ id: newId('q'), projectId: pid, roundId, factKey: def.key, text: q.text, team, assigneeIds: assignees, createdAt: at, sampleAnswer: q.sample, defaultValue: def.defaultIfUnknown })
       }

@@ -8,9 +8,9 @@
  * Full version inside the Simple frame.
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
-import { subscribe } from './demo/store'
+import { onSaveError, subscribe } from './demo/store'
 import { subscribeSession } from './demo/session'
 import { useSessionUserId } from './api/hooks'
 import { usePrefs, useTextSize, useThemeClass } from './components/prefs'
@@ -44,9 +44,10 @@ import { HelpPage } from './simple/HelpPage'
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity, retry: false, refetchOnWindowFocus: false } } })
 
+/** Refetch every screen when the data changes (the AI status is checked only on request). */
 function DataRefresh() {
   useEffect(() => {
-    const refresh = () => queryClient.invalidateQueries()
+    const refresh = () => queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] !== 'ai-status' })
     const a = subscribe(refresh)
     const b = subscribeSession(refresh)
     return () => {
@@ -55,6 +56,14 @@ function DataRefresh() {
     }
   }, [])
   return null
+}
+
+/** A red bar while changes cannot be saved (for example the app server was stopped). */
+function SaveProblem() {
+  const [message, setMessage] = useState<string | null>(null)
+  useEffect(() => onSaveError(setMessage), [])
+  if (!message) return null
+  return <div className="fixed inset-x-0 top-0 z-50 bg-red-700 px-4 py-2 text-center text-sm text-white no-print">{message}</div>
 }
 
 /** Light or dark mode and the text size on <html>. The print view is always light and normal size, like paper. */
@@ -91,6 +100,7 @@ export function App() {
       <ToastProvider>
         <BrowserRouter>
           <DataRefresh />
+          <SaveProblem />
           <Theme />
           <Routes>
             <Route path="/login" element={<LoginPage />} />

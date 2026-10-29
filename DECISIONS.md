@@ -5,14 +5,14 @@ One line each: the decision, then the reason.
 
 ## Prototype approach
 
-- Frontend only, data in the browser (localStorage), AI simulated — agreed plan in `BUILD_PROMPT_FRONTEND.md`.
+- Frontend only, data in the browser (localStorage), AI simulated — agreed plan in `BUILD_PROMPT_FRONTEND.md`. (Changed on 29 October 2026: one JSON file and real AI, see the last section.)
 - Built in one go rather than slice by slice — the user asked for it; every slice is in place.
 - Business rules live in `frontend/src/rules/` with Vitest tests — so they can move to the Python backend unchanged in meaning.
 - The api layer (`frontend/src/api/`) refuses actions like a backend would — so screens never depend on hidden buttons for safety.
 - Signed-in user is kept per browser tab (sessionStorage) — so two windows can be two people for the live view and lock demo.
 - The demo clock starts at the seed’s Wednesday 10:00, shifted by whole weeks — reminders and “waiting since” look the same in every demo.
-- Seed files are hashed; any change resets every browser automatically — so edited dummy data always shows up.
-- Interrupted AI jobs (tab closed mid-job) are marked failed after 2 minutes — they cannot finish without the tab that started them.
+- Seed files are hashed; any change resets every browser automatically — so edited dummy data always shows up. (Since 29 October 2026 the data lives in one file; Demo → Start again loads the seed files.)
+- Interrupted AI jobs (tab closed mid-job) are marked failed when they have shown no progress for 4 minutes (checked every 30 seconds) — they cannot finish without the tab that started them, and one real AI answer may take up to 3 minutes.
 
 ## Q/A and Fact Sheet
 
@@ -32,7 +32,7 @@ One line each: the decision, then the reason.
 - While a head is Away, only the deputy can act (the head can end Away to act again) — avoids two people acting on the same step.
 - Request changes always adds a general open comment to the document (main documents only) — the spec requires a comment and open comments block the next send.
 - Accepted suggestions are applied to the draft, not saved as a version — a PM team member saves the version with a message.
-- The scope check is simulated by template sections flagged “scope-sensitive” (objectives, scope, deliverables, timeline and budget sections) — predictable for demos; the real app asks the LLM.
+- The scope check first finds edited sections flagged “scope-sensitive” in the template; only those go to the AI, which answers yes or no with a reason. If the AI cannot answer, the edit stays flagged and the PM decides. The minor-correction check uses the template flags only (no AI) — fast and predictable while someone waits for the button.
 - Fact change detection is simulated by finding Fact Sheet values that disappeared from the edited text — predictable; the real app asks the LLM.
 - A Fact Sheet update to a scope, budget or timeline fact automatically starts a change request at the impact-analysis step — “If the update changes scope, the change request flow applies.”
 - Applying a change request marks the Proposal and every later document Out of sync; the Proposal can be re-approved unchanged — “the pipeline restarts from the Proposal”.
@@ -45,7 +45,7 @@ One line each: the decision, then the reason.
 - Retest “passed” on a defect with a linked test case also records a passed run of that test on the fix build — keeps the exit criteria consistent with the retest.
 - A test case whose requirement text changed counts as not run until it is run again — “latest result is reset to Not run”.
 - Sign-off reports have no comment sidebar; the request-changes comment is stored on the chain — per `SPEC_SQA_UAT.md`.
-- Defect duplicate detection is simulated by word overlap (threshold 0.5) — stands in for embeddings.
+- Defect duplicate detection compares meaning with the embedding model (threshold 0.75; a reworded duplicate scored 0.82, an unrelated defect about 0.5).
 - The board shows the four outcome columns (Rejected, Duplicate, Deferred, Change request) so the PM can drag to them; each asks for the required reason.
 
 ## Calls and notifications
@@ -92,3 +92,36 @@ One line each: the decision, then the reason.
 - **Not offered in direct messages between two members**, although SPEC.md says “any member can click Mark as decision on a chat message”. A private chat is not tied to one project (two people often share several), so nobody could tell which project the decision belongs to. Decisions are marked in the project chat or a document chat instead. Rule: `canMarkDecision` in `src/rules/permissions.ts`, enforced in `src/api/chat.ts`.
 - Still offered in messages with a member of a similar past project: those are started from one project, and the spec asks for it there.
 
+## Starting a project alone; Proposal & Charter in one step (29 October 2026)
+
+The user changed the rules: one person can start a project, and the Proposal, Charter and slides are made in one step. Conflicts with `SPEC.md` were settled with the user:
+
+- Whoever starts a project becomes the **Project Owner and the PM** — the smallest change that still has an owner and a PM.
+- The **Owner and the PM** add people (on the Team page, or with the **Add** buttons where the app stops).
+- The app **stops at the first step that needs people**: sending questions (the teams that get them), asking the stakeholder head to confirm the Fact Sheet, **Send for approval**, and testing. It says who is missing and offers **Add**. Rule: `rules/people.ts`.
+- Before **Send for approval** the **whole chain** is checked at once — so nobody approves a document that then gets stuck at a later, empty step.
+- Deputies are optional; the app asks for one when a head is set **Away** — Away needs someone to cover.
+- **One person may hold several roles**, with a warning (they would approve more than once and could approve their own work) — a small team may have no one else. This replaces the spec's one-role-per-person rule.
+- The Proposal and Charter are **one document** (`PROPOSAL`, shown as “Proposal & Charter”) with two parts; Charter sections have keys starting with `charter_`. **One approval round**; the **sponsor head signs** the package — the spec had two chains; one round avoids asking the same people twice in a row.
+- The slides are made automatically and are **not approved** — like the other derived outputs, they are for quick understanding only.
+- PDF and Word downloads offer the whole package or either part.
+
+## One JSON file and real AI with LM Studio (29 October 2026)
+
+- **Data in one JSON file** (`frontend/data/db.json`) behind a small Node server with no dependencies (`frontend/server/`) — the user asked for a JSON file; several tabs on this laptop share the same data.
+- **The business logic stays in the browser** (`src/api`, `src/rules`); the server only stores the whole data and passes AI requests on — no rule had to be rewritten, and the screens did not change.
+- Each tab changes its copy at once and sends the whole data with the version it was based on; if another tab saved first, the change is re-applied on top of the newer data (a change that is no longer allowed is dropped). Tabs hear about changes through Server-Sent Events.
+- The background worker (reminders, lock release) runs in **one tab only**, chosen with a browser lock — otherwise every open tab would send the same reminders.
+- **Starts empty** (people, settings and templates only); the demo projects load from Demo → Start again → With demo projects — the user's choice.
+- **Model:** `qwen2.5-coder-0.5b-instruct`, switchable in Admin → Settings — the larger `spark-x2.6-4b` would not load on this 8 GB laptop. Embeddings: `text-embedding-nomic-embed-text-v1.5`.
+- **Short documents:** about 5–6 sections, each at most 2 sentences or 3 bullets (about 200 words per document), with a token limit per kind of request (`LIMITS` in `src/ai/prompts.ts`). Measured: Proposal & Charter about 18 s, BRD about 20 s, SRS about 17 s.
+- **Plain labelled lines instead of JSON:** the model answers “key: value”, “- point”, “Title: …”. On this laptop it writes about 17 tokens a second, and JSON's quotes, brackets and indentation doubled the time (a fact extraction took 21 s and was cut off; the same in lines took 10 s).
+- **One question per request:** asked for several questions at once, the 0.5B model wrote one question about something else; one at a time it writes good questions in about a second each.
+- **Facts the model did not really find are dropped:** values that only repeat the field's name (“In scope.”) or say it is not given (“not specified in the text”), so those fields become questions.
+- **Two sources disagree** when the numbers or dates in their values differ (for example “June 2027” and “September 2027”); wording differences are not conflicts. A person's value is kept unless the new reading gives different numbers.
+- **The fact a decision sets is chosen by meaning** (embeddings, with the nomic `search_query:` / `search_document:` prefixes); the model writes only the value — asked to pick one of 24 fields, it could not; by meaning, 5 of 6 test decisions got the right field.
+- **Similar projects** are matched by meaning against each finished project's summary, then their document sections; a match needs at least 0.6 (unrelated text scores about 0.5); the duplicate warning stays at 0.85.
+- **Change requests:** an old value written word for word in a section is replaced directly; the AI rewrites only for the other changes, and a new value it leaves out is added as a line — the 0.5B model often repeated the text unchanged.
+- **Summaries** are made from each section's first two sentences, with the instructions after the text — with the full text the small model ignored the format and wrote an essay.
+- **When LM Studio is off or does not answer**, the action stops with the reason and nothing is changed — the user chose an error over made-up fallback text.
+- **Still simulated:** OCR of PDF, Word and scanned uploads (`.txt`, `.md` and `.csv` files are really read), call transcription, email (Mailbox), calls.

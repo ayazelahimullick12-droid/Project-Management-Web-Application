@@ -1,25 +1,30 @@
 # Seed data
 
 Everything the prototype starts with. All people, projects and documents are fictional.
-When any file here changes, every browser resets to the new data on its next load.
+
+The first start (when `data/db.json` does not exist yet) builds the data from these files **without
+the projects**: people, settings, templates and the fact checklist only. Demo menu → **Start
+again** → **With demo projects** loads the projects below as well; **Empty** goes back to no
+projects. After changing a file here, use Start again to load it (the data file is not reset by
+itself).
 
 | File | Contents |
 | --- | --- |
 | `users.json` | The user directory (one person per role, deputies, past project members) |
-| `settings.json` | `seedNow` (the demo clock's start: a Wednesday morning) and the default settings |
+| `settings.json` | `seedNow` (the demo clock's start for the demo projects: a Wednesday morning) and the default settings, including `ai`: the LM Studio models (`model` writes, `embedModel` compares meaning) |
 | `catalog.json` | The required-fields checklist: every fact the templates need, its category, which Q/A round asks for it, the question, a sample answer and the default for “Unknown” |
-| `templates.json` | Draft templates for the four documents (sections, AI guidance, required facts, scope-sensitive flag). Replace with BRAC’s real templates. |
+| `templates.json` | Draft templates for the Proposal & Charter, BRD and SRS: sections, AI guidance, required facts, the scope-sensitive flag, and `numbered` (`OBJ`, `BR` or `SR`) for the numbered lists. Kept short (5–6 sections) so the AI writes quickly. Sections whose key starts with `charter_` form the Charter part. Replace with BRAC’s real templates. |
 | `team-templates.json` | Saved teams for the new project wizard |
 | `messages.json` | Direct (one-to-one) messages, and where people last read a chat — later messages show as unread |
 | `projects/*.json` | One file per demo project (see below) |
 | `docs/<project>/*.md` | Document text for seeded projects |
-| `ai/<project>.json` and `ai/<project>/*.md` | Pre-written AI results (facts, RAG matches, drafts, transcript, requirements) |
+| `ai/<project>.json` | Results for the parts that are still simulated: the text "read" from an uploaded PDF or scan (OCR), a call transcript, and fallback numbered requirements. Everything else is written by the real AI. |
 
 ## Demo projects
 
 | File | Stage | Shows |
 | --- | --- | --- |
-| `field-loan.json` | Intake, just created | The full walkthrough. Its AI results are in `ai/field-loan*` |
+| `field-loan.json` | Intake, just created | The full walkthrough (the AI writes its documents live). Its simulated OCR text and transcript are in `ai/field-loan.json` |
 | `branch-cash.json` | BRD in review | Comments, pending check log, suggestions, versions, minor-correction history, the stakeholder head Away with a deputy covering, a meeting transcript, decisions |
 | `savings-portal.json` | UAT | Test cases, four builds, runs, defects in every status, SQA signed off |
 | `collection-tracker.json`, `officer-dashboard.json` | Finished | Past projects for RAG matches and the duplicate warning |
@@ -35,8 +40,8 @@ section key in `templates.json`:
 1. First objective…
 ```
 
-In `ai/<project>/*.md` (AI drafts) you can use placeholders that are filled from the project’s
-Fact Sheet when the AI “generates” the document: `{{project}}` and `{{fact:budget_total}}`.
+The Proposal & Charter is one document with two files: write `"files": ["proposal.md",
+"charter.md"]` in the project file. The second file's section keys get the `charter_` prefix.
 
 ## Writing a project file
 

@@ -48,6 +48,7 @@ export const SETTINGS: Settings = {
   defectDuplicateThreshold: 0.85,
   aiSpeed: 'instant',
   holidays: [],
+  ai: { model: 'test-model', embedModel: 'test-embed' },
 }
 
 export function defect(overrides: Partial<Defect> = {}): Defect {

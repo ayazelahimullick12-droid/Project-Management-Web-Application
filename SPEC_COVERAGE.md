@@ -3,12 +3,13 @@
 Every feature and rule in `SPEC.md` and `SPEC_SQA_UAT.md`, and where to see it in the prototype.
 
 - `[x]` can be clicked in the prototype · `[~]` partly, see the note · `[e]` explained only (on **How the real app works**)
+- The AI is real (a local model in LM Studio) except where a line says simulated. See `frontend/README.md`.
 - Projects: **Loan** = Field Loan Application App (walkthrough), **Cash** = Branch Cash Reconciliation, **Savings** = Member Savings Statement Portal, **Past** = the two finished projects.
 
 ## Roles and permissions
 
 - [x] Roles per project; Admin system-wide — Team page; Admin menu (Farhana Kabir)
-- [x] One head per team; one role per person (blocked in the wizard and on the Team page) — New project, Team
+- [~] One head per team. One person **may** hold several roles, with a warning (changed on 29 October 2026, see `DECISIONS.md`) — New project, Team
 - [x] One deputy per head, including the PM — Team page (all projects)
 - [x] Deputy acts while the head is Away; “Approved by deputy X for head Y” — Cash → BRD (Jahid Hasan); approval history, audit log
 - [x] Permission matrix enforced in the api layer (not only hidden buttons) — every action; refusals appear as messages
@@ -18,15 +19,15 @@ Every feature and rule in `SPEC.md` and `SPEC_SQA_UAT.md`, and where to see it i
 
 ## Project setup
 
-- [x] Wizard: details → PM → teams, heads, deputies → invite (in-app + email) — New project
-- [x] Members from the user directory; one-team block — New project, Team
+- [x] Start a project with only a name: the starter becomes Owner and PM; people are added now (optional) or when a step needs them (questions, Fact Sheet confirmation, approval, testing), with **Add** buttons — New project, Intake, document pages
+- [x] Members from the user directory — New project, Team
 - [x] Team templates (load in wizard, save from Team page)
 - [x] Reassigning: replace member, head or deputy; pending approval moves to the new head on the same version — Team → Replace / make head
 - [x] Away with start and end dates, set by the head or the Owner; deputy gets approvals, signatures, questions and reminders — Team → Away; Cash (Rokeya Away)
 
 ## Q/A agent and the Fact Sheet
 
-- [x] Inputs: description, uploads with OCR, RAG items, answers, transcripts and chat decisions — Loan → Intake; Changes & decisions → Decisions
+- [x] Inputs: description, uploads, RAG items, answers, transcripts and chat decisions — Loan → Intake; Changes & decisions → Decisions (OCR of PDF, Word and scans is simulated; `.txt`, `.md` and `.csv` uploads are really read)
 - [x] Required-fields checklist from all four templates; filled, missing, assumed, conflicting — Intake → Fact Sheet (“Needed by” column)
 - [x] Routing: business → stakeholders, funding → sponsors, technical → tech team — Intake → Q/A questions; My work → Q/A questions
 - [x] “Unknown” stored as an assumption with an agreed default — answer funding source as Unknown
@@ -36,7 +37,7 @@ Every feature and rule in `SPEC.md` and `SPEC_SQA_UAT.md`, and where to see it i
 - [x] Each fact: value, category, source, status; versioned, compared and restored — Intake → Fact Sheet
 - [x] Stakeholder head confirms before the Proposal; can comment on what is wrong — Intake → Fact Sheet
 - [x] Manual edit changes a fact → AI proposes a Fact Sheet update; PM team accepts (new version); scope change → change request — Cash → Change requests; any document edit
-- [x] Extra rounds: business processes before the BRD, technical (tech team) before the SRS — Intake page banner after the Charter / BRD is signed
+- [x] Extra rounds: business processes before the BRD, technical (tech team) before the SRS — Intake page banner after the Proposal & Charter / BRD is signed
 - [~] Sources are shown as labels, not clickable links to the exact page or message
 
 ## RAG agent
@@ -50,16 +51,16 @@ Every feature and rule in `SPEC.md` and `SPEC_SQA_UAT.md`, and where to see it i
 - [x] Accepted items reduce questions — Loan (5 questions instead of 7)
 - [x] Direct message to a past project member (sees that conversation only); deactivated accounts unavailable — Similar projects → Message; Rashed Kabir shows unavailable
 - [x] Mark as decision in these messages — Direct messages
-- [x] Duplicate warning with the past PM as contact; Acknowledge required and logged — Loan → Similar projects
+- [x] Duplicate warning with the past PM as contact; Acknowledge required and logged — Loan → Similar projects (similarity by meaning with the embedding model in LM Studio; no ChromaDB)
 - [e] Embeddings in ChromaDB, real similarity search
 
 ## Document pipeline
 
 - [x] Fixed order; each starts after the previous is approved or signed — every project
-- [x] Generated from the Fact Sheet + earlier documents, section by section — Loan → Generate with AI (progress per section)
+- [x] Generated from the Fact Sheet + earlier documents, section by section — Loan → Generate with AI (progress per section). The Proposal and Charter are one package; BRD requirements link to Charter objectives and SRS requirements to BRD requirements
 - [x] Scope change restarts from the Proposal; unchanged Proposal can be re-approved — Change requests; “Send for re-approval (unchanged)”
 - [x] Change to an earlier document marks later ones Out of sync; PM picks sections to regenerate; re-approval in order — edit a frozen Proposal in Cash
-- [x] Derived outputs for every version: one-page summary, PPTX, very short summary, labelled “AI summary of version N” — Summaries and slides tab
+- [x] Derived outputs for every version: one-page summary, PPTX, very short summary, labelled “AI summary of version N” — Summaries and slides tab (made in the background after each generated or saved version; **Make them again**)
 - [x] SRS traceability matrix with unlinked items flagged — Savings → SRS → Traceability; Loan after the SRS (SR-08 is flagged)
 - [x] Admin maintains templates; projects keep their version; PM can switch — Admin → Templates; document page notice
 - [x] Export PDF, DOCX, PPTX with branding — document header buttons; Summaries tab
@@ -67,15 +68,15 @@ Every feature and rule in `SPEC.md` and `SPEC_SQA_UAT.md`, and where to see it i
 
 ## Approval and signing
 
-- [x] PM → tech head → stakeholder head; sponsor head signs Charter, BRD, SRS — approval panel
+- [x] PM → tech head → stakeholder head; sponsor head signs the Proposal & Charter (one round), BRD, SRS — approval panel
 - [x] Chain starts only with no open comments and no comments pending check — try Send for approval with an open comment
 - [x] Turn notifications and reminders every 4 working hours — Notifications, Mailbox
 - [x] Approve / Request changes (comment required) — approval panel
 - [x] New version cancels earlier approvals; holder notified “version replaced” — save a version while a chain runs
 - [x] Editing during review; comments during review — Cash → BRD
 - [x] No conditional approval, no cancellation — no such buttons
-- [x] Minor correction: declare, AI scope check, refusal when scope is touched, approvals carried over, requester sees the diff, history label — approval panel after Request changes (Cash → Charter: the budget edit touched scope, so the full chain ran)
-- [x] Signing: password or email one-time code (Mailbox), stored copy, SHA-256 fingerprints, signature page, frozen, never regenerated — Cash → Charter (signed PDF, Verify fingerprint)
+- [x] Minor correction: declare, scope check, refusal when scope is touched, approvals carried over, requester sees the diff, history label — approval panel after Request changes (Cash → Proposal & Charter: the budget edit touched scope, so the full chain ran)
+- [x] Signing: password or email one-time code (Mailbox), stored copy, SHA-256 fingerprints, signature page, frozen, never regenerated — Cash → Proposal & Charter (signed PDF, Verify fingerprint)
 - [x] “Electronic approval record, not a CCA-certified signature” label — sign dialog, certificate page
 - [~] Fingerprints are of the stored text, not PDF bytes `[e]`
 
@@ -119,7 +120,8 @@ Every feature and rule in `SPEC.md` and `SPEC_SQA_UAT.md`, and where to see it i
 
 ## Technical decisions and security
 
-- [e] LM Studio, Qwen3.5-4B, BanglaASR, Tesseract, nomic embeddings, ChromaDB, LiveKit, 1-hour lock, reminders, signing — How the real app works
+- [x] Local AI through LM Studio: `qwen2.5-coder-0.5b-instruct` writes (any loaded model can be chosen in Admin → Settings), `nomic-embed-text` compares meaning; every request logged in Admin → AI activity; when LM Studio is off the action stops with a clear message
+- [e] Qwen3.5-4B, BanglaASR, Tesseract, ChromaDB, LiveKit, 1-hour lock, reminders, signing — How the real app works
 - [e] AI inputs are data, never instructions; agents only propose — every “In the real app” note
 - [x] Agents only propose; every AI result is labelled until a person confirms — AI badges throughout
 
@@ -144,7 +146,7 @@ Every feature and rule in `SPEC.md` and `SPEC_SQA_UAT.md`, and where to see it i
 - [x] Test runs, My tests inbox, Pass / Fail (must link a defect) / Blocked (reason), files — My work → Tests
 - [x] Defects: fields, severity, status flow, outcomes (Rejected, Duplicate, Deferred — Medium/Low only, Change request) — Savings → Defects
 - [x] Board with drag and drop (only allowed moves), list with filters and saved shortcuts, defect page with comments, @tags, files, history, watchers — Savings → Defects
-- [x] AI defect writer; possible duplicates — Raise a defect / record a Fail
+- [x] AI defect writer; possible duplicates (compared by meaning) — Raise a defect / record a Fail
 - [x] Exit criteria checklist; generated report (numbers counted by code, AI summary paragraph labelled); known issues; Not testable list — Sign-off tab
 - [x] SQA sign-off approved by the tech head (auto-releases the build to UAT); UAT sign-off PM → tech → stakeholder head, sponsor signs — Sign-off tab
 - [x] Request changes on a report → regenerate → chain restarts

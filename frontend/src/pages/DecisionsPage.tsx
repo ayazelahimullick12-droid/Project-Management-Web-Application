@@ -2,7 +2,7 @@
  * The PM's decision queue: candidate decisions from meeting transcripts (AI) and chat messages
  * marked as decisions. The PM confirms each into the Fact Sheet, starts a change request, or dismisses it.
  */
-import { Gavel, Workflow } from 'lucide-react'
+import { Gavel, Sparkles, Workflow } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import type { CandidateDecision } from '../types'
@@ -19,6 +19,8 @@ export function DecisionsPage() {
   const [confirming, setConfirming] = useState<CandidateDecision | null>(null)
   const [factKey, setFactKey] = useState('')
   const [value, setValue] = useState('')
+  const [suggested, setSuggested] = useState(false)
+  const suggest = useAction(api.changes.suggestDecision, { onDone: (r) => { setFactKey(r.factKey); setValue(r.value); setSuggested(true) } })
   const confirm = useAction(api.changes.confirmDecision, { success: 'Decision confirmed.', onDone: () => setConfirming(null) })
   const dismiss = useAction(api.changes.dismissDecision, { success: 'Dismissed.' })
   if (isLoading) return <Loading />
@@ -41,7 +43,7 @@ export function DecisionsPage() {
             <div className="text-sm font-medium">“{d.text}”</div>
             {data.pm && data.project.status === 'active' && (
               <div className="mt-3 flex flex-wrap gap-2">
-                <Button size="sm" variant="success" onClick={() => { setConfirming(d); setFactKey(d.factKey ?? ''); setValue(d.text) }}>Confirm into the Fact Sheet</Button>
+                <Button size="sm" variant="success" onClick={() => { setConfirming(d); setFactKey(d.factKey ?? ''); setValue(d.text); setSuggested(false) }}>Confirm into the Fact Sheet</Button>
                 <Button size="sm" onClick={() => confirm.run(d.id, { kind: 'change_request' })}><Workflow className="h-3.5 w-3.5" /> It changes scope: start a change request</Button>
                 <Button size="sm" variant="danger" onClick={() => dismiss.run(d.id)}>Dismiss</Button>
               </div>
@@ -64,6 +66,12 @@ export function DecisionsPage() {
       )}
       <div className="mt-6"><AiNote agent="decisions" compact /></div>
       <Modal open={!!confirming} onClose={() => setConfirming(null)} title="Confirm into the Fact Sheet" footer={<Button variant="primary" disabled={!factKey} onClick={() => confirm.run(confirming!.id, { kind: 'fact', factKey, value })}>Confirm</Button>}>
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <Button size="sm" disabled={suggest.pending} onClick={() => suggest.run(confirming!.id)}>
+            <Sparkles className="h-3.5 w-3.5" /> {suggest.pending ? 'The AI is reading it…' : 'Suggest with AI'}
+          </Button>
+          {suggested && <AiBadge label="AI suggestion: check it" />}
+        </div>
         <Field label="Which fact does it set?">
           <Select value={factKey} onChange={(e) => { setFactKey(e.target.value); }}>
             <option value="">Choose…</option>

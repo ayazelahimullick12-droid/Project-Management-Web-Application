@@ -77,7 +77,7 @@ export function OverviewTab({ data, goTo }: { data: IntakeData; goTo: (t: string
             <EmptyState title="No description yet">A stakeholder writes what they need. The PM team can help.</EmptyState>
           )}
         </Card>
-        <Card title="Uploaded files" subtitle="PDF, Word and images. Scanned pages are read with OCR (English and Bangla)." actions={data.perms.upload && <FileButton size="sm" onPick={(f) => upload.run(f)} accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.tif,.tiff" />}>
+        <Card title="Uploaded files" subtitle="PDF, Word, images and text files. Scanned pages are read with OCR (English and Bangla)." actions={data.perms.upload && <FileButton size="sm" onPick={(f) => upload.run(f)} accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.tif,.tiff,.txt,.md,.csv" />}>
           {data.uploads.length ? (
             <ul className="divide-y divide-line">
               {data.uploads.map((u) => (
@@ -97,7 +97,7 @@ export function OverviewTab({ data, goTo }: { data: IntakeData; goTo: (t: string
                   {openUpload === u.id && (
                     <div className="mt-2 rounded bg-canvas p-3">
                       {u.dataUrl && <img src={u.dataUrl} alt="" className="mb-2 max-h-48 rounded" />}
-                      <div className="mb-1 text-[11px] font-medium text-muted">Extracted text (simulated)</div>
+                      <div className="mb-1 text-[11px] font-medium text-muted">Extracted text{u.ocrUsed || !/\.(txt|md|csv)$/i.test(u.name) ? ' (simulated)' : ''}</div>
                       <pre className="font-sans text-xs whitespace-pre-wrap">{u.extractedText}</pre>
                     </div>
                   )}
@@ -105,7 +105,7 @@ export function OverviewTab({ data, goTo }: { data: IntakeData; goTo: (t: string
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-muted">No files yet. Try uploading any PDF or image: the prototype shows a pre-written OCR result.</p>
+            <p className="text-sm text-muted">No files yet. Text files (.txt, .md, .csv) are really read by the AI. For PDF, Word and images, reading the text is still simulated.</p>
           )}
           <div className="mt-3">
             <AiNote agent="ocr" compact />

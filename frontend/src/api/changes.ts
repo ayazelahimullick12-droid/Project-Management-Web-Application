@@ -9,15 +9,15 @@ import type { DemoState, DocVersion, ID, Project } from '../types'
 import { MAIN_DOCS } from '../types'
 import { now, nowIso } from '../demo/clock'
 import { newId } from '../demo/ids'
-import { runJob } from '../demo/jobs'
-import { updateForFacts } from '../demo/ai/agents'
+import { runAiJob, runJob } from '../demo/jobs'
+import { suggestDecision as aiSuggestDecision, updateForFacts } from '../ai/agents'
 import { actAsHead, can, headOf, TEAM_LABEL } from '../rules/permissions'
 import { DOC_LABEL, PIPELINE } from '../rules/pipeline'
 import { routeTeam } from '../rules/qa'
 import { peopleCheck, questionNeeds } from '../rules/people'
 import { act, ensure, fail, me, nameOf, projectOf, read } from './core'
 import { audit, notify, teamMembers } from './effects'
-import { afterNewVersion } from './documents'
+import { afterNewVersion, aiLabel } from './documents'
 
 const STATUS_LABEL = {
   questions: 'Asking about what changed',
@@ -147,25 +147,28 @@ export async function regenerateAffected(crId: ID) {
   const fsList = s0.factSheets.filter((f) => f.projectId === p.id).sort((a, b) => a.number - b.number)
   const before = fsList.at(-2)?.facts ?? []
   const changes = cr.changedFactKeys.map((k) => ({ label: s0.factCatalog.find((d) => d.key === k)?.label ?? k, oldValue: before.find((f) => f.key === k)?.value ?? '', newValue: p.facts.find((f) => f.key === k)?.value ?? '' }))
-  const count = cr.impact.reduce((n, i) => n + i.sectionIds.length, 0)
-  return runJob({
+  const affected = cr.impact.flatMap((i) => {
+    const v = s0.versions.find((x) => x.id === s0.docs.find((d) => d.id === i.docId)?.currentVersionId)!
+    return i.sectionIds.map((id) => ({ docId: i.docId, docType: i.docType, section: v.sections.find((x) => x.id === id)! }))
+  })
+  return runAiJob({
     agent: 'docgen',
-    title: `Regenerating ${count} affected section${count > 1 ? 's' : ''}`,
+    title: `Regenerating ${affected.length} affected section${affected.length > 1 ? 's' : ''}`,
     projectId: p.id,
     byUserId: user.id,
     link: `/projects/${p.id}/changes`,
-    promptTokens: 900 * count,
-    steps: cr.impact.map((i) => `Regenerating ${i.sectionIds.length} section${i.sectionIds.length > 1 ? 's' : ''} of the ${DOC_LABEL[i.docType]}`),
-    apply: (s) => {
-      const c = s.changeRequests.find((x) => x.id === crId)!
-      c.proposals = []
-      for (const i of c.impact) {
-        const v = s.versions.find((x) => x.id === s.docs.find((d) => d.id === i.docId)?.currentVersionId)!
-        for (const id of i.sectionIds) {
-          const sec = v.sections.find((x) => x.id === id)!
-          c.proposals.push({ docId: i.docId, sectionId: id, title: `${DOC_LABEL[i.docType]} · ${sec.title}`, before: sec.content, after: updateForFacts(sec, changes), status: 'pending' })
-        }
+    steps: affected.map((a, i) => `Rewriting ${i + 1} of ${affected.length}: ${DOC_LABEL[a.docType]} · ${a.section.title}`),
+    work: async (step) => {
+      const out: string[] = []
+      for (const [i, a] of affected.entries()) {
+        step(i)
+        out.push(await updateForFacts(p, aiLabel(a.docType, a.section.key), a.section, changes))
       }
+      return out
+    },
+    apply: (s, rewritten) => {
+      const c = s.changeRequests.find((x) => x.id === crId)!
+      c.proposals = affected.map((a, i) => ({ docId: a.docId, sectionId: a.section.id, title: `${DOC_LABEL[a.docType]} · ${a.section.title}`, before: a.section.content, after: rewritten[i], status: 'pending' as const }))
       c.status = 'regenerating'
       return 'Review each diff and accept or reject it.'
     },
@@ -262,6 +265,15 @@ export async function confirmDecision(id: ID, outcome: { kind: 'fact'; factKey: 
     }
     audit(s, { projectId: p.id, actorId: user.id, actingFor: pm.actingFor, action: 'Decision confirmed', details: `${d.text.slice(0, 80)} → ${outcome.kind === 'fact' ? 'Fact Sheet' : 'change request'}`, at })
   })
+}
+
+/** The AI proposes which fact a decision sets, and the value. The PM checks it before confirming. */
+export async function suggestDecision(id: ID) {
+  const s = await read((x) => x)
+  const d = s.decisions.find((x) => x.id === id)
+  if (!d) fail('Decision not found.')
+  ensure(actAsHead(projectOf(s, d.projectId), 'PM', me(s).id, now()))
+  return aiSuggestDecision(d.text, s.factCatalog, { projectId: d.projectId })
 }
 
 export async function dismissDecision(id: ID) {

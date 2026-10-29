@@ -3,7 +3,7 @@
  * never blocks the page, and every AI result is labelled until a person confirms it).
  */
 import { Bot, ChevronDown, CircleCheck, Info, Sparkles, TriangleAlert, X } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AI_AGENTS, SECURITY_NOTE } from '../demo/explanations'
 import { api } from '../api'
@@ -14,7 +14,7 @@ import { Spinner } from './ui'
 /** A quiet label on anything the AI produced, until a person confirms it. */
 export function AiBadge({ label = 'AI' }: { label?: string }) {
   return (
-    <span className="ai-gradient inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-semibold whitespace-nowrap text-violet-700 ring-1 ring-violet-200/60 ring-inset" title="Produced by the AI (simulated in this prototype). A person must check it.">
+    <span className="ai-gradient inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] font-semibold whitespace-nowrap text-violet-700 ring-1 ring-violet-200/60 ring-inset" title="Produced by the AI. A person must check it.">
       <Sparkles className="h-3 w-3" />
       {label}
     </span>
@@ -49,7 +49,15 @@ export function JobTray() {
   const uid = useSessionUserId()
   const { data: jobs } = useApi(['jobs', uid], api.notifications.myJobs, !!uid)
   const [hidden, setHidden] = useState<string[]>([])
-  const visible = (jobs ?? []).filter((j) => !hidden.includes(j.id) && (j.status === 'running' || Date.now() - (j.startedReal ?? 0) < 45_000)).slice(0, 3)
+  const [, setTick] = useState(0)
+  const since = (j: { heartbeatReal?: number; startedReal: number }) => Date.now() - (j.heartbeatReal ?? j.startedReal ?? 0)
+  const visible = (jobs ?? []).filter((j) => !hidden.includes(j.id) && (j.status === 'running' || since(j) < (j.status === 'failed' ? 600_000 : 45_000))).slice(0, 3)
+  const running = visible.some((j) => j.status === 'running')
+  useEffect(() => {
+    if (!running) return
+    const id = setInterval(() => setTick((n) => n + 1), 1000)
+    return () => clearInterval(id)
+  }, [running])
   if (!visible.length) return null
   return (
     <div className="fixed bottom-4 left-4 z-40 flex w-80 flex-col gap-2 no-print md:left-[17rem]">
@@ -62,7 +70,7 @@ export function JobTray() {
                 <Bot className="h-3.5 w-3.5 text-violet-700" /> <span className="truncate">{j.title}</span>
               </div>
               <div className="mt-0.5 text-xs text-muted">
-                {j.status === 'running' ? `${j.steps[j.step]} (${j.step + 1}/${j.steps.length})` : j.resultNote ?? (j.status === 'done' ? 'Done.' : 'Failed.')}
+                {j.status === 'running' ? `${j.steps[j.step]} (${j.step + 1}/${j.steps.length}) · ${Math.round((Date.now() - j.startedReal) / 1000)} s` : j.resultNote ?? (j.status === 'done' ? 'Done.' : 'Failed.')}
               </div>
               {j.status === 'running' && (
                 <div className="mt-2 h-1 overflow-hidden rounded bg-violet-100">

@@ -4,17 +4,19 @@
  * Spec: SPEC.md "Document pipeline", "Approval and signing", "Editing, versions and change
  * requests" and "Comments and suggestions". The rules themselves live in src/rules.
  */
-import type { ApprovalChain, Comment, DemoState, Doc, DocType, DocVersion, ID, Project, Section, User } from '../types'
+import type { ApprovalChain, Comment, DemoState, Doc, DocType, DocVersion, ID, Project, Section, TemplateSection, User } from '../types'
 import { MAIN_DOCS } from '../types'
 import { now, nowIso } from '../demo/clock'
 import { newId } from '../demo/ids'
-import { runJob } from '../demo/jobs'
-import { draftDocument, detectFactChanges, regenerateSection, requirementsFromCanned, requirementsFromText, scopeCheck as simulateScopeCheck, summaries } from '../demo/ai/agents'
+import { runAiJob, runJob } from '../demo/jobs'
+import { getState, mutate } from '../demo/store'
+import { detectFactChanges, requirementsFromCanned, requirementsFromText, scopeCheck as simulateScopeCheck } from '../demo/ai/agents'
+import { draftSection, rewriteSection as aiRewrite, scopeVerdict, summarize } from '../ai/agents'
 import { missingPeople } from '../rules/people'
 import { approve as approveRule, canAct, chainNeeds, CHAIN_CONFIG, cancel, currentStep, minorCorrectionChain, newChain, requestChanges as requestChangesRule, ROLE_LABEL, ROLE_TEAM, sendCheck, sign as signRule } from '../rules/approval'
 import { blockingCounts, canCheckPending, canComment, canTick, carryForward, commentTeam } from '../rules/comments'
 import { actAsHead, can, headOf, headRecipient, inTeam, isSqa, memberOf, TEAM_LABEL, type Check } from '../rules/permissions'
-import { activeChain, canGenerate, chainsOf, DOC_LABEL, docStatus, isComplete, laterTypes, PIPELINE, previousComplete } from '../rules/pipeline'
+import { activeChain, canGenerate, chainsOf, DOC_LABEL, docStatus, isComplete, laterTypes, PART_LABEL, PIPELINE, previousComplete, sectionPart } from '../rules/pipeline'
 import { exitCriteria, markReadyForRetest } from '../rules/testing'
 import { normalize } from '../rules/text'
 import { act, ApiError, ensure, fail, me, nameOf, pipelineCtx, projectOf, read } from './core'
@@ -76,8 +78,11 @@ export async function getDocument(pid: ID, type: DocType) {
     const lastChain = chains.at(-1)
     const minor = minorCheck(s, p, doc, current, lastChain, user, t)
 
-    // Derived outputs: regenerated for every saved version (SPEC.md "Derived outputs").
-    const derived = current && MAIN_DOCS.includes(type) ? summaries(DOC_LABEL[type], p.name, current.number, current.sections) : undefined
+    // Derived outputs: made by the AI for each new version (SPEC.md "Derived outputs").
+    const derived = current && MAIN_DOCS.includes(type) ? s.summaries[current.id] : undefined
+    const summaryJobs = current ? s.jobs.filter((j) => j.ref === current.id && j.agent === 'summary') : [] // newest first
+    const summarizing = summaryJobs[0]?.status === 'running'
+    const summaryError = !derived && summaryJobs[0]?.status === 'failed' ? summaryJobs[0].resultNote : undefined
 
     const signatures = doc ? s.signatures.filter((x) => x.docId === doc.id).map((x) => ({ ...x, signerName: nameOf(s, x.signerId), actingForName: x.actingFor ? nameOf(s, x.actingFor) : undefined })) : []
     const named = (c: ApprovalChain) => ({
@@ -110,6 +115,8 @@ export async function getDocument(pid: ID, type: DocType) {
       facts: p.facts,
       factUpdates: doc ? s.factUpdates.filter((f) => f.docId === doc.id) : [],
       derived,
+      summarizing,
+      summaryError,
       requirements: reqs,
       traceBuilt: !!s.traceLinksDone[pid],
       testCases: s.testCases.filter((tc) => tc.projectId === pid),
@@ -130,6 +137,7 @@ export async function getDocument(pid: ID, type: DocType) {
         forceUnlock: pm.ok && lockedByOther,
         decideScope: pm.ok && scopeUndecided,
         switchTemplate: pm.ok && (p.templateVersions[type] ?? 1) < latestTemplate,
+        summarize: can.memberOrOwner(p, user.id).ok && !summarizing,
       },
       complete: isComplete(ctx, type),
       // Every head the approval chain needs; checked before "Send for approval" (see sendCheck).
@@ -182,16 +190,24 @@ export async function generate(pid: ID, type: DocType) {
   ensure(canGenerate(pipelineCtx(s0, pid), type))
   if (s0.docs.some((d) => d.projectId === pid && d.type === type && d.currentVersionId)) fail('This document already has a version. Edit it, or use “Rewrite with AI” on a section.')
   const template = s0.templates.find((x) => x.docType === type && x.version === (p.templateVersions[type] ?? 1))!
-  const sections = draftDocument(p, type, template, p.facts)
-  return runJob({
+  const parents = parentsFor(s0, pid, type)
+  return runAiJob({
     agent: 'docgen',
     title: `Drafting the ${DOC_LABEL[type]}`,
     projectId: pid,
     byUserId: user.id,
     link: `/projects/${pid}/docs/${type}`,
-    promptTokens: 900 * sections.length,
-    steps: [...sections.map((x, i) => `Drafting section ${i + 1} of ${sections.length}: ${x.title}`), 'Recording which facts each section used'],
-    apply: (s) => {
+    steps: template.sections.map((x, i) => `Writing section ${i + 1} of ${template.sections.length}: ${x.title}`),
+    work: async (step) => {
+      const out: { key: string; title: string; content: string; factKeys: string[] }[] = []
+      for (const [i, ts] of template.sections.entries()) {
+        step(i)
+        out.push({ key: ts.key, title: ts.title, factKeys: ts.factKeys, content: await draftSection(p, aiLabel(type, ts.key), ts, p.facts, parents) })
+      }
+      return out
+    },
+    onDone: () => summariesInBackground(`${pid}-${type}`),
+    apply: (s, sections) => {
       const at = nowIso()
       let doc = s.docs.find((d) => d.projectId === pid && d.type === type)
       if (!doc) {
@@ -214,6 +230,64 @@ export async function generate(pid: ID, type: DocType) {
       return `${sections.length} sections drafted. Everyone in the project was notified.`
     },
   })
+}
+
+/** The document's name as the AI should see it (the package has two parts). */
+export function aiLabel(type: DocType, sectionKey: string): string {
+  if (type === 'PROPOSAL') return PART_LABEL[sectionPart(sectionKey)]
+  return type === 'BRD' ? 'Business Requirements Document (BRD)' : type === 'SRS' ? 'Software Requirements Specification (SRS)' : DOC_LABEL[type]
+}
+
+/** The numbered items a document's requirements must support: BRD → Charter objectives, SRS → BRD requirements. */
+function parentsFor(s: DemoState, pid: ID, type: DocType) {
+  const parentType = type === 'BRD' ? 'PROPOSAL' : type === 'SRS' ? 'BRD' : undefined
+  return parentType ? s.requirements.filter((r) => r.projectId === pid && r.docType === parentType).map((r) => ({ id: r.id, text: r.text })) : []
+}
+
+function templateSection(s: DemoState, p: Project, type: DocType, key: string): TemplateSection | undefined {
+  return s.templates.find((x) => x.docType === type && x.version === (p.templateVersions[type] ?? 1))?.sections.find((x) => x.key === key)
+}
+
+// ─── Summaries and slides (AI, made for each new version) ──────────────
+
+function summaryJob(p: Project, doc: Doc, v: DocVersion, byUserId: ID) {
+  return runAiJob({
+    agent: 'summary',
+    title: `Summary and slides: ${DOC_LABEL[doc.type]} v${v.number}`,
+    projectId: p.id,
+    byUserId,
+    link: `${docLink(doc)}?tab=summaries`,
+    ref: v.id,
+    steps: ['Writing the summary', 'Making the slides'],
+    work: (step) => summarize(DOC_LABEL[doc.type], p.name, v.sections, { projectId: p.id }, step),
+    apply: (s, r) => {
+      s.summaries[v.id] = { ...r, createdAt: nowIso() }
+      return `Summary and ${r.slides.length} slides ready.`
+    },
+  })
+}
+
+/** Starts the summary job for a document's current version, if it has none yet. */
+function summariesInBackground(docId: ID) {
+  const s = getState()
+  const doc = s.docs.find((d) => d.id === docId)
+  const v = doc && currentVersion(s, doc)
+  if (!doc || !v || !MAIN_DOCS.includes(doc.type) || s.summaries[v.id]) return
+  if (s.jobs.some((j) => j.ref === v.id && j.status === 'running')) return
+  summaryJob(projectOf(s, doc.projectId), doc, v, me(s).id)
+}
+
+/** "Make the summary and slides" (again) for the current version. */
+export async function makeSummaries(pid: ID, type: DocType) {
+  const s0 = await read((s) => s)
+  const user = me(s0)
+  const p = projectOf(s0, pid)
+  ensure(can.memberOrOwner(p, user.id))
+  const doc = s0.docs.find((d) => d.projectId === pid && d.type === type)
+  const v = doc ? currentVersion(s0, doc) : undefined
+  if (!doc || !v) fail('There is no version to summarise yet.')
+  if (s0.jobs.some((j) => j.ref === v.id && j.status === 'running')) fail('The AI is already making them.')
+  return summaryJob(p, doc, v, user.id)
 }
 
 /** Keeps the numbered requirements (OBJ/BR/SR) in step with the document text. */
@@ -325,16 +399,15 @@ export async function rewriteSection(docId: ID, sectionId: ID, prompt: string) {
   if (!lock || lock.userId !== user.id) fail('Start editing first (AI regeneration also takes the lock).')
   const draft = s0.drafts.find((d) => d.docId === docId)!
   const section = draft.sections.find((x) => x.id === sectionId)!
-  const content = regenerateSection(p, doc.type, section, prompt, p.facts)
-  return runJob({
+  return runAiJob({
     agent: 'regen',
     title: `Rewriting “${section.title}”`,
     projectId: p.id,
     byUserId: user.id,
     link: docLink(doc),
-    promptTokens: Math.round(section.content.length / 4) + 600,
-    steps: ['Reading the section and your instruction', 'Writing the new text', 'Preparing the diff'],
-    apply: (s) => {
+    steps: ['Writing the new text'],
+    work: () => aiRewrite(p, aiLabel(doc.type, section.key), section, prompt),
+    apply: (s, content) => {
       const d = s.drafts.find((x) => x.docId === docId)
       if (!d) fail('The draft was discarded.')
       d.proposals = [...(d.proposals ?? []).filter((x) => x.sectionId !== sectionId), { sectionId, prompt, content, createdAt: nowIso() }]
@@ -358,22 +431,55 @@ export async function decideProposal(docId: ID, sectionId: ID, accept: boolean) 
   })
 }
 
-/** What saving would do (scope check and fact changes), shown before saving. */
+/** A short fingerprint of the draft text, to know whether a stored scope check still applies. */
+function draftKey(sections: Section[]): string {
+  let h = 5381
+  for (const ch of sections.map((x) => `${x.id}=${x.content}`).join('|')) h = ((h * 33) ^ ch.charCodeAt(0)) >>> 0
+  return h.toString(36)
+}
+
+const scopeRuns = new Map<string, Promise<NonNullable<DemoState['drafts'][number]['scopeCheck']>>>()
+
+/**
+ * What saving would do (scope check and fact changes), shown before saving.
+ * Edits of sections that cover objectives, deliverables, budget or timeline go to the AI, which
+ * decides whether the edit really changes scope. Its answer is kept on the draft for saveVersion.
+ * If the AI cannot answer, the edit stays flagged so the PM decides.
+ */
 export async function previewSave(docId: ID) {
-  return read((s) => {
-    const doc = docById(s, docId)
-    const p = projectOf(s, doc.projectId)
-    const d = s.drafts.find((x) => x.docId === docId)
-    const v = currentVersion(s, doc)
-    if (!d || !v) return { changedTitles: [] as string[], flagged: false, reason: 'No draft.', sectionTitles: [] as string[], factChanges: [] as ReturnType<typeof detectFactChanges> }
-    const template = s.templates.find((x) => x.docType === doc.type && x.version === (p.templateVersions[doc.type] ?? 1))
-    const sc = simulateScopeCheck(template, v.sections, d.sections)
-    return { ...sc, factChanges: detectFactChanges(p.facts, v.sections, d.sections) }
-  })
+  const s0 = await read((s) => s)
+  const doc = docById(s0, docId)
+  const p = projectOf(s0, doc.projectId)
+  const d = s0.drafts.find((x) => x.docId === docId)
+  const v = currentVersion(s0, doc)
+  if (!d || !v) return { changedTitles: [] as string[], flagged: false, reason: 'No draft.', sectionTitles: [] as string[], factChanges: [] as ReturnType<typeof detectFactChanges> }
+  const template = s0.templates.find((x) => x.docType === doc.type && x.version === (p.templateVersions[doc.type] ?? 1))
+  const rule = simulateScopeCheck(template, v.sections, d.sections)
+  const factChanges = detectFactChanges(p.facts, v.sections, d.sections)
+  if (!rule.flagged) return { ...rule, factChanges }
+  const key = draftKey(d.sections)
+  if (d.scopeCheck?.key === key) return { ...rule, ...d.scopeCheck, factChanges }
+  const runKey = `${docId}|${key}`
+  if (!scopeRuns.has(runKey)) {
+    const changes = d.sections.filter((x) => rule.sectionTitles.includes(x.title)).map((x) => ({ title: x.title, before: v.sections.find((y) => y.id === x.id)?.content ?? '', after: x.content }))
+    const run = scopeVerdict(changes, { projectId: p.id })
+      .then((r) => ({ key, flagged: r.changesScope, sectionTitles: r.changesScope ? rule.sectionTitles : [], reason: r.reason.trim() || rule.reason }))
+      .catch((err: Error) => ({ key, flagged: true, sectionTitles: rule.sectionTitles, reason: `${rule.reason} The AI check could not run (${err.message}), so the PM decides.` }))
+      .then((verdict) => {
+        mutate((s) => {
+          const dd = s.drafts.find((x) => x.docId === docId)
+          if (dd && draftKey(dd.sections) === key) dd.scopeCheck = verdict
+        })
+        scopeRuns.delete(runKey)
+        return verdict
+      })
+    scopeRuns.set(runKey, run)
+  }
+  return { ...rule, ...(await scopeRuns.get(runKey)!), factChanges }
 }
 
 export async function saveVersion(docId: ID, message: string, scopeDecision?: 'normal' | 'scope_change') {
-  return act((s, t, at) => {
+  const number = await act((s, t, at) => {
     const user = me(s)
     const doc = docById(s, docId)
     const p = projectOf(s, doc.projectId)
@@ -387,7 +493,8 @@ export async function saveVersion(docId: ID, message: string, scopeDecision?: 'n
     if (d.sections.every((x) => normalize(prev.sections.find((y) => y.id === x.id)?.content ?? '') === normalize(x.content))) fail('Nothing has changed since the last version.')
     if (!message.trim()) fail('Write a short message describing the change.')
     const template = s.templates.find((x) => x.docType === doc.type && x.version === (p.templateVersions[doc.type] ?? 1))
-    const sc = simulateScopeCheck(template, prev.sections, d.sections)
+    const rule = simulateScopeCheck(template, prev.sections, d.sections)
+    const sc = rule.flagged && d.scopeCheck?.key === draftKey(d.sections) ? { ...rule, ...d.scopeCheck } : rule
     const pm = actAsHead(p, 'PM', user.id, t)
     const v: DocVersion = {
       id: newId('ver'), docId, projectId: p.id, number: prev.number + 1, authorId: user.id, message: message.trim(),
@@ -406,6 +513,8 @@ export async function saveVersion(docId: ID, message: string, scopeDecision?: 'n
     audit(s, { projectId: p.id, actorId: user.id, action: 'Version saved', details: `${DOC_LABEL[doc.type]} v${v.number}: ${v.message}${sc.flagged ? ' (scope check flagged)' : ''}`, at })
     return v.number
   })
+  summariesInBackground(docId)
+  return number
 }
 
 /** Everything that happens after any new version (SPEC.md "Editing" → after every new version). */
@@ -441,9 +550,8 @@ export function afterNewVersion(s: DemoState, doc: Doc, prev: DocVersion, v: Doc
     later.outOfSync = { since: at, cause: `${DOC_LABEL[doc.type]} changed (v${v.number})`, suggestedSectionIds: suggested }
     notify(s, { to: teamMembers(p, 'PM'), type: 'out-of-sync', title: `${DOC_LABEL[lt]} is out of sync`, body: `${p.name}: the ${DOC_LABEL[doc.type]} changed after the ${DOC_LABEL[lt]} was written. It must be re-approved in order.`, link: docLink(later), projectId: p.id, at, email: false })
   }
-  // 5. Requirements follow the text; 6. derived outputs regenerate; 7. everyone is told.
+  // 5. Requirements follow the text; 6. everyone is told. (Summaries: summariesInBackground.)
   updateRequirements(s, p, doc.type, v.sections, false)
-  if (MAIN_DOCS.includes(doc.type)) s.aiCalls.unshift({ id: newId('ai'), projectId: p.id, agent: 'summary', title: `Summaries and slides for ${DOC_LABEL[doc.type]} v${v.number}`, promptTokens: Math.round(v.sections.reduce((n, x) => n + x.content.length, 0) / 4), durationMs: 2100, success: true, createdAt: at })
   notify(s, { to: allMembers(p), type: 'version', title: `New version: ${DOC_LABEL[doc.type]} v${v.number}`, body: `${p.name}: ${user.name} saved v${v.number} (“${v.message}”).`, link: docLink(doc), projectId: p.id, at, exclude: user.id, email: false })
 }
 
@@ -511,24 +619,30 @@ export async function regenerateOutOfSync(docId: ID, sectionIds: ID[]) {
   const p = projectOf(s0, doc.projectId)
   ensure(actAsHead(p, 'PM', user.id, now()))
   if (!sectionIds.length) fail('Choose at least one section.')
-  const template = s0.templates.find((x) => x.docType === doc.type && x.version === (p.templateVersions[doc.type] ?? 1))!
-  const fresh = draftDocument(p, doc.type, template, p.facts)
   const draft = s0.drafts.find((d) => d.docId === docId)!
-  return runJob({
+  const parents = parentsFor(s0, p.id, doc.type)
+  const picked = draft.sections.filter((x) => sectionIds.includes(x.id))
+  return runAiJob({
     agent: 'docgen',
-    title: `Regenerating ${sectionIds.length} section${sectionIds.length > 1 ? 's' : ''} of the ${DOC_LABEL[doc.type]}`,
+    title: `Regenerating ${picked.length} section${picked.length > 1 ? 's' : ''} of the ${DOC_LABEL[doc.type]}`,
     projectId: p.id,
     byUserId: user.id,
     link: docLink(doc),
-    promptTokens: 900 * sectionIds.length,
-    steps: sectionIds.map((id, i) => `Regenerating section ${i + 1} of ${sectionIds.length}: ${draft.sections.find((x) => x.id === id)?.title}`),
-    apply: (s) => {
+    steps: picked.map((x, i) => `Regenerating section ${i + 1} of ${picked.length}: ${x.title}`),
+    work: async (step) => {
+      const fresh = new Map<ID, string>()
+      for (const [i, sec] of picked.entries()) {
+        step(i)
+        const ts = templateSection(s0, p, doc.type, sec.key) ?? { key: sec.key, title: sec.title, guidance: sec.title, factKeys: sec.factKeys }
+        fresh.set(sec.id, await draftSection(p, aiLabel(doc.type, sec.key), ts, p.facts, parents))
+      }
+      return fresh
+    },
+    apply: (s, fresh) => {
       const d = s.drafts.find((x) => x.docId === docId)
       if (!d) fail('The draft was discarded.')
-      for (const id of sectionIds) {
-        const sec = d.sections.find((x) => x.id === id)!
-        const f = fresh.find((x) => x.key === sec.key)
-        d.proposals = [...(d.proposals ?? []).filter((x) => x.sectionId !== id), { sectionId: id, prompt: 'Bring in line with the earlier document that changed', content: f?.content ?? sec.content, createdAt: nowIso() }]
+      for (const [id, content] of fresh) {
+        d.proposals = [...(d.proposals ?? []).filter((x) => x.sectionId !== id), { sectionId: id, prompt: 'Bring in line with the earlier document that changed', content, createdAt: nowIso() }]
       }
       return 'Review each diff, accept or reject, then save a version.'
     },
@@ -871,7 +985,7 @@ export async function printable(versionId: ID) {
     ensure(can.view(p, user))
     const signature = s.signatures.find((x) => x.versionId === v.id)
     const chain = s.chains.filter((c) => c.versionId === v.id && c.status !== 'cancelled').at(-1)
-    return { project: p, doc, version: v, label: DOC_LABEL[doc.type], signature: signature ? { ...signature, signerName: nameOf(s, signature.signerId), actingForName: signature.actingFor ? nameOf(s, signature.actingFor) : undefined } : undefined, chainStatus: chain?.status, approvals: chain?.steps.filter((x) => x.actedAt).map((x) => ({ role: ROLE_LABEL[x.role], by: nameOf(s, x.actedBy), at: x.actedAt!, actingFor: x.actingFor ? nameOf(s, x.actingFor) : undefined })) ?? [] }
+    return { project: p, doc, version: v, label: DOC_LABEL[doc.type], summary: s.summaries[v.id], signature: signature ? { ...signature, signerName: nameOf(s, signature.signerId), actingForName: signature.actingFor ? nameOf(s, signature.actingFor) : undefined } : undefined, chainStatus: chain?.status, approvals: chain?.steps.filter((x) => x.actedAt).map((x) => ({ role: ROLE_LABEL[x.role], by: nameOf(s, x.actedBy), at: x.actedAt!, actingFor: x.actingFor ? nameOf(s, x.actingFor) : undefined })) ?? [] }
   })
 }
 

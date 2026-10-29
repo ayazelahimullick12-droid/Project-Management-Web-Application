@@ -119,7 +119,8 @@ function SettingsTab({ d }: { d: AdminData }) {
         <Field label="Q/A rounds before the PM decides"><Input type="number" value={s.qaRoundLimit} onChange={(e) => setS({ ...s, qaRoundLimit: Number(e.target.value) })} /></Field>
         <Field label="Similar projects shown (RAG top K)"><Input type="number" value={s.ragTopK} onChange={(e) => setS({ ...s, ragTopK: Number(e.target.value) })} /></Field>
         <Field label="Duplicate warning threshold"><Input type="number" step="0.01" value={s.ragDuplicateThreshold} onChange={(e) => setS({ ...s, ragDuplicateThreshold: Number(e.target.value) })} /></Field>
-        <Field label="AI speed (prototype)">
+        <Field label="Defect duplicate threshold (0–1)"><Input type="number" step="0.01" value={s.defectDuplicateThreshold} onChange={(e) => setS({ ...s, defectDuplicateThreshold: Number(e.target.value) })} /></Field>
+        <Field label="Speed of simulated steps (prototype)">
           <Select value={s.aiSpeed} onChange={(e) => setS({ ...s, aiSpeed: e.target.value as Settings['aiSpeed'] })}>
             <option value="normal">normal</option><option value="fast">fast</option><option value="instant">instant</option>
           </Select>
@@ -132,7 +133,37 @@ function SettingsTab({ d }: { d: AdminData }) {
       <Field label="Holidays (YYYY-MM-DD, one per line)" hint="No reminders on these days (Eid and other public holidays).">
         <Textarea rows={3} value={s.holidays.join('\n')} onChange={(e) => setS({ ...s, holidays: e.target.value.split('\n').map((x) => x.trim()).filter(Boolean) })} />
       </Field>
+      <AiModels value={s.ai} onChange={(ai) => setS({ ...s, ai })} />
     </Card>
+  )
+}
+
+/** Which models in LM Studio the app uses. The list comes from LM Studio itself. */
+function AiModels({ value, onChange }: { value: Settings['ai']; onChange: (v: Settings['ai']) => void }) {
+  const { data: st, refetch, isFetching } = useApi(['ai-status'], api.admin.aiStatus)
+  const models = st?.models ?? []
+  const options = (current: string, embed: boolean) => [...new Set([current, ...models.filter((m) => embed === /embed/i.test(m))])]
+  return (
+    <div className="mt-2 border-t border-line pt-4">
+      <div className="mb-2 flex flex-wrap items-center gap-2 text-sm font-medium">
+        AI models (LM Studio)
+        {st && (st.ok ? <Badge tone="green">connected</Badge> : <Badge tone="red">not reachable</Badge>)}
+        <Button size="sm" disabled={isFetching} onClick={() => refetch()}>Check again</Button>
+      </div>
+      {st && !st.ok && <Note tone="amber" className="mb-3">{st.error ?? 'LM Studio is not reachable.'} Start LM Studio, load a model and start its server (Developer tab).</Note>}
+      <div className="grid gap-x-4 md:grid-cols-2">
+        <Field label="Model that writes" hint="Small models answer fastest. Answers are kept short on purpose.">
+          <Select value={value.model} onChange={(e) => onChange({ ...value, model: e.target.value })}>
+            {options(value.model, false).map((m) => <option key={m} value={m}>{m}{models.length > 0 && !models.includes(m) ? ' (not in LM Studio)' : ''}</option>)}
+          </Select>
+        </Field>
+        <Field label="Model that compares (embeddings)" hint="Used for similar projects and possible duplicate defects.">
+          <Select value={value.embedModel} onChange={(e) => onChange({ ...value, embedModel: e.target.value })}>
+            {options(value.embedModel, true).map((m) => <option key={m} value={m}>{m}{models.length > 0 && !models.includes(m) ? ' (not in LM Studio)' : ''}</option>)}
+          </Select>
+        </Field>
+      </div>
+    </div>
   )
 }
 
@@ -177,21 +208,22 @@ export function AdminPage() {
       {tab === 'settings' && <SettingsTab d={data} />}
       {tab === 'import' && <Import d={data} />}
       {tab === 'ai' && (
-        <Card title={<span className="flex items-center gap-2"><Bot className="h-4 w-4" /> Every AI call (simulated)</span>} subtitle="The real app logs agent, prompt size, duration and success to the ai_calls table." padded={false}>
-          <Table head={['When', 'Agent', 'Task', 'Project', 'Prompt tokens', 'Duration', 'OK']}>
+        <Card title={<span className="flex items-center gap-2"><Bot className="h-4 w-4" /> Every AI call</span>} subtitle="Each request to LM Studio: the model, tokens in and out, how long it took, and any error. The last 300 are kept." padded={false}>
+          <Table head={['When', 'Agent', 'Task', 'Project', 'Model', 'Tokens in / out', 'Duration', 'OK']}>
             {data.aiCalls.map((c) => (
               <tr key={c.id}>
                 <Td className="text-xs text-muted">{fmtDateTime(c.createdAt)}</Td>
                 <Td className="text-xs">{c.agent}</Td>
                 <Td className="text-sm">{c.title}</Td>
                 <Td className="text-xs">{c.projectName ?? '—'}</Td>
-                <Td className="text-xs">{c.promptTokens.toLocaleString()}</Td>
+                <Td className="text-xs">{c.model ?? 'simulated'}</Td>
+                <Td className="text-xs">{c.promptTokens.toLocaleString()} / {c.completionTokens?.toLocaleString() ?? '—'}</Td>
                 <Td className="text-xs">{(c.durationMs / 1000).toFixed(1)} s</Td>
-                <Td>{c.success ? <Badge tone="green">yes</Badge> : <Badge tone="red">failed</Badge>}</Td>
+                <Td>{c.success ? <Badge tone="green">yes</Badge> : <span title={c.error}><Badge tone="red">failed</Badge></span>}</Td>
               </tr>
             ))}
           </Table>
-          {!data.aiCalls.length && <p className="p-4 text-sm text-muted">No AI calls yet in this browser.</p>}
+          {!data.aiCalls.length && <p className="p-4 text-sm text-muted">No AI calls yet.</p>}
         </Card>
       )}
       {tab === 'audit' && (

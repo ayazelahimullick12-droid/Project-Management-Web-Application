@@ -6,7 +6,6 @@ import { Printer } from 'lucide-react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../api'
 import { useApi } from '../api/hooks'
-import { summaries } from '../demo/ai/agents'
 import { brand } from '../theme/brand'
 import { Markdown } from '../components/Markdown'
 import { fmtDateTime } from '../components/format'
@@ -28,7 +27,8 @@ export function PrintPage() {
   const sections = part ? all.filter((s) => sectionPart(s.key) === part) : all
   const bothParts = !part && all.some((s) => sectionPart(s.key) === 'charter')
   const title = part ? PART_LABEL[part] : data.label
-  const onePager = kind === 'onepager' ? summaries(data.label, data.project.name, data.version.number, data.version.sections) : null
+  const onePager = kind === 'onepager' ? data.summary : undefined
+  if (kind === 'onepager' && !onePager) return <ErrorBox error={new Error('This version has no AI summary yet. Open the document’s Summary tab and make it first.')} />
 
   return (
     <div className="min-h-full bg-gray-200 py-8 print:bg-white print:py-0">

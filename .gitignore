@@ -7,3 +7,6 @@ dist/
 .DS_Store
 Thumbs.db
 *.tsbuildinfo
+
+# App data (the JSON file the server writes)
+frontend/data/

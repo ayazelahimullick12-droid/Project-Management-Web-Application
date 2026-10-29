@@ -84,3 +84,18 @@ Then follow `frontend/DEMO.md`.
 - Checked: 65 rule tests pass, production build passes; To do, Projects, Project, Document (as PM and as deputy reviewer), Questions (answering, "I don't know"), Messages, the switch in both directions, dark mode, larger text and the phone layout were checked in the browser.
 - Next: Simple versions of intake, testing (one test at a time), problem reports, and Messages without hover-only actions.
 
+## 29 October 2026 — start a project alone; Proposal & Charter in one step
+
+- One person can start a project and becomes Owner and PM. The app stops before a step that needs people (questions, Fact Sheet confirmation, approval, testing) and offers **Add**; the whole approval chain is checked before sending. Away asks for a deputy. One person may hold several roles, with a warning.
+- The Proposal and the Charter are one package: one approval round, the sponsor signs; Simple view tabs Proposal · Charter · Slides; PDF and Word for the whole package or either part. The pipeline has 7 steps.
+- Checked: 78 rule tests pass, production build passes; starting alone and the Add buttons were checked in the browser.
+
+## 29 October 2026 — one JSON file and real AI (LM Studio)
+
+- The data now lives in `frontend/data/db.json` behind a small Node server; several tabs share it and update each other live. `npm run dev` for development, `npm start` to run the built app. Starts empty; Demo → Start again → With demo projects.
+- Real AI with LM Studio (`qwen2.5-coder-0.5b-instruct`, switchable in Admin → Settings): fact extraction, Q/A questions, Proposal & Charter, BRD and SRS, Rewrite with AI, scope check, change-request rewrites, summaries and slides, test cases, defect writer, sign-off paragraph, decision suggestions. Embeddings (`nomic-embed-text`) for similar projects, duplicate defects and decisions. Still simulated: OCR, transcription, email.
+- Documents are short on purpose (about 200 words). Measured on this laptop: Proposal & Charter 18 s, BRD 20 s, SRS 17 s, facts 10–13 s (about 30 s with an upload), a question 1 s, a rewrite 5 s, a scope check 3 s, a test case 5 s, a defect write-up 6 s, similar projects 1.5 s, summary and slides 15–25 s in the background.
+- When LM Studio is off, the action stops with a clear message; nothing is changed.
+- Fixed on the way: the server answered an API request and then tried to answer it again (`npm start` crashed).
+- Checked: 91 tests pass (78 rules, 13 reading AI answers), production build passes, `npm start` serves the app. In the browser with LM Studio: a project started alone and taken through intake, questions, Fact Sheet, Proposal & Charter, BRD and SRS (all signed), Rewrite with AI, the scope check, test cases, the defect writer, summaries and slides, similar projects with the duplicate warning, a text upload with a conflict, decision suggestions, the AI-off message, two tabs as different people, Admin AI settings and AI activity.
+- Not checked in the browser: the change-request rewrite through its page (the agent was checked on its own), the SQA/UAT sign-off paragraph.

@@ -85,8 +85,8 @@ export function LoginPage() {
             AI agents gather the information and draft the Project Proposal, Charter, BRD and SRS. People review, comment, approve and sign. Then SQA and UAT test what was built.
           </p>
           <div className="mb-6 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-200">
-            <div className="mb-1 font-semibold">This is a clickable prototype</div>
-            All people, projects and documents are fictional. The AI is simulated with pre-written results. Data is kept only in this browser; use <b>Reset demo data</b> in the <b>Demo</b> menu to start over.
+            <div className="mb-1 font-semibold">This is a prototype</div>
+            All people, projects and documents are fictional. The AI runs on this laptop in LM Studio and keeps its answers short. Data is kept in one file on this laptop; use <b>Start again</b> in the <b>Demo</b> menu to start over.
           </div>
           <div className="shadow-soft rounded-2xl bg-surface p-5 ring-1 ring-line">
             <Field label="Email">

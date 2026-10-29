@@ -45,3 +45,13 @@ export function useNow(): Date {
   }, [])
   return t
 }
+
+/** The value once it has stopped changing for `ms` (e.g. text the user has finished typing). */
+export function useSettled<T>(value: T, ms: number): T {
+  const [settled, setSettled] = useState(value)
+  useEffect(() => {
+    const id = setTimeout(() => setSettled(value), ms)
+    return () => clearTimeout(id)
+  }, [value, ms])
+  return settled
+}

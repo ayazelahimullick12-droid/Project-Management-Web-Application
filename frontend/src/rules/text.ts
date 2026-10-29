@@ -49,7 +49,3 @@ export function contextAround(text: string, index: number, length: number, size 
   }
 }
 
-/** Fills {{project}} and {{fact:key}} placeholders in canned AI content. */
-export function fillPlaceholders(md: string, projectName: string, factValue: (key: string) => string | undefined): string {
-  return md.replace(/\{\{project\}\}/g, projectName).replace(/\{\{fact:([a-z_]+)\}\}/g, (_, key: string) => factValue(key) ?? `[missing: ${key.replace(/_/g, ' ')}]`)
-}
