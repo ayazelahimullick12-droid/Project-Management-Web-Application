@@ -4,12 +4,16 @@
  * Spec: SPEC.md "Approval and signing" (order, Request changes, new versions, editing and
  * comments during review, minor correction, signing) and SPEC_SQA_UAT.md "Sign-off".
  *
+ * Every step can also be approved (or signed) by the Project Owner or the Project Manager in
+ * the head's place (see actForHead in permissions.ts). A step whose role nobody has yet is
+ * "vacant": it waits on the PM until a head is added, and then moves to the new head.
+ *
  * Pure functions: they take a chain and return a new chain, or throw RuleError.
  * No screen code and no storage here.
  */
 import type { ApprovalChain, ApprovalStep, ApproverRole, DocType, ID, Project, Team } from '../types'
-import { actAsHead, headOf, type Check, yes, no } from './permissions'
-import { peopleCheck, type Need } from './people'
+import { actAsHead, actForHead, headOf, type Check, yes, no } from './permissions'
+import type { Need } from './people'
 
 export class RuleError extends Error {}
 
@@ -57,12 +61,13 @@ export function newChain(args: {
 }): ApprovalChain {
   const cfg = CHAIN_CONFIG[args.docType]
   const at = args.now.toISOString()
+  const pm = headOf(args.project, 'PM')?.userId ?? args.project.ownerId
   const steps: ApprovalStep[] = cfg.steps.map((role, i) => {
     const head = headOf(args.project, ROLE_TEAM[role])
-    if (!head) throw new RuleError(`The project has no ${ROLE_LABEL[role].toLowerCase()}.`)
     return {
       role,
-      assigneeId: head.userId,
+      assigneeId: head?.userId ?? pm, // no head yet: it waits on the PM, who approves in their place
+      ...(head ? {} : { vacant: true }),
       status: i === 0 ? 'pending' : 'waiting',
       pendingSince: i === 0 ? at : undefined,
       sign: cfg.signs && role === 'SPONSOR_HEAD',
@@ -85,12 +90,15 @@ export function currentStep(chain: ApprovalChain): ApprovalStep | undefined {
   return chain.status === 'in_progress' ? chain.steps.find((s) => s.status === 'pending') : undefined
 }
 
-/** Can this user act on the chain's current step (as the head, or as the deputy of an Away head)? */
+/**
+ * Can this user act on the chain's current step: as the head, as the deputy of an Away head, or
+ * as the Project Owner or PM in the head's place?
+ */
 export function canAct(chain: ApprovalChain, project: Project, userId: ID | null, now: Date): Check {
   if (project.status === 'archived') return no('This project is archived, so it is read-only.')
   const step = currentStep(chain)
   if (!step) return no('Nothing is waiting for approval.')
-  const check = actAsHead(project, ROLE_TEAM[step.role], userId, now)
+  const check = actForHead(project, ROLE_TEAM[step.role], userId, now)
   if (!check.ok) return no(`It is the ${ROLE_LABEL[step.role].toLowerCase()}'s turn. ${check.reason ?? ''}`.trim())
   return check
 }
@@ -108,7 +116,7 @@ export function approve(chain: ApprovalChain, project: Project, userId: ID, now:
   const step = next.steps[idx]
   if (step.sign) throw new RuleError('This step needs a signature. Use Approve and Sign.')
   const at = now.toISOString()
-  Object.assign(step, { status: 'approved', actedAt: at, actedBy: userId, actingFor: check.actingFor })
+  Object.assign(step, { status: 'approved', actedAt: at, actedBy: userId, actingFor: check.actingFor, coveredAs: check.coveredAs })
   const following = next.steps[idx + 1]
   if (following) {
     following.status = 'pending'
@@ -128,10 +136,10 @@ export function sign(chain: ApprovalChain, project: Project, userId: ID, now: Da
   const step = next.steps.find((s) => s.status === 'pending')!
   if (!step.sign) throw new RuleError('This step is an approval, not a signature.')
   const at = now.toISOString()
-  Object.assign(step, { status: 'approved', actedAt: at, actedBy: userId, actingFor: check.actingFor })
+  Object.assign(step, { status: 'approved', actedAt: at, actedBy: userId, actingFor: check.actingFor, coveredAs: check.coveredAs })
   next.status = 'signed'
   next.endedAt = at
-  return { chain: next, actingFor: check.actingFor }
+  return { chain: next, actingFor: check.actingFor, coveredAs: check.coveredAs, role: step.role }
 }
 
 /** Request changes. A comment is required. The document goes back to the PM team. */
@@ -142,12 +150,12 @@ export function requestChanges(chain: ApprovalChain, project: Project, userId: I
   const next = cloneChain(chain)
   const at = now.toISOString()
   for (const s of next.steps) {
-    if (s.status === 'pending') Object.assign(s, { status: 'changes_requested', actedAt: at, actedBy: userId, actingFor: check.actingFor, comment })
+    if (s.status === 'pending') Object.assign(s, { status: 'changes_requested', actedAt: at, actedBy: userId, actingFor: check.actingFor, coveredAs: check.coveredAs, comment })
     else if (s.status === 'waiting') s.status = 'cancelled'
   }
   next.status = 'changes_requested'
   next.endedAt = at
-  return { chain: next, actingFor: check.actingFor }
+  return { chain: next, actingFor: check.actingFor, coveredAs: check.coveredAs }
 }
 
 /** A new version cancels the chain of the earlier version. */
@@ -172,9 +180,10 @@ export function minorCorrectionChain(prev: ApprovalChain, args: { id: ID; versio
   const steps: ApprovalStep[] = prev.steps.map((s, i) => {
     const head = headOf(args.project, ROLE_TEAM[s.role])
     const assigneeId = head?.userId ?? s.assigneeId
+    const vacant = head ? {} : { vacant: true }
     if (i < requesterIdx) return { ...s, status: 'carried_over' }
-    if (i === requesterIdx) return { role: s.role, assigneeId, sign: s.sign, status: 'pending', pendingSince: at }
-    return { role: s.role, assigneeId, sign: s.sign, status: 'waiting' }
+    if (i === requesterIdx) return { role: s.role, assigneeId, ...vacant, sign: s.sign, status: 'pending', pendingSince: at }
+    return { role: s.role, assigneeId, ...vacant, sign: s.sign, status: 'waiting' }
   })
   return {
     id: args.id,
@@ -189,11 +198,15 @@ export function minorCorrectionChain(prev: ApprovalChain, args: { id: ID; versio
   }
 }
 
-/** The Owner replaced a head: pending and waiting steps move to the new head, same version. */
+/** A team has a new head (replaced, or added where there was none): pending and waiting steps move to them, same version. */
 export function reassign(chain: ApprovalChain, team: Team, newHeadId: ID): ApprovalChain {
   if (chain.status !== 'in_progress') return chain
   const next = cloneChain(chain)
-  for (const s of next.steps) if (ROLE_TEAM[s.role] === team && (s.status === 'pending' || s.status === 'waiting')) s.assigneeId = newHeadId
+  for (const s of next.steps)
+    if (ROLE_TEAM[s.role] === team && (s.status === 'pending' || s.status === 'waiting')) {
+      s.assigneeId = newHeadId
+      delete s.vacant
+    }
   return next
 }
 
@@ -215,7 +228,6 @@ export function sendCheck(args: {
 }): Check {
   const cfg = CHAIN_CONFIG[args.docType]
   if (args.project.status === 'archived') return no('This project is archived, so it is read-only.')
-  const people = peopleCheck(args.project, chainNeeds(args.docType))
   if (cfg.sender === 'PM') {
     const pm = actAsHead(args.project, 'PM', args.userId, args.now)
     if (!pm.ok) return no('Only the Project Manager can send a version for approval.')
@@ -227,12 +239,11 @@ export function sendCheck(args: {
   if (args.scopeUndecided) return no('The PM must first decide whether the flagged edit is a normal edit or a scope change.')
   if (!args.previousComplete.ok) return args.previousComplete
   if (args.exitCriteria && !args.exitCriteria.ok) return args.exitCriteria
-  // The whole chain is checked before it starts, so it never stalls halfway for a missing head.
-  if (!people.ok) return people
+  // A missing head does not stop it: the Owner or the PM approves that step in their place.
   return yes
 }
 
-/** Who must exist before a document's approval chain can start: every head in the chain. */
+/** The heads a document's approval chain uses (shown as "not added yet" when missing). */
 export function chainNeeds(docType: DocType): Need[] {
   return CHAIN_CONFIG[docType].steps.map((role) => ROLE_NEED[role])
 }

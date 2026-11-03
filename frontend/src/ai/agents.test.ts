@@ -114,6 +114,15 @@ describe('summarize', () => {
     expect(r.slides[2].bullets).toEqual(['Works offline.']) // the bullet cut off at the length limit is dropped
   })
 
+  it('uses the first bullet as the summary when the model writes only bullets (and drops a cut-off last one)', async () => {
+    const ask = (await import('./client')).ask as unknown as ReturnType<typeof vi.fn>
+    ask.mockResolvedValueOnce('- The proposal outlines the Agami app update.\n- It covers the mobile and web apps.\n- The budget is $100 million.\n- Deliverables include')
+    ask.mockResolvedValueOnce('Slide: Why\n- Users want a better app.')
+    const r = await summarize('Proposal & Charter', 'Agami Update', [{ id: 's', key: 'k', title: 'T', content: 'text', factKeys: [] }], {})
+    expect(r.short).toBe('The proposal outlines the Agami app update.')
+    expect(r.onePager).toBe('- It covers the mobile and web apps.\n- The budget is $100 million.')
+  })
+
   it('uses the sentences when the model skips the "- " markers', async () => {
     const ask = (await import('./client')).ask as unknown as ReturnType<typeof vi.fn>
     ask.mockResolvedValueOnce('The charter sets up daily cash checks. Differences are flagged the same evening. Area managers follow up.')

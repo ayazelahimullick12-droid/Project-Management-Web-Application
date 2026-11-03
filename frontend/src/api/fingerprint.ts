@@ -17,11 +17,12 @@ export function canonicalDocument(snapshot: Signature['snapshot']): string {
   return [`${snapshot.title}`, `Version ${snapshot.versionNumber}`, '', ...snapshot.sections.flatMap((s) => [`## ${s.title}`, s.content.trim(), ''])].join('\n')
 }
 
-export function signaturePageText(args: { title: string; versionNumber: number; signer: string; actingFor?: string; signedAt: string; ip: string; method: string; docHash: string }): string {
+/** onBehalf: how it was signed for someone else, e.g. "deputy for X" or "Project Manager, for the sponsor head". */
+export function signaturePageText(args: { title: string; versionNumber: number; signer: string; onBehalf?: string; signedAt: string; ip: string; method: string; docHash: string }): string {
   return [
     'CERTIFICATE OF COMPLETION — electronic approval record',
     `Document: ${args.title}, version ${args.versionNumber}`,
-    `Signed by: ${args.signer}${args.actingFor ? ` (deputy, acting for ${args.actingFor})` : ''}`,
+    `Signed by: ${args.signer}${args.onBehalf ? ` (${args.onBehalf})` : ''}`,
     `Signed at: ${args.signedAt}`,
     `IP address: ${args.ip}`,
     `Re-authentication: ${args.method === 'password' ? 'password' : 'email one-time code'}`,

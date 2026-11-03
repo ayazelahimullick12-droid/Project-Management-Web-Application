@@ -1,8 +1,9 @@
 /**
  * Adding people when a step needs them (a project can start with one person).
  *
- * MissingPeople: "Before this can be sent for approval, add a tech head and a sponsor head",
- * with one "Add …" button per missing person (for the Owner and the PM; others are told who to ask).
+ * MissingPeople: "Before the questions can be sent, add a stakeholder", with one "Add …" button
+ * per missing person (for the Owner and the PM; others are told who to ask). With `optional`, it
+ * only informs: "No sponsor head yet. The Project Owner or the PM approves in their place."
  * AddPersonModal: pick someone from the user directory and add them in the right role. Someone who
  * already has a role in the project can be added again (several roles are allowed), with a warning.
  */
@@ -94,19 +95,26 @@ export function AddPersonModal({ pid, toAdd, onClose }: { pid: string; toAdd: Ro
 }
 
 /** "Before … add a tech head and a sponsor head", with an Add button for each missing person. */
-export function MissingPeople({ pid, missing, canAdd, before, large, className }: { pid: string; missing: MissingRole[]; canAdd: boolean; before: string; large?: boolean; className?: string }) {
+export function MissingPeople({ pid, missing, canAdd, before, optional, large, className }: { pid: string; missing: MissingRole[]; canAdd: boolean; before?: string; optional?: string; large?: boolean; className?: string }) {
   const [adding, setAdding] = useState<RoleToAdd | null>(null)
   if (!missing.length) return null
-  const list = missing.map((m) => m.label)
-  const text = list.length === 1 ? list[0] : `${list.slice(0, -1).join(', ')} and ${list.at(-1)}`
+  const join = (list: string[]) => (list.length === 1 ? list[0] : `${list.slice(0, -1).join(', ')} and ${list.at(-1)}`)
+  const text = join(missing.map((m) => m.label)) // "a tech head and a sponsor head"
+  const bare = join(missing.map((m) => m.label.replace(/^(a|an) /, ''))) // "tech head and sponsor head"
   return (
-    <div className={clsx('rounded-xl bg-amber-50 ring-1 ring-amber-200', large ? 'p-5 text-lg' : 'px-4 py-3 text-sm', className)}>
-      <div className="flex items-start gap-2 text-amber-950">
-        <UserPlus className={clsx('mt-0.5 shrink-0 text-amber-700', large ? 'h-6 w-6' : 'h-4 w-4')} />
-        <div>
-          {before}, add <b>{text}</b> to the project.
-          {!canAdd && <span className="block text-amber-900/80">Ask the Project Owner or the Project Manager to add them.</span>}
-        </div>
+    <div className={clsx('rounded-xl ring-1', optional ? 'bg-sky-50 ring-sky-200' : 'bg-amber-50 ring-amber-200', large ? 'p-5 text-lg' : 'px-4 py-3 text-sm', className)}>
+      <div className={clsx('flex items-start gap-2', optional ? 'text-sky-950' : 'text-amber-950')}>
+        <UserPlus className={clsx('mt-0.5 shrink-0', optional ? 'text-sky-700' : 'text-amber-700', large ? 'h-6 w-6' : 'h-4 w-4')} />
+        {optional ? (
+          <div>
+            No <b>{bare}</b> in the project yet. {optional}
+          </div>
+        ) : (
+          <div>
+            {before}, add <b>{text}</b> to the project.
+            {!canAdd && <span className="block text-amber-900/80">Ask the Project Owner or the Project Manager to add them.</span>}
+          </div>
+        )}
       </div>
       {canAdd && (
         <div className={clsx('flex flex-wrap gap-2', large ? 'mt-4' : 'mt-2.5')}>

@@ -133,9 +133,10 @@ The view most people will use. Show it first, then flip to **Full** to show the 
    warning says they would approve more than once. Remove them again, then **Start the project**
    with nobody else.
 2. The new project opens in the **Intake** stage. Show that the app asks for people only when a
-   step needs them: on **Q/A questions**, **Start the first round** stops with “add the
-   stakeholders first” and an **Add** button (the same happens before Fact Sheet confirmation,
-   before **Send for approval** (the whole chain is checked at once) and before testing).
+   step needs them to do work: on **Q/A questions**, **Start the first round** stops with “add the
+   stakeholders first” and an **Add** button (the same happens before testing, for testers and
+   developers). Approvals and confirmations do not stop: Imran (Owner) or the PM gives them in
+   place of any head who is missing. A blue note says so, with an optional **Add** button.
 3. Open the new project's **Team** page (use this project, so the demo projects stay intact):
    - **Add** someone → **Add and notify**.
    - **Replace** a person (a pending approval moves to the new head, on the same version).
@@ -268,7 +269,10 @@ Proposal & Charter, with signing at the end.
 
 ## Part 7 — Branch Cash: deputies, signing, Fact Sheet updates, decisions, change requests (12 min)
 
-1. Be **Jahid Hasan** (deputy stakeholder head). Open **Branch Cash Reconciliation → BRD**.
+1. Optional first: be **Nusrat** (PM) on the same BRD. She sees **Approve (for the stakeholder
+   head)**: the Project Owner and the PM can approve any step in the head's place (and sign for
+   the sponsor head). Do not click it if you want to show the deputy next.
+   Be **Jahid Hasan** (deputy stakeholder head). Open **Branch Cash Reconciliation → BRD**.
    Rokeya is **Away**, so Jahid sees **Approve (as deputy)**. Click it. The record will say who
    acted for whom.
 2. Be **Selim Reza** → **BRD** → **Approve and sign** with an **Email one-time code** (code in the

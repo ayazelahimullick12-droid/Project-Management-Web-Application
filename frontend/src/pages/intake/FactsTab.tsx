@@ -96,9 +96,9 @@ export function FactsTab({ data }: { data: IntakeData }) {
           </div>
         </div>
         {!data.confirmed && data.perms.pm && !p.intake.confirmRequestedAt && data.missingForConfirmation.length > 0 && (
-          <MissingPeople pid={p.id} missing={data.missingForConfirmation} canAdd={data.perms.canAddPeople} before="Before the Fact Sheet can be sent for confirmation" />
+          <MissingPeople pid={p.id} missing={data.missingForConfirmation} canAdd={data.perms.canAddPeople} optional="The Project Owner or the Project Manager confirms the Fact Sheet in their place." />
         )}
-        {!data.confirmed && data.perms.pm && !p.intake.confirmRequestedAt && !data.missingForConfirmation.length && (
+        {!data.confirmed && data.perms.pm && !p.intake.confirmRequestedAt && (
           <Button variant="primary" onClick={() => request.run(p.id)}>
             <Send className="h-4 w-4" /> Send for confirmation
           </Button>
@@ -106,7 +106,7 @@ export function FactsTab({ data }: { data: IntakeData }) {
         {!data.confirmed && p.intake.confirmRequestedAt && (
           <>
             <Guarded variant="success" check={data.perms.confirm ? { ok: true } : { ok: false, reason: data.perms.confirmReason }} onClick={() => confirm.run(p.id)}>
-              <BadgeCheck className="h-4 w-4" /> Confirm Fact Sheet{data.perms.actingFor ? ' (as deputy)' : ''}
+              <BadgeCheck className="h-4 w-4" /> Confirm Fact Sheet{data.perms.coveredAs ? ' (for the stakeholder head)' : data.perms.actingFor ? ' (as deputy)' : ''}
             </Guarded>
             {data.perms.confirm && (
               <Button onClick={() => setFeedback(true)}>

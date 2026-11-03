@@ -11,7 +11,7 @@ import { runAiJob } from '../demo/jobs'
 import { draftTestCase, signoffParagraph, similarDefects, writeDefect as aiWriteDefect } from '../ai/agents'
 import { CHAIN_CONFIG, ROLE_LABEL } from '../rules/approval'
 import { missingPeople, testingNeeds } from '../rules/people'
-import { actAsHead, can, headOf, headRecipient, inTeam, isDeveloper, isSqa, type Check } from '../rules/permissions'
+import { actAsHead, actForHead, can, headOf, headRecipient, inTeam, isDeveloper, isSqa, onBehalfText, type Check } from '../rules/permissions'
 import { activeChain, chainsOf, DOC_LABEL, docStatus, previousComplete } from '../rules/pipeline'
 import { buildReportSections, reportStats } from '../rules/signoffReport'
 import { allowedTransitions, buildAvailable, canBeAssigned, checkTransition, coverage, exitCriteria, knownIssues, latestResults, markReadyForRetest, releaseCheck, requirementsFor, transitionFor, UNRESOLVED } from '../rules/testing'
@@ -74,7 +74,7 @@ export async function getTesting(pid: ID, stage: TestStage) {
       allRequirements: reqs,
       coverage: coverage(stage, reqs, s.testCases.filter((x) => x.projectId === pid)),
       tests: tests.map((tc) => ({ ...tc, latest: latest.find((l) => l.test.id === tc.id)?.latest, createdByName: tc.createdBy ? nameOf(s, tc.createdBy) : 'AI' })),
-      confirmation: confirmation ? { ...confirmation, byName: nameOf(s, confirmation.by), actingForName: confirmation.actingFor ? nameOf(s, confirmation.actingFor) : undefined } : undefined,
+      confirmation: confirmation ? { ...confirmation, byName: nameOf(s, confirmation.by), onBehalf: onBehalfText({ coveredAs: confirmation.coveredAs, actingForName: confirmation.actingFor ? nameOf(s, confirmation.actingFor) : undefined, headLabel: stage === 'SQA' ? 'Tech head' : 'Stakeholder head' }) } : undefined,
       builds: builds.map((b) => ({
         ...b,
         registeredByName: nameOf(s, b.registeredBy),
@@ -101,7 +101,7 @@ export async function getTesting(pid: ID, stage: TestStage) {
       perms: {
         canAddPeople: can.addPeople(p, user.id, t).ok,
         writeTests: canWriteTests(p, user.id, stage),
-        confirmList: actAsHead(p, headTeam, user.id, t),
+        confirmList: actForHead(p, headTeam, user.id, t),
         registerBuild: p.status === 'active' && (isDeveloper(p, user.id) || actAsHead(p, 'TECH', user.id, t).ok),
         createRun: stage === 'SQA' ? isSqa(p, user.id) : inTeam(p, user.id, 'PM'),
         raise: canRaise(p, user.id, stage),
@@ -245,10 +245,10 @@ export async function confirmList(pid: ID, stage: TestStage) {
   return act((s, t, at) => {
     const user = me(s)
     const p = projectOf(s, pid)
-    const check = ensure(actAsHead(p, stage === 'SQA' ? 'TECH' : 'STAKEHOLDER', user.id, t))
+    const check = ensure(actForHead(p, stage === 'SQA' ? 'TECH' : 'STAKEHOLDER', user.id, t))
     if (!s.testCases.some((x) => x.projectId === pid && x.stage === stage)) fail('There are no test cases to confirm yet.')
     if (s.testConfirmations.some((c) => c.projectId === pid && c.stage === stage)) fail('Already confirmed.')
-    s.testConfirmations.push({ projectId: pid, stage, by: user.id, actingFor: check.actingFor, at })
+    s.testConfirmations.push({ projectId: pid, stage, by: user.id, actingFor: check.actingFor, coveredAs: check.coveredAs, at })
     notify(s, { to: stage === 'SQA' ? p.members.filter((m) => m.isSqa).map((m) => m.userId) : teamMembers(p, 'PM'), type: 'test-list', title: `${stage} test case list confirmed`, body: `${p.name}: testing can start.`, link: `/projects/${pid}/testing/${stage}`, projectId: pid, at, exclude: user.id })
     audit(s, { projectId: pid, actorId: user.id, actingFor: check.actingFor, action: 'Test case list confirmed', details: stage, at })
   })

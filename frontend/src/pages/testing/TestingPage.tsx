@@ -128,10 +128,10 @@ function Cases({ d }: { d: TData }) {
           )}
           <span className="ml-auto" />
           {d.confirmation ? (
-            <Badge tone="green"><BadgeCheck className="h-3 w-3" /> List confirmed by {d.confirmation.byName}{d.confirmation.actingForName ? ` (for ${d.confirmation.actingForName})` : ''}</Badge>
+            <Badge tone="green"><BadgeCheck className="h-3 w-3" /> List confirmed by {d.confirmation.byName}{d.confirmation.onBehalf ? ` (${d.confirmation.onBehalf})` : ''}</Badge>
           ) : (
             <Guarded variant="success" check={d.tests.length ? d.perms.confirmList : { ok: false, reason: 'No test cases yet.' }} onClick={() => confirm.run(d.project.id, d.stage)}>
-              <BadgeCheck className="h-4 w-4" /> Confirm the list ({d.stage === 'SQA' ? 'tech head' : 'stakeholder head'})
+              <BadgeCheck className="h-4 w-4" /> Confirm the list ({d.perms.confirmList.coveredAs ? 'for the ' : ''}{d.stage === 'SQA' ? 'tech head' : 'stakeholder head'})
             </Guarded>
           )}
         </div>

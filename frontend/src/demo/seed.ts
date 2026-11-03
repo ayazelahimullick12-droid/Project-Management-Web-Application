@@ -311,7 +311,7 @@ async function makeSignature(s: DemoState, p: Project, doc: Doc, version: DocVer
   const docHash = await sha256Hex(canonicalDocument(snapshot))
   const name = (id?: string) => s.users.find((u) => u.id === id)?.name ?? ''
   const ip = '10.20.4.17'
-  const page = signaturePageText({ title: snapshot.title, versionNumber: version.number, signer: name(signerId), actingFor: actingFor ? name(actingFor) : undefined, signedAt: at, ip, method: 'password', docHash })
+  const page = signaturePageText({ title: snapshot.title, versionNumber: version.number, signer: name(signerId), onBehalf: actingFor ? `deputy for ${name(actingFor)}` : undefined, signedAt: at, ip, method: 'password', docHash })
   const finalHash = await sha256Hex(canonicalDocument(snapshot) + '\n\n' + page)
   s.signatures.push({ id: `${version.id}-sig`, projectId: p.id, docId: doc.id, versionId: version.id, signerId, actingFor, signedAt: at, ip, userAgent: 'Seed data (prototype)', method: 'password', docHash, finalHash, snapshot })
 }

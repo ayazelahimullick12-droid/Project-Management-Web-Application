@@ -89,6 +89,8 @@ view and notifications without switching back and forth.
 
 1. Be **Jahid Hasan**. Open **Branch Cash Reconciliation → BRD**. Rokeya is **Away**, so Jahid,
    her deputy, sees **Approve (as deputy)** at the top. The record will say who acted for whom.
+   (Nusrat, the PM, would see **Approve (for the stakeholder head)**: the Project Owner and the PM
+   can approve any step in the head's place.)
 2. Open the **Proposal & Charter** (Charter tab): it was sent back by the sponsor (“split the
    budget”), edited, and signed.
    In the rail’s **Approval** tab, open the **signed PDF** (stored copy plus the certificate page

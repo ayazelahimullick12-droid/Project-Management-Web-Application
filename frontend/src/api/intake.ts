@@ -9,7 +9,7 @@ import { runAiJob, runJob } from '../demo/jobs'
 import { newId } from '../demo/ids'
 import { questionFor, readUpload } from '../demo/ai/agents'
 import { extractFacts, findSimilarProjects, writeQuestions, type PastProject } from '../ai/agents'
-import { actAsHead, can, headOf, inTeam, membershipsOf, TEAM_LABEL } from '../rules/permissions'
+import { actAsHead, actForHead, can, COVER_LABEL, coverers, headOf, inTeam, membershipsOf, TEAM_LABEL } from '../rules/permissions'
 import { FACT_CONFIRMATION_NEEDS, missingPeople, peopleCheck, questionNeeds } from '../rules/people'
 import { factSheetConfirmed, isComplete, roundClosed } from '../rules/pipeline'
 import { atRoundLimit, conflicts, factFromAnswer, factRows, mergeValue, missingFor, requiredBy, roundsOf, routeTeam, settleConflict } from '../rules/qa'
@@ -36,7 +36,7 @@ export async function getIntake(pid: ID) {
     const ctx = pipelineCtx(s, pid)
     const pmTeam = isPmTeam(p, user.id)
     const pm = actAsHead(p, 'PM', user.id, t)
-    const shHead = actAsHead(p, 'STAKEHOLDER', user.id, t)
+    const shHead = actForHead(p, 'STAKEHOLDER', user.id, t)
     const rows = factRows(p.facts, s.factCatalog).map((f) => ({ ...f, requiredBy: requiredBy(s.templates, f.key), round: s.factCatalog.find((d) => d.key === f.key)?.round }))
     const rounds = s.rounds.filter((r) => r.projectId === pid).sort((a, b) => a.startedAt.localeCompare(b.startedAt))
     const questions = s.questions
@@ -98,6 +98,7 @@ export async function getIntake(pid: ID) {
         confirm: shHead.ok,
         confirmReason: shHead.reason,
         actingFor: shHead.actingFor,
+        coveredAs: shHead.coveredAs,
       },
     }
   })
@@ -483,10 +484,10 @@ export async function requestConfirmation(pid: ID) {
     const missing = missingFor(p.facts, s.factCatalog, 'intake')
     if (missing.length && !p.intake.gapsLogged) fail(`${missing.length} fields are still missing. Ask again, or choose “Proceed with gaps logged”.`)
     if (s.rounds.some((r) => r.projectId === pid && r.purpose === 'intake' && r.status === 'open')) fail('Close the open Q/A round first.')
-    ensure(peopleCheck(p, FACT_CONFIRMATION_NEEDS))
     p.intake.confirmRequestedAt = at
-    const sh = headOf(p, 'STAKEHOLDER')!
-    notify(s, { to: [sh.userId], type: 'factsheet', title: 'Please confirm the Fact Sheet', body: `${p.name}: the Fact Sheet is ready. Confirm it, or comment on what is wrong.`, link: `/projects/${pid}/intake?tab=facts`, projectId: pid, at })
+    // The stakeholder head confirms; without one, the Owner or the PM confirms in their place.
+    const sh = headOf(p, 'STAKEHOLDER')
+    notify(s, { to: sh ? [sh.userId] : coverers(p), type: 'factsheet', title: 'Please confirm the Fact Sheet', body: `${p.name}: the Fact Sheet is ready. Confirm it, or comment on what is wrong.`, link: `/projects/${pid}/intake?tab=facts`, projectId: pid, at, exclude: user.id })
     audit(s, { projectId: pid, actorId: user.id, action: 'Fact Sheet sent for confirmation', details: '', at })
   })
 }
@@ -495,14 +496,15 @@ export async function confirmFactSheet(pid: ID) {
   return act((s, t, at) => {
     const user = me(s)
     const p = projectOf(s, pid)
-    const check = ensure(actAsHead(p, 'STAKEHOLDER', user.id, t))
+    const check = ensure(actForHead(p, 'STAKEHOLDER', user.id, t))
     if (!p.intake.confirmRequestedAt) fail('The PM has not sent the Fact Sheet for confirmation yet.')
     if (conflicts(p.facts).length) fail('Some facts are still conflicting.')
     p.facts = p.facts.map((f) => ({ ...f, ai: false }))
     const number = s.factSheets.filter((f) => f.projectId === pid).length + 1
-    s.factSheets.push({ id: newId('fs'), projectId: pid, number, facts: structuredClone(p.facts), createdAt: at, createdBy: user.id, note: 'Confirmed by the stakeholder head', confirmedBy: user.id, actingFor: check.actingFor })
+    const note = check.coveredAs ? `Confirmed by ${user.name} (${COVER_LABEL[check.coveredAs]}) for the stakeholder head` : 'Confirmed by the stakeholder head'
+    s.factSheets.push({ id: newId('fs'), projectId: pid, number, facts: structuredClone(p.facts), createdAt: at, createdBy: user.id, note, confirmedBy: user.id, actingFor: check.actingFor, coveredAs: check.coveredAs })
     notify(s, { to: teamMembers(p, 'PM'), type: 'factsheet', title: 'Fact Sheet confirmed', body: `${p.name}: Fact Sheet v${number} is confirmed. The Proposal can now be generated.`, link: `/projects/${pid}/docs/PROPOSAL`, projectId: pid, at })
-    audit(s, { projectId: pid, actorId: user.id, actingFor: check.actingFor, action: 'Fact Sheet confirmed', details: `Version ${number}`, at })
+    audit(s, { projectId: pid, actorId: user.id, actingFor: check.actingFor, action: 'Fact Sheet confirmed', details: `Version ${number}${check.coveredAs ? ` (${COVER_LABEL[check.coveredAs]}, for the stakeholder head)` : ''}`, at })
   })
 }
 
@@ -510,7 +512,7 @@ export async function factSheetFeedback(pid: ID, text: string) {
   return act((s, t, at) => {
     const user = me(s)
     const p = projectOf(s, pid)
-    ensure(actAsHead(p, 'STAKEHOLDER', user.id, t))
+    ensure(actForHead(p, 'STAKEHOLDER', user.id, t))
     if (!text.trim()) fail('Write what is wrong.')
     p.intake.feedback = [...(p.intake.feedback ?? []), { by: user.id, at, text: text.trim() }]
     p.intake.confirmRequestedAt = undefined

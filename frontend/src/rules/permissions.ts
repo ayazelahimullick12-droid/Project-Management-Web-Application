@@ -7,17 +7,23 @@
  * Every check returns { ok, reason, actingFor }. The api layer refuses actions that fail
  * (like a backend would) and the screens use the same checks to hide or disable buttons.
  *
+ * Approvals and confirmations belong to a team's head (or their deputy while they are Away).
+ * The Project Owner and the Project Manager can also give any of them in the head's place, for
+ * example when the head is not available or has not been added yet (see actForHead). The record
+ * always says who acted for whom.
+ *
  * One person may hold several roles in a project (for example tech head and stakeholder head).
  * The app warns about it, because that person then approves more than once (see teamWarnings).
  * So a person can have several memberships: use membershipsOf / inTeam rather than memberOf
  * when the team matters.
  */
-import type { ID, Member, Project, Team, User } from '../types'
+import type { CoverRole, ID, Member, Project, Team, User } from '../types'
 
 export interface Check {
   ok: boolean
   reason?: string
-  actingFor?: ID // set when a deputy acts for an Away head
+  actingFor?: ID // the head this is done for: by their deputy (head Away), or by the Owner or PM
+  coveredAs?: CoverRole // set when the Project Owner or PM acts in the head's place
 }
 
 export const yes: Check = { ok: true }
@@ -114,6 +120,39 @@ export function actAsHead(p: Project, team: Team, userId: ID | null | undefined,
   const deputy = deputyOf(p, team)
   if (deputy?.userId === userId && isAway(p, head.userId, now)) return { ok: true, actingFor: head.userId }
   return no(`Only the ${HEAD_LABEL[team].toLowerCase()} can do this${deputy ? ' (or their deputy while they are Away)' : ''}.`)
+}
+
+export const COVER_LABEL: Record<CoverRole, string> = { OWNER: 'Project Owner', PM: 'Project Manager' }
+
+/**
+ * Can this user give the approval or confirmation that belongs to the head of `team`?
+ * The head (or their deputy while they are Away) can. So can the Project Owner and the Project
+ * Manager, in the head's place, also when the project has no such head yet.
+ */
+export function actForHead(p: Project, team: Team, userId: ID | null | undefined, now: Date): Check {
+  const own = actAsHead(p, team, userId, now)
+  if (own.ok) return own
+  const coveredAs: CoverRole | undefined = isOwner(p, userId) ? 'OWNER' : actAsHead(p, 'PM', userId, now).ok ? 'PM' : undefined
+  if (!coveredAs) {
+    const reason = headOf(p, team) ? own.reason : `This project has no ${HEAD_LABEL[team].toLowerCase()} yet.`
+    return no(`${reason} The Project Owner or the Project Manager can also do it in their place.`)
+  }
+  return { ok: true, actingFor: headOf(p, team)?.userId, coveredAs }
+}
+
+/** Who gets the work of a head the project does not have yet: the Owner and the PM. */
+export function coverers(p: Project): ID[] {
+  return [...new Set([p.ownerId, headOf(p, 'PM')?.userId].filter(Boolean) as ID[])]
+}
+
+/**
+ * How an approval or confirmation was given, for records and labels:
+ * "deputy for Rokeya Begum", "Project Manager, for the stakeholder head (Rokeya Begum)",
+ * "Project Owner, for the sponsor head". Empty when the head acted themselves.
+ */
+export function onBehalfText(a: { coveredAs?: CoverRole; actingForName?: string; headLabel: string }): string {
+  if (a.coveredAs) return `${COVER_LABEL[a.coveredAs]}, for the ${a.headLabel.toLowerCase()}${a.actingForName ? ` (${a.actingForName})` : ''}`
+  return a.actingForName ? `deputy for ${a.actingForName}` : ''
 }
 
 /**

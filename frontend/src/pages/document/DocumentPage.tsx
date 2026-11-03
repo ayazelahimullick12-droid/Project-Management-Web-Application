@@ -322,14 +322,13 @@ export function DocumentPage() {
             The AI proposed {pendingUpdates} Fact Sheet update{pendingUpdates > 1 ? 's' : ''} from edits to this document.
           </Notice>
         )}
-        {sendHint && data.missing.length > 0 && !current.frozen ? (
-          <MissingPeople pid={pid} missing={data.missing} canAdd={data.canAddPeople} before="Before it can be sent for approval" />
-        ) : (
-          sendHint && (
-            <Notice tone="gray" icon={<Info />}>
-              Before sending for approval: {sendHint}
-            </Notice>
-          )
+        {sendHint && (
+          <Notice tone="gray" icon={<Info />}>
+            Before sending for approval: {sendHint}
+          </Notice>
+        )}
+        {data.perms.pm && !data.activeChain && data.missing.length > 0 && !current.frozen && (
+          <MissingPeople pid={pid} missing={data.missing} canAdd={data.canAddPeople} optional="The Project Owner or the Project Manager approves that step in their place. You can add them now if you like." />
         )}
       </div>
 

@@ -521,8 +521,8 @@ export async function replacePerson(pid: ID, oldId: ID, newId_: ID, team: Team) 
 function moveHeadWork(s: DemoState, p: Project, team: Team, oldId: ID | undefined, newHeadId: ID, at: string) {
   s.chains = s.chains.map((c) => (c.projectId === p.id ? reassign(c, team, newHeadId) : c))
   const moved = s.chains.filter((c) => c.projectId === p.id && c.status === 'in_progress' && c.steps.some((st) => st.status === 'pending' && st.assigneeId === newHeadId))
-  if (moved.length && oldId)
-    notify(s, { to: [newHeadId], type: 'approval', title: 'An approval moved to you', body: `${moved.length} pending approval${moved.length > 1 ? 's' : ''} moved to you on the same version.`, link: `/projects/${p.id}`, projectId: p.id, at })
+  if (moved.length)
+    notify(s, { to: [newHeadId], type: 'approval', title: 'An approval moved to you', body: `${moved.length} pending approval${moved.length > 1 ? 's' : ''} moved to you on the same version${oldId ? '' : ' (the Owner or the PM was covering until now)'}.`, link: `/projects/${p.id}`, projectId: p.id, at })
 }
 
 // ─── Away and archive ───────────────────────────────────────────────────

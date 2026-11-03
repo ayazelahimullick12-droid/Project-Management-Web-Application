@@ -118,7 +118,9 @@ export function SimpleDocumentPage() {
   // ─── Where it stands and what this person can do ──────────────────────
   const chain = data.activeChain?.status === 'in_progress' ? data.activeChain : undefined
   const step = chain?.steps.find((s) => s.status === 'pending')
-  const myTurn = !!chain && data.perms.act.ok
+  const myTurn = !!chain && data.perms.act.ok && !data.perms.act.coveredAs
+  // The Owner or PM may approve any step in the head's place; it is still that head's turn.
+  const canCover = !!chain && data.perms.act.ok && !!data.perms.act.coveredAs
   const canSend = !chain && data.perms.send.ok
   const minorReady = !chain && !!data.perms.minor.requested && data.perms.minor.ok
   const someoneElse = !!data.lock && !data.lock.mine
@@ -127,13 +129,12 @@ export function SimpleDocumentPage() {
   const since = data.status.since ? ` (for ${waited(data.status.since, now)})` : ''
   const statusText = myTurn
     ? `Waiting for your approval${data.perms.act.actingFor ? `, as deputy for ${nameOf(data.perms.act.actingFor)}, who is away` : ''}${since}.`
-    : `${docStatusText(data.status, nameOf)}${data.status.key === 'in_review' ? since : ''}.`
+    : `${docStatusText(data.status, nameOf)}${data.status.key === 'in_review' ? since : ''}.${canCover && step ? ` You can also ${step.sign ? 'approve and sign' : 'approve'} it in the ${step.roleLabel.toLowerCase()}'s place.` : ''}`
 
   // At most one notice: the most important one.
   let notice: { tone: Tone; text: ReactNode; actions?: ReactNode } | undefined
   const needPeople = data.perms.pm && !chain && !current.frozen && data.missing.length > 0
-  if (needPeople) notice = undefined // shown below as "Before it can be sent for approval, add …"
-  else if (doc.outOfSync && data.perms.pm) notice = { tone: 'problem', text: `This document needs updating: ${doc.outOfSync.cause}.`, actions: <LinkButton to={tools} size="lg">Update it</LinkButton> }
+  if (doc.outOfSync && data.perms.pm) notice = { tone: 'problem', text: `This document needs updating: ${doc.outOfSync.cause}.`, actions: <LinkButton to={tools} size="lg">Update it</LinkButton> }
   else if (current.scopeCheck?.flagged && !current.scopeCheck.decision && data.perms.decideScope)
     notice = {
       tone: 'problem',
@@ -193,7 +194,7 @@ export function SimpleDocumentPage() {
                 {i > 0 && ' → '}
                 <span className={clsx(s.status === 'approved' && 'text-leaf', s.status === 'pending' && 'font-medium text-ink')}>
                   {s.status === 'approved' ? '✓ ' : ''}
-                  {s.assigneeName}
+                  {s.vacant && s.status !== 'approved' ? `no ${s.roleLabel.toLowerCase()} yet` : s.actedByName ?? s.assigneeName}
                   {s.sign ? ' (signs)' : ''}
                 </span>
               </span>
@@ -208,7 +209,7 @@ export function SimpleDocumentPage() {
       {canSend && <NextStep>It is ready. Send it for approval with the button at the bottom of the screen.</NextStep>}
       {minorReady && <NextStep>The requested changes were made. If it was only a small fix, the approvals can continue from where they stopped (button at the bottom).</NextStep>}
 
-      {needPeople && <MissingPeople pid={pid} missing={data.missing} canAdd={data.canAddPeople} before="Before it can be sent for approval" large />}
+      {needPeople && !notice && <MissingPeople pid={pid} missing={data.missing} canAdd={data.canAddPeople} optional="You (the Project Owner or the Project Manager) approve that step in their place. You can add them now if you like." large />}
 
       {notice && (
         <div className="rounded-2xl bg-surface p-5 ring-1 ring-line">

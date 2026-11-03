@@ -114,10 +114,46 @@ describe('sending for approval', () => {
   it('needs the scope decision first', () => expect(sendCheck({ ...base, scopeUndecided: true }).ok).toBe(false))
   it('allows re-approving a frozen version that is out of sync', () => expect(sendCheck({ ...base, versionFrozen: true, outOfSync: true }).ok).toBe(true))
   it('lets an SQA member send the SQA sign-off', () => expect(sendCheck({ ...base, docType: 'SQA_SIGNOFF', userId: 'sqa', isSqaMember: true }).ok).toBe(true))
-  it('checks the whole chain first: stops and names every missing head', () => {
+  it('does not stop for missing heads: the Owner or the PM approves those steps', () => {
     const alone = project({ members: [{ userId: 'pm', team: 'PM', isHead: true }] })
-    const r = sendCheck({ ...base, project: alone })
-    expect(r.ok).toBe(false)
-    expect(r.reason).toBe('Add a tech head, a stakeholder head and a sponsor head to the project first.')
+    expect(sendCheck({ ...base, project: alone }).ok).toBe(true)
+  })
+})
+
+describe('the Project Owner and the PM can approve in a head\'s place', () => {
+  it('lets them approve and sign any step; the record says who acted for whom', () => {
+    let c = chainFor('PROPOSAL')
+    c = approve(c, p, 'pm', NOW).chain // the PM's own step
+    expect(c.steps[0]).toMatchObject({ actedBy: 'pm', coveredAs: undefined })
+    c = approve(c, p, 'owner', NOW).chain // the tech head's step, by the Owner
+    expect(c.steps[1]).toMatchObject({ status: 'approved', actedBy: 'owner', actingFor: 'tech', coveredAs: 'OWNER' })
+    c = approve(c, p, 'pm', NOW).chain // the stakeholder head's step, by the PM
+    expect(c.steps[2]).toMatchObject({ actedBy: 'pm', actingFor: 'sh', coveredAs: 'PM' })
+    const signed = sign(c, p, 'pm', NOW) // the sponsor head's signature, by the PM
+    expect(signed).toMatchObject({ coveredAs: 'PM', actingFor: 'sp', role: 'SPONSOR_HEAD' })
+    expect(signed.chain.status).toBe('signed')
+  })
+
+  it('lets them request changes in the head\'s place', () => {
+    const c = approve(chainFor('PROPOSAL'), p, 'pm', NOW).chain
+    expect(requestChanges(c, p, 'owner', 'Split the budget', NOW).chain.steps[1]).toMatchObject({ status: 'changes_requested', coveredAs: 'OWNER', actingFor: 'tech' })
+  })
+
+  it('still refuses other members, including the rest of the PM team', () => {
+    const c = approve(chainFor('PROPOSAL'), p, 'pm', NOW).chain
+    expect(() => approve(c, p, 'pm1', NOW)).toThrow(/tech head's turn/i)
+    expect(() => approve(c, p, 'sh', NOW)).toThrow(RuleError)
+  })
+
+  it('makes a step without a head wait on the PM, and moves it to the head once one is added', () => {
+    const solo = project({ members: [{ userId: 'pm', team: 'PM', isHead: true }] })
+    let c = newChain({ id: 'c1', docId: 'd1', docType: 'BRD', projectId: 'p1', versionId: 'v1', project: solo, startedBy: 'pm', now: NOW })
+    expect(c.steps.slice(1).map((s) => [s.assigneeId, s.vacant])).toEqual([['pm', true], ['pm', true], ['pm', true]])
+    c = approve(c, solo, 'pm', NOW).chain
+    c = approve(c, solo, 'pm', NOW).chain // no tech head: the PM approves in their place
+    expect(c.steps[1]).toMatchObject({ coveredAs: 'PM', actingFor: undefined })
+    const moved = reassign(c, 'STAKEHOLDER', 'sh')
+    expect(moved.steps[2]).toMatchObject({ assigneeId: 'sh', status: 'pending' })
+    expect(moved.steps[2].vacant).toBeUndefined()
   })
 })

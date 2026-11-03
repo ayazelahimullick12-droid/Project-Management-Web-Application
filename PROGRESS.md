@@ -99,3 +99,12 @@ Then follow `frontend/DEMO.md`.
 - Fixed on the way: the server answered an API request and then tried to answer it again (`npm start` crashed).
 - Checked: 91 tests pass (78 rules, 13 reading AI answers), production build passes, `npm start` serves the app. In the browser with LM Studio: a project started alone and taken through intake, questions, Fact Sheet, Proposal & Charter, BRD and SRS (all signed), Rewrite with AI, the scope check, test cases, the defect writer, summaries and slides, similar projects with the duplicate warning, a text upload with a conflict, decision suggestions, the AI-off message, two tabs as different people, Admin AI settings and AI activity.
 - Not checked in the browser: the change-request rewrite through its page (the agent was checked on its own), the SQA/UAT sign-off paragraph.
+
+## 3 November 2026 — the Project Owner and the PM can approve in any head's place
+
+- New rule: the chain is unchanged, but the Project Owner and the PM can approve, sign, request changes, confirm the Fact Sheet and confirm the test case lists for any head. Each record says who acted for whom ("Project Manager, for the stakeholder head (Rokeya Begum)"), including the signed PDF's certificate; the head is told in-app.
+- A missing head no longer stops sending a document, the Fact Sheet confirmation or testing: the step waits on the PM and moves to the head when one is added.
+- Fixed: summaries and slides failed when the model answered with bullet points only.
+- Checked: 99 tests pass (8 new), production build passes. In the browser on a separate test data file: as Nusrat, approved the BRD for the stakeholder head and signed it for the sponsor head (approval list, audit log, notices, approval record and certificate checked); sent a new version with no sponsor head (blue note, "No sponsor head yet" step); the Simple view's status sentence; making Selim sponsor head moved the waiting step to him. The summary fix was checked against the model's real answers for the Agami Update proposal.
+- Not checked in the browser: confirming the Fact Sheet and a test list in a head's place (same rule; covered by tests).
+

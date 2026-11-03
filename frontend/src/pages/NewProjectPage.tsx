@@ -43,7 +43,7 @@ export function NewProjectPage() {
           <Textarea value={description} onChange={(e) => setDescription(e.target.value)} />
         </Field>
         <Note tone="blue" icon={<UserRound className="h-4 w-4" />}>
-          You ({me?.name}) will be the <b>Project Owner</b> and the <b>Project Manager</b>. When a step needs someone else (stakeholders to answer questions, heads to approve, testers), the app asks you to add them. You can hand the PM role to someone else later.
+          You ({me?.name}) will be the <b>Project Owner</b> and the <b>Project Manager</b>. When a step needs other people to do work (stakeholders to answer questions, testers), the app asks you to add them. Approvals and confirmations you can give yourself, in place of any head. You can hand the PM role to someone else later.
         </Note>
 
         <button type="button" onClick={() => setWithPeople(!withPeople)} className="mt-4 flex items-center gap-2 text-sm font-medium text-brand">

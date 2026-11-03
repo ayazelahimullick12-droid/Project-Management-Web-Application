@@ -12,6 +12,7 @@ Every feature and rule in `SPEC.md` and `SPEC_SQA_UAT.md`, and where to see it i
 - [~] One head per team. One person **may** hold several roles, with a warning (changed on 29 October 2026, see `DECISIONS.md`) — New project, Team
 - [x] One deputy per head, including the PM — Team page (all projects)
 - [x] Deputy acts while the head is Away; “Approved by deputy X for head Y” — Cash → BRD (Jahid Hasan); approval history, audit log
+- [x] **Added (3 November 2026):** the Project Owner and the PM can approve, sign, request changes or confirm (Fact Sheet, test lists) in any head's place, also when the head is not added yet; recorded as “Project Manager, for the stakeholder head (name)” — any approval step (log in as Nusrat or Imran)
 - [x] Permission matrix enforced in the api layer (not only hidden buttons) — every action; refusals appear as messages
 - [x] Comment and suggest only until the team’s head has approved that version — any document after the tech head approves (log in as a developer)
 - [x] Confirm or reopen an auto-resolved comment: members of the author’s team — Pending check comments in the sidebar

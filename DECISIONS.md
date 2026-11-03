@@ -98,8 +98,8 @@ The user changed the rules: one person can start a project, and the Proposal, Ch
 
 - Whoever starts a project becomes the **Project Owner and the PM** — the smallest change that still has an owner and a PM.
 - The **Owner and the PM** add people (on the Team page, or with the **Add** buttons where the app stops).
-- The app **stops at the first step that needs people**: sending questions (the teams that get them), asking the stakeholder head to confirm the Fact Sheet, **Send for approval**, and testing. It says who is missing and offers **Add**. Rule: `rules/people.ts`.
-- Before **Send for approval** the **whole chain** is checked at once — so nobody approves a document that then gets stuck at a later, empty step.
+- The app **stops at the first step that needs people**: sending questions (the teams that get them), asking the stakeholder head to confirm the Fact Sheet, **Send for approval**, and testing. It says who is missing and offers **Add**. Rule: `rules/people.ts`. (Changed on 3 November 2026: approvals and confirmations no longer stop, see the last section.)
+- Before **Send for approval** the **whole chain** is checked at once — so nobody approves a document that then gets stuck at a later, empty step. (Changed on 3 November 2026: a missing head no longer stops sending.)
 - Deputies are optional; the app asks for one when a head is set **Away** — Away needs someone to cover.
 - **One person may hold several roles**, with a warning (they would approve more than once and could approve their own work) — a small team may have no one else. This replaces the spec's one-role-per-person rule.
 - The Proposal and Charter are **one document** (`PROPOSAL`, shown as “Proposal & Charter”) with two parts; Charter sections have keys starting with `charter_`. **One approval round**; the **sponsor head signs** the package — the spec had two chains; one round avoids asking the same people twice in a row.
@@ -125,3 +125,17 @@ The user changed the rules: one person can start a project, and the Proposal, Ch
 - **Summaries** are made from each section's first two sentences, with the instructions after the text — with the full text the small model ignored the format and wrote an essay.
 - **When LM Studio is off or does not answer**, the action stops with the reason and nothing is changed — the user chose an error over made-up fallback text.
 - **Still simulated:** OCR of PDF, Word and scanned uploads (`.txt`, `.md` and `.csv` files are really read), call transcription, email (Mailbox), calls.
+
+## The Project Owner and the PM can approve in any head's place (3 November 2026)
+
+The user's rule: the approval chain stays exactly as it is (each step belongs to its head), but the Project Owner and the Project Manager can also press the button for any step, for example when that person is not present.
+
+- **Every approval and confirmation:** each step of every approval chain (including the sponsor head's **signature**), **Request changes**, confirming the **Fact Sheet**, and confirming the **SQA and UAT test case lists**. Rule: `actForHead` in `src/rules/permissions.ts`; `canAct` in `src/rules/approval.ts` uses it.
+- **Always allowed, not only when the head is away** — the user said the Owner or PM can give it too; the head can still act themselves. The PM's own step and the head's step stay separate: the PM clicks once for each.
+- **The record says who acted for whom:** the step, the audit log, the signed PDF's certificate and the approval record read, for example, "Nusrat Jahan (Project Manager, for the stakeholder head (Rokeya Begum))". The Owner or PM signs with their **own** password or email code. The head is told in-app when someone approved or signed in their place.
+- **A head who has not been added yet no longer stops anything:** a document can be sent for approval, the Fact Sheet sent for confirmation and testing started without them. Their step waits on the PM ("No sponsor head yet — the Project Owner or the PM approves in their place"); if a head is added later, the waiting step moves to them. Work for a missing head (reminders, To do) goes to the Owner and the PM.
+- **Still needed:** people who do the work — stakeholders, sponsors or the tech team to answer questions, SQA testers and developers to test. A deputy is still asked for before a head is set Away.
+- Buttons say whose step it is: **Approve (for the stakeholder head)**, **Approve and sign (for the sponsor head)**, **Confirm Fact Sheet (for the stakeholder head)**. In the Simple view the status sentence still names the head whose turn it is, and adds "You can also approve it in the stakeholder head's place."
+- A head's team can no longer comment on a version once its step is approved, also when the Owner or PM approved it — the same rule as before (it follows the step, not the person).
+- **Fixed on the way:** the summary and slides failed with "could not use" when the model wrote only bullet points without the one-sentence first line (it often does). The first bullet is now the summary; a last bullet cut off at the length limit is dropped.
+

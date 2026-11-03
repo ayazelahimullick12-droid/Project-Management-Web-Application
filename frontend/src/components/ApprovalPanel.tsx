@@ -23,7 +23,7 @@ import { useToast } from './toast'
 type NamedChain = Omit<ApprovalChain, 'steps'> & {
   versionNumber?: number
   startedByName: string
-  steps: (ApprovalChain['steps'][number] & { assigneeName: string; actedByName?: string; actingForName?: string; roleLabel: string; deputyCovering?: string | false })[]
+  steps: (ApprovalChain['steps'][number] & { assigneeName: string; actedByName?: string; actingForName?: string; actedNote?: string; roleLabel: string; deputyCovering?: string | false })[]
 }
 
 export interface ApprovalProps {
@@ -39,7 +39,7 @@ export interface ApprovalProps {
   minor: Check & { requested?: boolean }
   outOfSync?: boolean
   frozen?: boolean
-  signatures: (Signature & { signerName: string; actingForName?: string })[]
+  signatures: (Signature & { signerName: string; actingForName?: string; onBehalf?: string })[]
   compareLink?: string
 }
 
@@ -108,7 +108,7 @@ function SignatureRecord({ sig }: { sig: ApprovalProps['signatures'][number] }) 
     <div className="rounded-md bg-leaf-soft/50 p-3 text-xs ring-1 ring-green-200">
       <div className="mb-1 flex items-center gap-1.5 text-sm font-medium text-leaf">
         <BadgeCheck className="h-4 w-4" /> Signed by {sig.signerName}
-        {sig.actingForName && <span className="font-normal"> (deputy for {sig.actingForName})</span>}
+        {sig.onBehalf && <span className="font-normal"> ({sig.onBehalf})</span>}
       </div>
       <div className="space-y-0.5 text-ink/80">
         <div>{fmtDateTime(sig.signedAt)} · IP {sig.ip} · {sig.method === 'password' ? 'password' : 'email code'}</div>
@@ -149,7 +149,8 @@ export function ApprovalActions(props: ApprovalProps & { layout?: 'row' | 'stack
   const chain = props.activeChain?.status === 'in_progress' ? props.activeChain : undefined
   const current = chain?.steps.find((s) => s.status === 'pending')
   const row = props.layout === 'row'
-  const deputy = props.act.actingFor ? ' (as deputy)' : ''
+  // The Owner or PM approving in a head's place sees whose step it is on the button.
+  const deputy = props.act.coveredAs ? ` (for the ${current?.roleLabel.toLowerCase() ?? 'head'})` : props.act.actingFor ? ' (as deputy)' : ''
   // plain: the Simple view's wording and larger buttons
   const size = props.size ?? 'md'
   const askLabel = props.plain ? 'Ask for changes' : 'Request changes'
@@ -238,13 +239,14 @@ export function ApprovalTimeline(props: ApprovalProps) {
                 {s.status === 'approved' || s.status === 'carried_over' ? <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-leaf" /> : s.status === 'pending' ? <CircleDot className="mt-0.5 h-4 w-4 shrink-0 text-sky-600" /> : s.status === 'changes_requested' ? <Undo2 className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" /> : <CircleDashed className="mt-0.5 h-4 w-4 shrink-0 text-ink/25" />}
                 <div className="min-w-0 flex-1 text-sm">
                   <div className="flex flex-wrap items-baseline justify-between gap-x-2">
-                    <span className="font-medium">{s.actedByName ?? s.assigneeName}</span>
+                    <span className="font-medium">{s.actedByName ?? (s.vacant ? `No ${s.roleLabel.toLowerCase()} yet` : s.assigneeName)}</span>
                     <StepStatusChip status={s.status} />
                   </div>
                   <div className="text-xs text-muted">
                     {s.roleLabel}
                     {s.sign && ' · signs'}
-                    {s.actingForName && ` · deputy for ${s.actingForName}`}
+                    {s.actedNote && ` · ${s.actedNote}`}
+                    {s.vacant && (s.status === 'pending' || s.status === 'waiting') && ' · the Project Owner or the PM approves in their place'}
                     {s.actedAt && ` · ${fmtDateTime(s.actedAt)}`}
                     {s.status === 'pending' && s.deputyCovering && ` · Away; ${s.deputyCovering} is covering`}
                   </div>

@@ -132,6 +132,7 @@ export interface FactSheetVersion {
   note: string
   confirmedBy?: ID
   actingFor?: ID
+  coveredAs?: CoverRole
 }
 
 export interface QARound {
@@ -366,6 +367,8 @@ export interface Suggestion {
 // ─── Approval and signing ───────────────────────────────────────────────
 
 export type ApproverRole = 'PM' | 'TECH_HEAD' | 'STAKEHOLDER_HEAD' | 'SPONSOR_HEAD'
+/** The Project Owner or the Project Manager, approving or confirming in a head's place. */
+export type CoverRole = 'OWNER' | 'PM'
 export type StepStatus = 'waiting' | 'pending' | 'approved' | 'changes_requested' | 'cancelled' | 'carried_over'
 
 export interface ApprovalStep {
@@ -376,7 +379,9 @@ export interface ApprovalStep {
   pendingSince?: string
   actedAt?: string
   actedBy?: ID
-  actingFor?: ID
+  actingFor?: ID // the head this was done for (by their deputy, or by the Owner or PM)
+  coveredAs?: CoverRole // done by the Project Owner or PM in the head's place
+  vacant?: boolean // nobody had this role when the step was created; the Owner or PM approves
   comment?: string
 }
 
@@ -402,6 +407,8 @@ export interface Signature {
   versionId: ID
   signerId: ID
   actingFor?: ID
+  coveredAs?: CoverRole
+  role?: ApproverRole // the step that was signed
   signedAt: string
   ip: string
   userAgent: string
@@ -629,6 +636,7 @@ export interface TestListConfirmation {
   stage: TestStage
   by: ID
   actingFor?: ID
+  coveredAs?: CoverRole
   at: string
 }
 

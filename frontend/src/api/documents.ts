@@ -15,7 +15,7 @@ import { draftSection, rewriteSection as aiRewrite, scopeVerdict, summarize } fr
 import { missingPeople } from '../rules/people'
 import { approve as approveRule, canAct, chainNeeds, CHAIN_CONFIG, cancel, currentStep, minorCorrectionChain, newChain, requestChanges as requestChangesRule, ROLE_LABEL, ROLE_TEAM, sendCheck, sign as signRule } from '../rules/approval'
 import { blockingCounts, canCheckPending, canComment, canTick, carryForward, commentTeam } from '../rules/comments'
-import { actAsHead, can, headOf, headRecipient, inTeam, isSqa, memberOf, TEAM_LABEL, type Check } from '../rules/permissions'
+import { actAsHead, can, COVER_LABEL, headOf, headRecipient, inTeam, isSqa, memberOf, onBehalfText, TEAM_LABEL, type Check } from '../rules/permissions'
 import { activeChain, canGenerate, chainsOf, DOC_LABEL, docStatus, isComplete, laterTypes, PART_LABEL, PIPELINE, previousComplete, sectionPart } from '../rules/pipeline'
 import { exitCriteria, markReadyForRetest } from '../rules/testing'
 import { normalize } from '../rules/text'
@@ -84,10 +84,18 @@ export async function getDocument(pid: ID, type: DocType) {
     const summarizing = summaryJobs[0]?.status === 'running'
     const summaryError = !derived && summaryJobs[0]?.status === 'failed' ? summaryJobs[0].resultNote : undefined
 
-    const signatures = doc ? s.signatures.filter((x) => x.docId === doc.id).map((x) => ({ ...x, signerName: nameOf(s, x.signerId), actingForName: x.actingFor ? nameOf(s, x.actingFor) : undefined })) : []
+    const signatures = doc ? s.signatures.filter((x) => x.docId === doc.id).map((x) => ({ ...x, signerName: nameOf(s, x.signerId), actingForName: x.actingFor ? nameOf(s, x.actingFor) : undefined, onBehalf: onBehalfText({ coveredAs: x.coveredAs, actingForName: x.actingFor ? nameOf(s, x.actingFor) : undefined, headLabel: ROLE_LABEL[x.role ?? 'SPONSOR_HEAD'] }) })) : []
     const named = (c: ApprovalChain) => ({
       ...c,
-      steps: c.steps.map((st) => ({ ...st, assigneeName: nameOf(s, st.assigneeId), actedByName: st.actedBy ? nameOf(s, st.actedBy) : undefined, actingForName: st.actingFor ? nameOf(s, st.actingFor) : undefined, roleLabel: ROLE_LABEL[st.role], deputyCovering: st.status === 'pending' ? headRecipient(p, st.assigneeId, t).forUserId && nameOf(s, headRecipient(p, st.assigneeId, t).to) : undefined })),
+      steps: c.steps.map((st) => ({
+        ...st,
+        assigneeName: nameOf(s, st.assigneeId),
+        actedByName: st.actedBy ? nameOf(s, st.actedBy) : undefined,
+        actingForName: st.actingFor ? nameOf(s, st.actingFor) : undefined,
+        actedNote: onBehalfText({ coveredAs: st.coveredAs, actingForName: st.actingFor ? nameOf(s, st.actingFor) : undefined, headLabel: ROLE_LABEL[st.role] }),
+        roleLabel: ROLE_LABEL[st.role],
+        deputyCovering: st.status === 'pending' && !st.vacant ? headRecipient(p, st.assigneeId, t).forUserId && nameOf(s, headRecipient(p, st.assigneeId, t).to) : undefined,
+      })),
       versionNumber: s.versions.find((v) => v.id === c.versionId)?.number,
       startedByName: nameOf(s, c.startedBy),
     })
@@ -140,7 +148,7 @@ export async function getDocument(pid: ID, type: DocType) {
         summarize: can.memberOrOwner(p, user.id).ok && !summarizing,
       },
       complete: isComplete(ctx, type),
-      // Every head the approval chain needs; checked before "Send for approval" (see sendCheck).
+      // Heads of the approval chain not added yet (shown with "Add"; the Owner or PM approves in their place).
       missing: missingPeople(p, chainNeeds(type)),
       canAddPeople: can.addPeople(p, user.id, t).ok,
     }
@@ -849,8 +857,12 @@ export async function approve(docId: ID) {
     if (!chain || chain.status !== 'in_progress') fail('Nothing is waiting for approval.')
     const r = approveRule(chain, p, user.id, t)
     s.chains = s.chains.map((c) => (c.id === chain.id ? r.chain : c))
-    const step = r.chain.steps.find((x) => x.actedAt === at && x.actedBy === user.id)
-    audit(s, { projectId: p.id, actorId: user.id, actingFor: step?.actingFor, action: 'Approved', details: `${DOC_LABEL[doc.type]} as ${ROLE_LABEL[step?.role ?? 'PM'].toLowerCase()}${step?.actingFor ? ` (deputy for ${nameOf(s, step.actingFor)})` : ''}`, at })
+    const step = r.chain.steps.find((x) => x.actedAt === at && x.actedBy === user.id)!
+    const how = onBehalfText({ coveredAs: step.coveredAs, actingForName: step.actingFor ? nameOf(s, step.actingFor) : undefined, headLabel: ROLE_LABEL[step.role] })
+    audit(s, { projectId: p.id, actorId: user.id, actingFor: step.actingFor, action: 'Approved', details: `${DOC_LABEL[doc.type]} as ${ROLE_LABEL[step.role].toLowerCase()}${how ? ` (${how})` : ''}`, at })
+    const v0 = s.versions.find((x) => x.id === chain.versionId)!
+    if (step.coveredAs && step.actingFor && step.actingFor !== user.id)
+      notify(s, { to: [step.actingFor], type: 'approval', title: `${user.name} approved for you: ${DOC_LABEL[doc.type]} v${v0.number}`, body: `${p.name}: the ${COVER_LABEL[step.coveredAs]} approved this step in your place (as ${ROLE_LABEL[step.role].toLowerCase()}).`, link: docLink(doc), projectId: p.id, at, email: false })
     if (r.finished) afterChainFinished(s, doc, r.chain, at, user)
     else {
       const next = r.nextStep!
@@ -872,7 +884,8 @@ export async function requestChanges(docId: ID, comment: string) {
     const step = r.chain.steps.find((x) => x.status === 'changes_requested')!
     if (CHAIN_CONFIG[doc.type].comments)
       s.comments.push({ id: newId('cmt'), docId, projectId: p.id, createdOnVersionId: chain.versionId, versionId: chain.versionId, sectionId: null, quote: '', prefix: '', suffix: '', body: comment.trim(), authorId: user.id, authorTeam: ROLE_TEAM[step.role], mentions: [], status: 'open', reopenCount: 0, replies: [], createdAt: at, fromRequestChanges: true })
-    notify(s, { to: teamMembers(p, doc.type === 'SQA_SIGNOFF' ? 'TECH' : 'PM'), type: 'changes', title: `Changes requested: ${DOC_LABEL[doc.type]}`, body: `${p.name}: ${user.name}${r.actingFor ? ` (for ${nameOf(s, r.actingFor)})` : ''} asked for changes: “${comment.trim()}”`, link: docLink(doc), projectId: p.id, at })
+    const how = onBehalfText({ coveredAs: r.coveredAs, actingForName: r.actingFor ? nameOf(s, r.actingFor) : undefined, headLabel: ROLE_LABEL[step.role] })
+    notify(s, { to: teamMembers(p, doc.type === 'SQA_SIGNOFF' ? 'TECH' : 'PM'), type: 'changes', title: `Changes requested: ${DOC_LABEL[doc.type]}`, body: `${p.name}: ${user.name}${how ? ` (${how})` : ''} asked for changes: “${comment.trim()}”`, link: docLink(doc), projectId: p.id, at, exclude: user.id })
     audit(s, { projectId: p.id, actorId: user.id, actingFor: r.actingFor, action: 'Changes requested', details: `${DOC_LABEL[doc.type]}: ${comment.trim().slice(0, 100)}`, at })
   })
 }
@@ -909,15 +922,19 @@ export async function approveAndSign(docId: ID, method: 'password' | 'email_otp'
   const snapshot = { title: `${p.name} — ${DOC_LABEL[doc.type]}`, versionNumber: v.number, sections: v.sections.map((x) => ({ title: x.title, content: x.content })) }
   const ip = '10.20.4.17'
   const docHash = await sha256Hex(canonicalDocument(snapshot))
-  const page = signaturePageText({ title: snapshot.title, versionNumber: v.number, signer: user.name, actingFor: check.actingFor ? nameOf(s0, check.actingFor) : undefined, signedAt, ip, method, docHash })
+  const pendingRole = currentStep(chain)!.role
+  const onBehalf = onBehalfText({ coveredAs: check.coveredAs, actingForName: check.actingFor ? nameOf(s0, check.actingFor) : undefined, headLabel: ROLE_LABEL[pendingRole] })
+  const page = signaturePageText({ title: snapshot.title, versionNumber: v.number, signer: user.name, onBehalf: onBehalf || undefined, signedAt, ip, method, docHash })
   const finalHash = await sha256Hex(canonicalDocument(snapshot) + '\n\n' + page)
   return act((s, t2, at) => {
     const ch = activeChain(pipelineCtx(s, p.id), docById(s, docId))!
     const r = signRule(ch, projectOf(s, p.id), user.id, t2)
     s.chains = s.chains.map((c) => (c.id === ch.id ? r.chain : c))
-    s.signatures.push({ id: newId('sig'), projectId: p.id, docId, versionId: v.id, signerId: user.id, actingFor: r.actingFor, signedAt: at, ip, userAgent: navigator.userAgent, method, docHash, finalHash, snapshot })
+    s.signatures.push({ id: newId('sig'), projectId: p.id, docId, versionId: v.id, signerId: user.id, actingFor: r.actingFor, coveredAs: r.coveredAs, role: r.role, signedAt: at, ip, userAgent: navigator.userAgent, method, docHash, finalHash, snapshot })
     delete s.otps[user.id]
-    audit(s, { projectId: p.id, actorId: user.id, actingFor: r.actingFor, action: 'Approved and signed', details: `${DOC_LABEL[doc.type]} v${v.number} · SHA-256 ${docHash.slice(0, 16)}… · final ${finalHash.slice(0, 16)}… · ${method === 'password' ? 'password' : 'email code'}`, at })
+    audit(s, { projectId: p.id, actorId: user.id, actingFor: r.actingFor, action: 'Approved and signed', details: `${DOC_LABEL[doc.type]} v${v.number}${onBehalf ? ` (${onBehalf})` : ''} · SHA-256 ${docHash.slice(0, 16)}… · final ${finalHash.slice(0, 16)}… · ${method === 'password' ? 'password' : 'email code'}`, at })
+    if (r.coveredAs && r.actingFor && r.actingFor !== user.id)
+      notify(s, { to: [r.actingFor], type: 'approval', title: `${user.name} signed for you: ${DOC_LABEL[doc.type]} v${v.number}`, body: `${p.name}: the ${COVER_LABEL[r.coveredAs]} approved and signed in your place.`, link: docLink(doc), projectId: p.id, at, email: false })
     afterChainFinished(s, docById(s, docId), r.chain, at, user)
     return { docHash, finalHash }
   })
@@ -985,7 +1002,7 @@ export async function printable(versionId: ID) {
     ensure(can.view(p, user))
     const signature = s.signatures.find((x) => x.versionId === v.id)
     const chain = s.chains.filter((c) => c.versionId === v.id && c.status !== 'cancelled').at(-1)
-    return { project: p, doc, version: v, label: DOC_LABEL[doc.type], summary: s.summaries[v.id], signature: signature ? { ...signature, signerName: nameOf(s, signature.signerId), actingForName: signature.actingFor ? nameOf(s, signature.actingFor) : undefined } : undefined, chainStatus: chain?.status, approvals: chain?.steps.filter((x) => x.actedAt).map((x) => ({ role: ROLE_LABEL[x.role], by: nameOf(s, x.actedBy), at: x.actedAt!, actingFor: x.actingFor ? nameOf(s, x.actingFor) : undefined })) ?? [] }
+    return { project: p, doc, version: v, label: DOC_LABEL[doc.type], summary: s.summaries[v.id], signature: signature ? { ...signature, signerName: nameOf(s, signature.signerId), onBehalf: onBehalfText({ coveredAs: signature.coveredAs, actingForName: signature.actingFor ? nameOf(s, signature.actingFor) : undefined, headLabel: ROLE_LABEL[signature.role ?? 'SPONSOR_HEAD'] }) } : undefined, chainStatus: chain?.status, approvals: chain?.steps.filter((x) => x.actedAt).map((x) => ({ role: ROLE_LABEL[x.role], by: nameOf(s, x.actedBy), at: x.actedAt!, onBehalf: onBehalfText({ coveredAs: x.coveredAs, actingForName: x.actingFor ? nameOf(s, x.actingFor) : undefined, headLabel: ROLE_LABEL[x.role] }) })) ?? [] }
   })
 }
 

@@ -6,7 +6,7 @@
  */
 import type { DemoState, ID, TestStage } from '../types'
 import { CHAIN_CONFIG, ROLE_LABEL, currentStep } from '../rules/approval'
-import { headOf, headRecipient } from '../rules/permissions'
+import { coverers, headOf, headRecipient } from '../rules/permissions'
 import { DOC_LABEL } from '../rules/pipeline'
 import { UNRESOLVED } from '../rules/testing'
 import type { Recipient } from './effects'
@@ -73,7 +73,7 @@ export function waitingItems(s: DemoState, now: Date): WaitingItem[] {
     // Fact Sheet confirmation
     const confirmed = s.factSheets.some((f) => f.projectId === p.id && f.confirmedBy)
     const sh = headOf(p, 'STAKEHOLDER')
-    if (p.intake.confirmRequestedAt && !confirmed && sh) {
+    if (p.intake.confirmRequestedAt && !confirmed) {
       items.push({
         key: `fs-confirm:${p.id}`,
         projectId: p.id,
@@ -82,8 +82,8 @@ export function waitingItems(s: DemoState, now: Date): WaitingItem[] {
         title: 'Please confirm the Fact Sheet',
         body: `${p.name}: the Fact Sheet is ready. Confirm it, or comment on what is wrong.`,
         link: `${base}/intake?tab=facts`,
-        recipients: [headRecipient(p, sh.userId, now)],
-        waitingOn: sh.userId,
+        recipients: sh ? [headRecipient(p, sh.userId, now)] : coverers(p).map((to) => ({ to })),
+        waitingOn: sh?.userId ?? coverers(p).at(-1)!,
         reminders: true,
       })
     }
@@ -127,7 +127,7 @@ export function waitingItems(s: DemoState, now: Date): WaitingItem[] {
       const tests = s.testCases.filter((t) => t.projectId === p.id && t.stage === stage)
       const confirmedList = s.testConfirmations.some((c) => c.projectId === p.id && c.stage === stage)
       const head = headOf(p, stage === 'SQA' ? 'TECH' : 'STAKEHOLDER')
-      if (tests.length && !confirmedList && head)
+      if (tests.length && !confirmedList)
         items.push({
           key: `confirm:${p.id}:${stage}`,
           projectId: p.id,
@@ -136,8 +136,8 @@ export function waitingItems(s: DemoState, now: Date): WaitingItem[] {
           title: `Please confirm the ${stage} test case list`,
           body: `${p.name}: ${tests.length} ${stage} test cases are ready for your confirmation.`,
           link: `${base}/testing/${stage}?tab=cases`,
-          recipients: [headRecipient(p, head.userId, now)],
-          waitingOn: head.userId,
+          recipients: head ? [headRecipient(p, head.userId, now)] : coverers(p).map((to) => ({ to })),
+          waitingOn: head?.userId ?? coverers(p).at(-1)!,
           reminders: true,
         })
     }

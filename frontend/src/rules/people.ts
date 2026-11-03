@@ -6,12 +6,14 @@
  * checks the needs below. If someone is missing it stops, says who is missing, and the Owner or
  * the PM adds them (see can.addPeople in permissions.ts).
  *
- * The steps that stop:
+ * The steps that stop (they need people to do real work):
  * - sending Q/A questions        → someone in each team that gets questions
- * - sending the Fact Sheet for confirmation → a stakeholder head
- * - sending a document for approval → every head in its approval chain (checked all at once)
- * - technical or user testing    → testers, developers and heads
+ * - technical or user testing    → testers and developers
  * - marking a head Away          → a deputy (checked in the api, see setAway)
+ *
+ * Approvals and confirmations do NOT stop for a missing head: the Project Owner or the PM gives
+ * them in the head's place (see actForHead in permissions.ts). The screens still show which heads
+ * are not added yet, with an Add button.
  */
 import type { Project, Team, TestStage } from '../types'
 import { headOf, no, yes, type Check } from './permissions'
@@ -64,10 +66,11 @@ export function questionNeeds(teams: Team[]): Need[] {
   return teams.map((t) => map[t])
 }
 
-/** Technical testing needs SQA testers, developers to fix and the tech head (who confirms the list
- * and approves the sign-off). User testing needs stakeholders to test and their head to confirm. */
+/** Technical testing needs SQA testers and developers to fix; user testing needs stakeholders to
+ * test. (The list confirmation and the sign-off can be given by the Owner or PM if there is no head.) */
 export function testingNeeds(stage: TestStage): Need[] {
-  return stage === 'SQA' ? ['TECH_HEAD', 'SQA', 'DEVELOPER'] : ['STAKEHOLDER_HEAD', 'STAKEHOLDERS']
+  return stage === 'SQA' ? ['SQA', 'DEVELOPER'] : ['STAKEHOLDERS']
 }
 
+/** The head who confirms the Fact Sheet (the Owner or PM can confirm in their place). */
 export const FACT_CONFIRMATION_NEEDS: Need[] = ['STAKEHOLDER_HEAD']

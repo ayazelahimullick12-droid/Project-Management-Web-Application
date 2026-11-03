@@ -73,7 +73,7 @@ export function PrintPage() {
         {!onePager && data.approvals.length > 0 && (
           <section className="mt-8 border-t pt-4 text-xs" style={{ borderColor: brand.line }}>
             <div className="mb-1 font-semibold">Approval record</div>
-            {data.approvals.map((a, i) => <div key={i}>{a.role}: {a.by}{a.actingFor ? ` (deputy for ${a.actingFor})` : ''} · {fmtDateTime(a.at)}</div>)}
+            {data.approvals.map((a, i) => <div key={i}>{a.role}: {a.by}{a.onBehalf ? ` (${a.onBehalf})` : ''} · {fmtDateTime(a.at)}</div>)}
           </section>
         )}
         <footer className="mt-10 text-center text-[10px]" style={{ color: brand.muted }}>{brand.orgName} · {brand.appName} · Prototype export · dummy data</footer>
@@ -89,7 +89,7 @@ export function PrintPage() {
               {[
                 ['Document', `${data.project.name} — ${data.label}`],
                 ['Version', String(signed.snapshot.versionNumber)],
-                ['Signed by', `${signed.signerName}${signed.actingForName ? ` (deputy, acting for ${signed.actingForName})` : ''}`],
+                ['Signed by', `${signed.signerName}${signed.onBehalf ? ` (${signed.onBehalf})` : ''}`],
                 ['Signed at', fmtDateTime(signed.signedAt)],
                 ['IP address', signed.ip],
                 ['Re-authentication', signed.method === 'password' ? 'Password' : 'Email one-time code'],

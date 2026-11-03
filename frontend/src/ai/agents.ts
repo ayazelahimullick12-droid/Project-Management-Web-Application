@@ -31,6 +31,15 @@ const bullets = (lines: string[]) => lines.filter((l) => BULLET.test(l)).map((l)
 
 const clean = (v: string) => v.replace(/\s+/g, ' ').trim().replace(/^["“]|["”]$/g, '').trim()
 
+/**
+ * Drops the last item when the answer stopped mid-sentence at the length limit: the others end
+ * with a full stop and the last one does not ("Deliverables include").
+ */
+function dropCutOff(items: string[]): string[] {
+  const ends = (x: string) => /[.!?…]$/.test(x)
+  return items.length > 1 && !ends(items.at(-1)!) && items.slice(0, -1).every(ends) ? items.slice(0, -1) : items
+}
+
 const sentencesOf = (t: string) => t.replace(/\s+/g, ' ').match(/[^.!?]+[.!?]+(\s|$)|[^.!?]+$/g)?.map((x) => x.trim()).filter((x) => x.length > 3) ?? []
 
 /** A summary point or slide bullet: its first sentence, at most 18 words. */
@@ -180,11 +189,15 @@ export async function summarize(docLabel: string, projectName: string, sections:
     .join('\n')
     .slice(0, 1500)
   const sumLines = linesOf(await ask({ agent: 'summary', title: `Summary: ${docLabel}`, projectId: ctx.projectId, prompt: prompts.summary(docLabel, projectName, text), maxTokens: LIMITS.summary })).filter((l) => !/^#/.test(l) && !/:$/.test(l))
-  // If it skipped the "- " markers, the points are the sentences it wrote.
-  const listed = bullets(sumLines)
+  // If it skipped the "- " markers, the points are the sentences it wrote. If it skipped the first
+  // sentence and wrote only bullets (common), the first bullet is the summary. A last bullet cut
+  // off at the length limit is dropped.
+  const listed = dropCutOff(bullets(sumLines).filter((x) => x.split(' ').length >= 3))
   const said = sumLines.filter((l) => !BULLET.test(l)).flatMap((l) => sentencesOf(l.replace(/^(summary|first line)\s*:\s*/i, '')))
-  const short = said[0] ? brief(said[0]) : ''
-  const points = (listed.length ? listed : said.length > 1 ? said.slice(1) : said).filter((x) => x.split(' ').length >= 3).slice(0, 4).map(brief)
+  const first = said[0] ?? listed[0]
+  const rest = listed.length ? (said[0] ? listed : listed.slice(1)) : said.slice(1)
+  const short = first ? brief(first) : ''
+  const points = (rest.length ? rest : [first ?? '']).filter((x) => x.split(' ').length >= 3).slice(0, 4).map(brief)
   if (!short || !points.length) throw unusable()
 
   step?.(1)
@@ -195,9 +208,8 @@ export async function summarize(docLabel: string, projectName: string, sections:
     if (title) slides.push({ title: clean(title.replace(/[<>]/g, '')), bullets: [] })
     else if (BULLET.test(line) && slides.length && slides.at(-1)!.bullets.length < 3) slides.at(-1)!.bullets.push(brief(line.replace(BULLET, '')))
   }
-  // The answer may stop mid-sentence at the length limit: that last bullet is dropped.
-  const last = slides.at(-1)?.bullets
-  if (last?.length && !/[.!?…]$/.test(last.at(-1)!)) last.pop()
+  const all = slides.flatMap((x) => x.bullets)
+  if (dropCutOff(all).length < all.length) slides.at(-1)!.bullets.pop()
   const usable = slides.filter((x) => x.title && x.bullets.length).slice(0, 5)
   if (!usable.length) throw unusable()
   return {

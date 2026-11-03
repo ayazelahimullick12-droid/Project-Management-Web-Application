@@ -15,8 +15,8 @@ describe('starting a project alone', () => {
     expect(missing.map((m) => m.label)).toEqual(['a stakeholder', 'a sponsor'])
     expect(peopleCheck(alone, questionNeeds(['STAKEHOLDER'])).reason).toBe('Add a stakeholder to the project first.')
   })
-  it('names the testers, developers and heads that testing needs', () => {
-    expect(missingPeople(alone, testingNeeds('SQA')).map((m) => m.need)).toEqual(['TECH_HEAD', 'SQA', 'DEVELOPER'])
+  it('names the testers and developers that testing needs (not the heads: the Owner or PM can confirm)', () => {
+    expect(missingPeople(alone, testingNeeds('SQA')).map((m) => m.need)).toEqual(['SQA', 'DEVELOPER'])
     expect(missingPeople(project(), testingNeeds('UAT'))).toEqual([])
   })
   it('lets the Owner and the PM add people, but only the Owner replace or remove them', () => {
