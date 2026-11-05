@@ -12,7 +12,7 @@
  * No screen code and no storage here.
  */
 import type { ApprovalChain, ApprovalStep, ApproverRole, DocType, ID, Project, Team } from '../types'
-import { actAsHead, actForHead, headOf, type Check, yes, no } from './permissions'
+import { actAsHead, actForHead, headOf, isOwner, type Check, yes, no } from './permissions'
 import type { Need } from './people'
 
 export class RuleError extends Error {}
@@ -231,7 +231,7 @@ export function sendCheck(args: {
   if (cfg.sender === 'PM') {
     const pm = actAsHead(args.project, 'PM', args.userId, args.now)
     if (!pm.ok) return no('Only the Project Manager can send a version for approval.')
-  } else if (!args.isSqaMember) return no('Only an SQA team member can send the SQA sign-off.')
+  } else if (!args.isSqaMember && !isOwner(args.project, args.userId)) return no('Only an SQA team member can send the SQA sign-off.')
   if (args.chainInProgress) return no('This version is already in review.')
   if (args.versionFrozen && !args.outOfSync) return no('This version is already approved and frozen.')
   if (cfg.comments && args.openComments + args.pendingComments > 0)

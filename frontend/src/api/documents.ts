@@ -15,7 +15,7 @@ import { draftSection, rewriteSection as aiRewrite, scopeVerdict, summarize } fr
 import { missingPeople } from '../rules/people'
 import { approve as approveRule, canAct, chainNeeds, CHAIN_CONFIG, cancel, currentStep, minorCorrectionChain, newChain, requestChanges as requestChangesRule, ROLE_LABEL, ROLE_TEAM, sendCheck, sign as signRule } from '../rules/approval'
 import { blockingCounts, canCheckPending, canComment, canTick, carryForward, commentTeam } from '../rules/comments'
-import { actAsHead, can, COVER_LABEL, headOf, headRecipient, inTeam, isSqa, memberOf, onBehalfText, TEAM_LABEL, type Check } from '../rules/permissions'
+import { actAsHead, can, COVER_LABEL, headOf, headRecipient, inTeam, isOwner, isSqa, memberOf, onBehalfText, TEAM_LABEL, type Check } from '../rules/permissions'
 import { activeChain, canGenerate, chainsOf, DOC_LABEL, docStatus, isComplete, laterTypes, PART_LABEL, PIPELINE, previousComplete, sectionPart } from '../rules/pipeline'
 import { exitCriteria, markReadyForRetest } from '../rules/testing'
 import { normalize } from '../rules/text'
@@ -62,7 +62,7 @@ export async function getDocument(pid: ID, type: DocType) {
     const counts = doc ? blockingCounts(s.comments, doc.id) : { open: 0, pending: 0 }
     const cfg = CHAIN_CONFIG[type]
     const pm = actAsHead(p, 'PM', user.id, t)
-    const pmTeam = inTeam(p, user.id, 'PM')
+    const pmTeam = inTeam(p, user.id, 'PM') || isOwner(p, user.id)
     const lockedByOther = !!lock && lock.userId !== user.id
     const scopeUndecided = !!current?.scopeCheck?.flagged && !current.scopeCheck.decision
 

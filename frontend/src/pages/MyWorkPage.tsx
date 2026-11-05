@@ -35,6 +35,7 @@ export function MyWorkPage() {
             { id: 'all', label: `Everything (${data.myTasks.length})` },
             { id: 'questions', label: `Q/A questions (${qOpen})` },
             { id: 'tests', label: `Tests (${tOpen})` },
+            ...(data.ownerCanDo.length ? [{ id: 'owner', label: `As Project Owner (${data.ownerCanDo.length})` }] : []),
           ]}
         />
       </div>
@@ -63,6 +64,26 @@ export function MyWorkPage() {
             <CircleCheck className="h-4 w-4 text-leaf" /> You are all caught up.
           </div>
         ))}
+      {tab === 'owner' && (
+        <>
+          <p className="mb-3 text-sm text-muted">Waiting for other people in projects you own. As the Project Owner you can do any of it yourself; these are not reminded.</p>
+          <ul className="divide-y divide-line/70 overflow-hidden shadow-soft rounded-2xl border border-line/70 bg-surface">
+            {groupTasks(data.ownerCanDo).map((t) => (
+              <li key={t.key}>
+                <Link to={t.ownerLink ?? t.link} className="flex items-center gap-3 px-4 py-3 hover:bg-canvas">
+                  <span className="h-2 w-2 shrink-0 rounded-full bg-ink/25" />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium">{t.body}</div>
+                    <div className="truncate text-xs text-muted">{t.count > 1 ? `${t.count} items` : `${t.waitingOnName}'s turn`}</div>
+                  </div>
+                  <span className="shrink-0 text-xs text-muted">waiting {duration(now.getTime() - new Date(t.since).getTime())}</span>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-muted" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       {tab === 'questions' && <MyQuestionsPage embedded />}
       {tab === 'tests' && <MyTestsPage embedded />}
     </div>

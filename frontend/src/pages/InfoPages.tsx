@@ -75,7 +75,7 @@ export function HowItWorksPage() {
         </Card>
         <Card title="What is real logic">
           <ul className="list-disc space-y-1 pl-5 text-sm">
-            <li>Who can do what, deputies and Away, the Owner and PM approving in a head's place, and asking for people when a step needs them.</li>
+            <li>Who can do what, deputies and Away, the Owner and PM approving in a head's place, the Project Owner's master key, and asking for people when a step needs them.</li>
             <li>The approval chain, minor correction, Request changes, re-approval in order.</li>
             <li>Comment carry-forward and Pending check.</li>
             <li>Working-hours reminder times.</li>

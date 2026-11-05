@@ -18,7 +18,7 @@ import { Markdown } from '../../components/Markdown'
 import { OpenQuestion } from '../../components/OpenQuestion'
 import { Badge, Button, Card, EmptyState, ErrorBox, Field, Guarded, Input, Loading, Modal, Note, PageHeader, Select, Table, Tabs, Td, Textarea, useTab } from '../../components/ui'
 import { useToast } from '../../components/toast'
-import { MoveDialog, NewDefectModal } from './DefectForms'
+import { MoveDialog, NewDefectModal, RecordResultModal } from './DefectForms'
 import { MissingPeople } from '../../components/People'
 
 type TData = Awaited<ReturnType<typeof api.testing.getTesting>>
@@ -267,6 +267,7 @@ function Builds({ d }: { d: TData }) {
 
 function Runs({ d }: { d: TData }) {
   const [creating, setCreating] = useState(false)
+  const [recording, setRecording] = useState<Parameters<typeof RecordResultModal>[0]['execution'] | null>(null)
   const [open, setOpen] = useState<string | null>(d.runs[0]?.id ?? null)
   const testers = d.members.filter((m) => (d.stage === 'SQA' ? m.isSqa : m.team === 'STAKEHOLDER' || m.team === 'PM'))
   const available = d.builds.filter((b) => b.available)
@@ -284,14 +285,20 @@ function Runs({ d }: { d: TData }) {
       {d.runs.map((r) => (
         <Card key={r.id} title={<button className="text-left" onClick={() => setOpen(open === r.id ? null : r.id)}>{r.name}</button>} subtitle={`Build ${r.buildVersion} · by ${r.createdByName} · ${fmtDateTime(r.createdAt)}`} actions={<span className="text-xs text-muted">{r.done}/{r.total} run · {r.pass} pass · {r.fail} fail · {r.blocked} blocked</span>} padded={open === r.id ? false : true}>
           {open === r.id ? (
-            <Table head={['Test', 'Tester', 'Result', 'Defects', 'When']}>
+            <Table head={['Test', 'Tester', 'Result', 'Defects', 'When', ...(d.perms.recordAny ? [''] : [])]}>
               {r.executions.map((e) => (
                 <tr key={e.id}>
                   <Td><span className="font-mono text-xs">{e.testKey}</span> {e.testTitle}</Td>
-                  <Td className="text-xs">{e.assigneeName}</Td>
+                  <Td className="text-xs">
+                    {e.assigneeName}
+                    {e.executedByName && <div className="text-[11px] text-muted">recorded by {e.executedByName} (Project Owner)</div>}
+                  </Td>
                   <Td><ResultChip result={e.result} />{e.blockedReason && <div className="text-[11px] text-muted">{e.blockedReason}</div>}</Td>
                   <Td className="text-xs">{e.defectKeys.join(', ')}</Td>
                   <Td className="text-xs text-muted">{fmtDateTime(e.executedAt)}</Td>
+                  {d.perms.recordAny && (
+                    <Td>{e.result === 'not_run' && <Button size="sm" onClick={() => setRecording({ id: e.id, projectId: d.project.id, stage: d.stage, testCaseId: e.testCaseId, test: d.tests.find((t) => t.id === e.testCaseId) })}>Run for {e.assigneeName.split(' ')[0]}</Button>}</Td>
+                  )}
                 </tr>
               ))}
             </Table>
@@ -301,6 +308,7 @@ function Runs({ d }: { d: TData }) {
         </Card>
       ))}
       {!d.runs.length && <EmptyState title="No runs yet">A run is one round of testing on one build. Testers find their tests in My tests.</EmptyState>}
+      {recording && <RecordResultModal execution={recording} onClose={() => setRecording(null)} />}
       <Modal open={creating} onClose={() => setCreating(false)} title="New test run" wide footer={<Button variant="primary" onClick={() => create.run(d.project.id, d.stage, { buildId: form.buildId, name: form.name, assignments: Object.entries(form.picks).filter(([, u]) => u).map(([testCaseId, userId]) => ({ testCaseId, userId })) })}>Create run</Button>}>
         <div className="grid gap-3 md:grid-cols-2">
           <Field label="Build" hint={d.stage === 'UAT' ? 'Only builds released to UAT.' : undefined}>

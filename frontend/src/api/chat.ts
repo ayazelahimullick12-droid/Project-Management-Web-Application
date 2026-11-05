@@ -215,7 +215,7 @@ export async function startRagDm(pid: ID, pastUserId: ID) {
   return act((s, _t, at) => {
     const user = me(s)
     const p = projectOf(s, pid)
-    if (!inTeam(p, user.id, 'PM')) throw new ApiError(403, 'Only the PM team can message members of similar projects.')
+    if (!inTeam(p, user.id, 'PM') && !isOwner(p, user.id)) throw new ApiError(403, 'Only the PM team can message members of similar projects.')
     const other = s.users.find((u) => u.id === pastUserId)
     if (!other || other.deactivated) fail('This person’s account is deactivated, so they cannot be messaged.')
     const existing = s.chats.find((c) => c.kind === 'rag_dm' && c.projectId === pid && c.memberIds?.includes(user.id) && c.memberIds.includes(pastUserId))
@@ -269,7 +269,9 @@ export async function setTranscription(callId: ID, on: boolean) {
     const user = me(s)
     const call = s.calls.find((c) => c.id === callId)
     if (!call || call.endedAt) fail('The call has ended.')
-    if (call.startedBy !== user.id) throw new ApiError(403, 'Only the person who started the meeting can switch transcription on or off.')
+    const chat = s.chats.find((c) => c.id === call.chatId)
+    const owner = !!chat?.projectId && isOwner(projectOf(s, chat.projectId), user.id)
+    if (call.startedBy !== user.id && !owner) throw new ApiError(403, 'Only the person who started the meeting can switch transcription on or off.')
     call.transcription = on
     s.messages.push({ id: newId('msg'), chatId: call.chatId, authorId: null, kind: 'system', body: on ? 'Transcription switched on. Everyone sees “This meeting is being transcribed”.' : 'Transcription switched off.', createdAt: at })
   })

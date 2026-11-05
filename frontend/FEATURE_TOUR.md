@@ -40,7 +40,7 @@ The three active projects have the same team, so each person has the same role e
 | Person | Role | Use them to show |
 | --- | --- | --- |
 | **Farhana Kabir** | Admin (system-wide) | Admin pages: templates, users, settings, import, AI activity, audit log; the portfolio view |
-| **Imran Chowdhury** | Project Owner of every project | Home portfolio view, new project wizard, team changes, Away, archive |
+| **Imran Chowdhury** | Project Owner of every project | Home portfolio view, starting projects, team changes, Away, archive; the **master key**: he can do anything anyone in his projects can do (Part 12) |
 | **Nusrat Jahan** | Project Manager (PM head) | Running intake, generating documents, approvals, decisions, change requests, defect triage, UAT sign-off |
 | **Sadia Islam** | Deputy PM | Acting for the PM when Nusrat is Away |
 | **Rafiq Hasan**, **Mehnaz Akter** | PM team members | Editing documents, accepting suggestions, the edit lock |
@@ -425,6 +425,7 @@ Each refusal shows the reason. Show a few:
 - When **Nusrat** triages a defect, only developers can be chosen: SQA testers cannot be assigned
   defects. Be **Shuvo** on a defect: developers cannot close it.
 - Be **Nusrat** on the **Team** page: only the Owner changes the team.
+- The other way round, the **Project Owner has a master key**: be **Imran**. His To do has **You can also do, as Project Owner** (My work → **As Project Owner** in the Full view): everything waiting for other people in his projects. He can answer any question, record any tester's result (**Run for Habib** on a test run), triage, mark fixed, close, release a build, approve or sign any step. The record says "(Project Owner)". The same checks still apply to him: for example he cannot defer a Critical defect or send a document with open comments.
 - Be **Mithila Sarker** (past project member): she has no active projects. From Field Loan she sees
   only the conversation Nusrat started, nothing else.
 

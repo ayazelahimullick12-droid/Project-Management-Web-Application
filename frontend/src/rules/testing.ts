@@ -4,8 +4,8 @@
  * Spec: SPEC_SQA_UAT.md — "Who does what", "Builds", "Defects" (status flow and other
  * outcomes), "Sign-off" (exit criteria) and "Changes during testing".
  */
-import type { Build, Defect, DefectStatus, Execution, ID, Project, Requirement, Severity, TestCase, TestListConfirmation, TestRun, TestStage } from '../types'
-import { actAsHead, isSqa, memberOf, no, yes, type Check, inTeam, membershipIn } from './permissions'
+import type { Build, CoverRole, Defect, DefectStatus, Execution, ID, Project, Requirement, Severity, TestCase, TestListConfirmation, TestRun, TestStage } from '../types'
+import { actAsHead, isOwner, isSqa, memberOf, no, yes, type Check, inTeam, membershipIn } from './permissions'
 
 /** Statuses where the defect still needs work. */
 export const UNRESOLVED: DefectStatus[] = ['New', 'Open', 'In progress', 'Fixed', 'Ready for retest', 'Reopened']
@@ -46,8 +46,9 @@ export interface DefectCtx {
   fixBuildReleased?: boolean // for SQA reopening a UAT fix: only before the build reaches UAT
 }
 
-/** Which roles the user has for this defect. */
-function actorsFor(d: Defect, ctx: DefectCtx): { actors: Actor[]; actingFor?: ID } {
+/** Which roles the user has for this defect. The Project Owner has them all (master key). */
+function actorsFor(d: Defect, ctx: DefectCtx): { actors: Actor[]; actingFor?: ID; coveredAs?: CoverRole } {
+  if (isOwner(ctx.project, ctx.userId)) return { actors: ['triager', 'assignee', 'reporter_team', 'pm', 'sqa'], coveredAs: 'OWNER' }
   const out: Actor[] = []
   let actingFor: ID | undefined
   const pm = actAsHead(ctx.project, 'PM', ctx.userId, ctx.now)
@@ -77,7 +78,7 @@ export function checkTransition(d: Defect, to: DefectStatus, ctx: DefectCtx): Ch
   if (to === 'Deferred' && ctx.blocking.includes(d.severity)) return no(`${d.severity} defects cannot be deferred. They must be fixed, rejected or turned into a change request.`)
   if (t.who.includes('sqa') && d.stage !== 'UAT') return no('Only UAT fixes are checked by SQA before release.')
   if (t.who.includes('sqa') && ctx.fixBuildReleased) return no('This fix has already been released to UAT.')
-  const { actors, actingFor } = actorsFor(d, ctx)
+  const { actors, actingFor, coveredAs } = actorsFor(d, ctx)
   if (!t.who.some((w) => actors.includes(w))) {
     const who: Record<Actor, string> = {
       triager: 'the PM or the tech head',
@@ -88,7 +89,7 @@ export function checkTransition(d: Defect, to: DefectStatus, ctx: DefectCtx): Ch
     }
     return no(`Only ${t.who.map((w) => who[w]).join(' or ')} can do this.`)
   }
-  return { ok: true, actingFor }
+  return { ok: true, actingFor, coveredAs }
 }
 
 /** The moves this user can make now (used for buttons and for the board). */
@@ -128,7 +129,7 @@ export function sqaRunCompleted(buildId: ID, runs: TestRun[], executions: Execut
 /** Release to UAT is allowed only after SQA has checked the build (SPEC_SQA_UAT.md "Builds"). */
 export function releaseCheck(args: { build: Build; project: Project; userId: ID | null; runs: TestRun[]; executions: Execution[]; defects: Defect[]; blocking: Severity[] }): Check {
   const { build } = args
-  if (!isSqa(args.project, args.userId)) return no('Only SQA testers can release a build to UAT.')
+  if (!isSqa(args.project, args.userId) && !isOwner(args.project, args.userId)) return no('Only SQA testers can release a build to UAT.')
   if (build.releasedToUatAt) return no('Already released to UAT.')
   if (!sqaRunCompleted(build.id, args.runs, args.executions)) return no('The SQA team must first complete a test run on this build.')
   const claimed = args.defects.filter((d) => build.fixesDefectIds.includes(d.id))

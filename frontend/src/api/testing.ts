@@ -11,7 +11,7 @@ import { runAiJob } from '../demo/jobs'
 import { draftTestCase, signoffParagraph, similarDefects, writeDefect as aiWriteDefect } from '../ai/agents'
 import { CHAIN_CONFIG, ROLE_LABEL } from '../rules/approval'
 import { missingPeople, testingNeeds } from '../rules/people'
-import { actAsHead, actForHead, can, headOf, headRecipient, inTeam, isDeveloper, isSqa, onBehalfText, type Check } from '../rules/permissions'
+import { actAsHead, actForHead, can, COVER_LABEL, headOf, headRecipient, inTeam, isDeveloper, isOwner, isSqa, onBehalfText, type Check } from '../rules/permissions'
 import { activeChain, chainsOf, DOC_LABEL, docStatus, previousComplete } from '../rules/pipeline'
 import { buildReportSections, reportStats } from '../rules/signoffReport'
 import { allowedTransitions, buildAvailable, canBeAssigned, checkTransition, coverage, exitCriteria, knownIssues, latestResults, markReadyForRetest, releaseCheck, requirementsFor, transitionFor, UNRESOLVED } from '../rules/testing'
@@ -25,12 +25,14 @@ const signoffType = (stage: TestStage) => (stage === 'SQA' ? 'SQA_SIGNOFF' : 'UA
 /** Who writes and runs tests in each stage. */
 function canWriteTests(p: Project, userId: ID, stage: TestStage): Check {
   if (p.status === 'archived') return { ok: false, reason: 'This project is archived, so it is read-only.' }
+  if (isOwner(p, userId)) return { ok: true } // the Project Owner's master key
   if (stage === 'SQA') return isSqa(p, userId) ? { ok: true } : { ok: false, reason: 'Only SQA testers write SQA test cases.' }
   return inTeam(p, userId, 'PM') ? { ok: true } : { ok: false, reason: 'The PM team writes UAT test cases.' }
 }
 
 function canRaise(p: Project, userId: ID, stage: TestStage): Check {
   if (p.status === 'archived') return { ok: false, reason: 'This project is archived, so it is read-only.' }
+  if (isOwner(p, userId)) return { ok: true }
   if (stage === 'SQA') return isSqa(p, userId) ? { ok: true } : { ok: false, reason: 'Only SQA testers raise SQA defects.' }
   return inTeam(p, userId, 'STAKEHOLDER') || inTeam(p, userId, 'PM') ? { ok: true } : { ok: false, reason: 'UAT defects are raised by stakeholders and the PM team.' }
 }
@@ -85,7 +87,7 @@ export async function getTesting(pid: ID, stage: TestStage) {
       })),
       runs: runs.map((r) => {
         const ex = executions.filter((e) => e.runId === r.id)
-        return { ...r, buildVersion: s.builds.find((b) => b.id === r.buildId)?.version, createdByName: nameOf(s, r.createdBy), total: ex.length, done: ex.filter((e) => e.result !== 'not_run').length, pass: ex.filter((e) => e.result === 'pass').length, fail: ex.filter((e) => e.result === 'fail').length, blocked: ex.filter((e) => e.result === 'blocked').length, executions: ex.map((e) => ({ ...e, testKey: s.testCases.find((x) => x.id === e.testCaseId)?.key, testTitle: s.testCases.find((x) => x.id === e.testCaseId)?.title, assigneeName: nameOf(s, e.assigneeId), defectKeys: s.defects.filter((d) => e.defectIds.includes(d.id)).map((d) => d.key) })) }
+        return { ...r, buildVersion: s.builds.find((b) => b.id === r.buildId)?.version, createdByName: nameOf(s, r.createdBy), total: ex.length, done: ex.filter((e) => e.result !== 'not_run').length, pass: ex.filter((e) => e.result === 'pass').length, fail: ex.filter((e) => e.result === 'fail').length, blocked: ex.filter((e) => e.result === 'blocked').length, executions: ex.map((e) => ({ ...e, testKey: s.testCases.find((x) => x.id === e.testCaseId)?.key, testTitle: s.testCases.find((x) => x.id === e.testCaseId)?.title, assigneeName: nameOf(s, e.assigneeId), executedByName: e.executedBy && e.executedBy !== e.assigneeId ? nameOf(s, e.executedBy) : undefined, defectKeys: s.defects.filter((d) => e.defectIds.includes(d.id)).map((d) => d.key) })) }
       }),
       defects: defects.map((d) => ({ ...d, reporterName: nameOf(s, d.reporterId), assigneeName: d.assigneeId ? nameOf(s, d.assigneeId) : undefined, moves: allowedTransitions(d, { ...ctxD, fixBuildReleased: !!s.builds.find((b) => b.id === d.fixedInBuildId)?.releasedToUatAt }).map((x) => ({ to: x.to, label: x.label, needs: x.needs })) })),
       criteria,
@@ -103,11 +105,13 @@ export async function getTesting(pid: ID, stage: TestStage) {
         writeTests: canWriteTests(p, user.id, stage),
         confirmList: actForHead(p, headTeam, user.id, t),
         registerBuild: p.status === 'active' && (isDeveloper(p, user.id) || actAsHead(p, 'TECH', user.id, t).ok),
-        createRun: stage === 'SQA' ? isSqa(p, user.id) : inTeam(p, user.id, 'PM'),
+        createRun: (stage === 'SQA' ? isSqa(p, user.id) : inTeam(p, user.id, 'PM')) || isOwner(p, user.id),
         raise: canRaise(p, user.id, stage),
         pm: actAsHead(p, 'PM', user.id, t).ok,
-        sqa: isSqa(p, user.id),
-        generateReport: stage === 'SQA' ? isSqa(p, user.id) : actAsHead(p, 'PM', user.id, t).ok,
+        sqa: isSqa(p, user.id) || isOwner(p, user.id),
+        generateReport: stage === 'SQA' ? isSqa(p, user.id) || isOwner(p, user.id) : actAsHead(p, 'PM', user.id, t).ok,
+        // The Project Owner can record any tester's result.
+        recordAny: p.status === 'active' && isOwner(p, user.id),
       },
       me: user.id,
     }
@@ -142,7 +146,7 @@ export async function getDefect(pid: ID, defectId: ID) {
       builds: s.builds.filter((b) => b.projectId === pid).map((b) => ({ id: b.id, version: b.version })),
       otherDefects: s.defects.filter((x) => x.projectId === pid && x.id !== d.id).map((x) => ({ id: x.id, key: x.key, title: x.title })),
       canTriage: actAsHead(p, 'PM', user.id, t).ok || actAsHead(p, 'TECH', user.id, t).ok,
-      canVerify: d.stage === 'UAT' && d.status === 'Fixed' && isSqa(p, user.id) && !fixBuild?.releasedToUatAt && d.sqaVerified?.buildId !== d.fixedInBuildId,
+      canVerify: d.stage === 'UAT' && d.status === 'Fixed' && (isSqa(p, user.id) || isOwner(p, user.id)) && !fixBuild?.releasedToUatAt && d.sqaVerified?.buildId !== d.fixedInBuildId,
       canComment: can.memberOrOwner(p, user.id).ok,
       members: p.members.map((m) => ({ id: m.userId, name: nameOf(s, m.userId) })),
       severities: SEVERITIES,
@@ -286,13 +290,13 @@ export async function verifyFix(defectId: ID, works: boolean, reason?: string) {
     const user = me(s)
     const d = s.defects.find((x) => x.id === defectId)!
     const p = projectOf(s, d.projectId)
-    if (!isSqa(p, user.id)) throw new ApiError(403, 'Only SQA testers check UAT fixes before release.')
+    if (!isSqa(p, user.id) && !isOwner(p, user.id)) throw new ApiError(403, 'Only SQA testers check UAT fixes before release.')
     if (d.stage !== 'UAT' || d.status !== 'Fixed') fail('Only UAT defects marked Fixed are checked by SQA.')
     const b = s.builds.find((x) => x.id === d.fixedInBuildId)
     if (b?.releasedToUatAt) fail('This build is already in UAT.')
     if (works) {
       d.sqaVerified = { buildId: d.fixedInBuildId!, by: user.id, at }
-      d.history.push({ by: user.id, at, text: `Fix checked by SQA (${user.name}) in build ${b?.version}` })
+      d.history.push({ by: user.id, at, text: `Fix checked by ${isSqa(p, user.id) ? `SQA (${user.name})` : `${user.name} (Project Owner)`} in build ${b?.version}` })
     } else {
       ensure(checkTransition(d, 'Reopened', { project: p, userId: user.id, now: t, blocking: s.settings.signoffBlocking, fixBuildReleased: false }))
       if (!reason?.trim()) fail('Say what still fails.')
@@ -327,7 +331,7 @@ export async function createRun(pid: ID, stage: TestStage, input: { buildId: ID;
     const user = me(s)
     const p = projectOf(s, pid)
     ensure(can.change(p))
-    if (stage === 'SQA' ? !isSqa(p, user.id) : !inTeam(p, user.id, 'PM')) throw new ApiError(403, stage === 'SQA' ? 'SQA testers create SQA runs.' : 'The PM team creates UAT runs.')
+    if (!isOwner(p, user.id) && (stage === 'SQA' ? !isSqa(p, user.id) : !inTeam(p, user.id, 'PM'))) throw new ApiError(403, stage === 'SQA' ? 'SQA testers create SQA runs.' : 'The PM team creates UAT runs.')
     if (!s.testConfirmations.some((c) => c.projectId === pid && c.stage === stage)) fail(`The ${stage} test case list must be confirmed before testing starts.`)
     const b = s.builds.find((x) => x.id === input.buildId)
     if (!b || !buildAvailable(b, stage)) fail(stage === 'UAT' ? 'This build has not been released to UAT yet.' : 'Choose a build.')
@@ -353,7 +357,8 @@ export async function recordResult(executionId: ID, input: { result: 'pass' | 'f
     if (!e) fail('Not found.')
     const p = projectOf(s, e.projectId)
     ensure(can.change(p))
-    if (e.assigneeId !== user.id) throw new ApiError(403, 'This test is assigned to someone else.')
+    const forTester = e.assigneeId !== user.id
+    if (forTester && !isOwner(p, user.id)) throw new ApiError(403, 'This test is assigned to someone else.')
     const b = s.builds.find((x) => x.id === e.buildId)!
     if (!buildAvailable(b, e.stage)) fail('This build is not available to UAT yet.')
     let defectIds = input.defectIds ?? []
@@ -368,7 +373,9 @@ export async function recordResult(executionId: ID, input: { result: 'pass' | 'f
       tc.needsReview = false
       tc.history.push({ by: user.id, at, text: 'Run again after the requirement changed' })
     }
-    audit(s, { projectId: p.id, actorId: user.id, action: 'Test result', details: `${tc?.key}: ${input.result}`, at })
+    audit(s, { projectId: p.id, actorId: user.id, actingFor: forTester ? e.assigneeId : undefined, action: 'Test result', details: `${tc?.key}: ${input.result}${forTester ? ` (Project Owner, for ${nameOf(s, e.assigneeId)})` : ''}`, at })
+    if (forTester)
+      notify(s, { to: [e.assigneeId], type: 'tests', title: `${user.name} recorded a test for you: ${tc?.key}`, body: `${p.name}: the Project Owner recorded ${input.result === 'pass' ? 'Pass' : input.result === 'fail' ? 'Fail' : 'Blocked'} for this test in your place.`, link: '/inbox/tests', projectId: p.id, at, email: false })
   })
 }
 
@@ -445,7 +452,7 @@ export async function moveDefect(defectId: ID, to: DefectStatus, input: { assign
     if (tr.needs.includes('reason') && !input.reason?.trim()) fail('A reason is required.')
     if (tr.needs.includes('original') && !input.duplicateOfId) fail('Choose the original defect.')
     const from = d.status
-    let text = `${from} → ${to} by ${user.name}${check.actingFor ? ` (for ${nameOf(s, check.actingFor)})` : ''}`
+    let text = `${from} → ${to} by ${user.name}${check.coveredAs ? ` (${COVER_LABEL[check.coveredAs]})` : check.actingFor ? ` (for ${nameOf(s, check.actingFor)})` : ''}`
     d.status = to
     d.updatedAt = at
     if (to === 'Open' && input.assigneeId) {
@@ -556,7 +563,7 @@ export async function generateReport(pid: ID, stage: TestStage) {
   const s0 = await read((s) => s)
   const user = me(s0)
   const p = projectOf(s0, pid)
-  if (stage === 'SQA' ? !isSqa(p, user.id) : !actAsHead(p, 'PM', user.id, now()).ok) throw new ApiError(403, stage === 'SQA' ? 'An SQA tester generates the SQA sign-off report.' : 'The PM generates the UAT sign-off report.')
+  if (stage === 'SQA' ? !isSqa(p, user.id) && !isOwner(p, user.id) : !actAsHead(p, 'PM', user.id, now()).ok) throw new ApiError(403, stage === 'SQA' ? 'An SQA tester generates the SQA sign-off report.' : 'The PM generates the UAT sign-off report.')
   const builds = s0.builds.filter((b) => b.projectId === pid && buildAvailable(b, stage))
   const build = builds.at(-1)
   if (!build) fail('There is no build in this stage yet.')

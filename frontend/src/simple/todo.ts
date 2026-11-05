@@ -24,6 +24,17 @@ export interface TodoItem {
   coveringFor?: string // "for Rokeya Begum (away)"
 }
 
+/** One line of the Project Owner's "You can also do" list: what it is and whose turn it is. */
+export interface OwnerItem {
+  key: string
+  title: string
+  to: string
+  projectId: string
+  projectName: string
+  whose?: string // "Rokeya Begum's turn"; empty when several people are involved
+  since: string
+}
+
 /** Next-step titles from the project summary, in plain words. */
 export function plainStep(title: string): string {
   return title
@@ -63,5 +74,19 @@ export function useTodo() {
     // Longest waiting first; items without a date at the end.
     return out.sort((a, b) => (a.since ?? '9').localeCompare(b.since ?? '9'))
   }, [dash, uid])
-  return { items, dash, isLoading }
+  // Everything waiting in projects this person owns, for someone else (a list, no reminders).
+  const ownerItems = useMemo<OwnerItem[]>(
+    () =>
+      groupTasks(dash?.ownerCanDo ?? []).map((t) => ({
+        key: t.key,
+        title: plainTask(t).title,
+        to: t.ownerLink ?? plainTask(t).to,
+        projectId: t.projectId,
+        projectName: t.projectName,
+        whose: t.count > 1 ? undefined : `${t.waitingOnName}'s turn`,
+        since: t.since,
+      })),
+    [dash],
+  )
+  return { items, ownerItems, dash, isLoading }
 }

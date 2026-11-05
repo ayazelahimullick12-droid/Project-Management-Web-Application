@@ -9,7 +9,7 @@ import { runAiJob, runJob } from '../demo/jobs'
 import { newId } from '../demo/ids'
 import { questionFor, readUpload } from '../demo/ai/agents'
 import { extractFacts, findSimilarProjects, writeQuestions, type PastProject } from '../ai/agents'
-import { actAsHead, actForHead, can, COVER_LABEL, coverers, headOf, inTeam, membershipsOf, TEAM_LABEL } from '../rules/permissions'
+import { actAsHead, actForHead, can, COVER_LABEL, coverers, deputyFor, headOf, inTeam, isOwner, membershipsOf, TEAM_LABEL } from '../rules/permissions'
 import { FACT_CONFIRMATION_NEEDS, missingPeople, peopleCheck, questionNeeds } from '../rules/people'
 import { factSheetConfirmed, isComplete, roundClosed } from '../rules/pipeline'
 import { atRoundLimit, conflicts, factFromAnswer, factRows, mergeValue, missingFor, requiredBy, roundsOf, routeTeam, settleConflict } from '../rules/qa'
@@ -24,8 +24,9 @@ export const ROUND_LABEL: Record<RoundPurpose, string> = {
   change_request: 'Change request',
 }
 
+/** The PM team's work (and the Project Owner, who may do anything in their project). */
 function isPmTeam(p: Project, userId: ID) {
-  return inTeam(p, userId, 'PM')
+  return inTeam(p, userId, 'PM') || isOwner(p, userId)
 }
 
 export async function getIntake(pid: ID) {
@@ -41,7 +42,11 @@ export async function getIntake(pid: ID) {
     const rounds = s.rounds.filter((r) => r.projectId === pid).sort((a, b) => a.startedAt.localeCompare(b.startedAt))
     const questions = s.questions
       .filter((q) => q.projectId === pid)
-      .map((q) => ({ ...q, teamLabel: TEAM_LABEL[q.team], assigneeNames: q.assigneeIds.map((id) => nameOf(s, id)), answeredByName: q.answeredBy ? nameOf(s, q.answeredBy) : undefined, mine: q.assigneeIds.includes(user.id) || q.assigneeIds.some((id) => membershipsOf(p, id).some((m) => m.isHead && actAsHead(p, m.team, user.id, t).actingFor === id)) }))
+      .map((q) => {
+        const mine = q.assigneeIds.includes(user.id) || q.assigneeIds.some((id) => membershipsOf(p, id).some((m) => m.isHead && deputyFor(p, m.team, user.id, t) === id))
+        // canAnswer: also the Project Owner, who may answer any question in their project
+        return { ...q, teamLabel: TEAM_LABEL[q.team], assigneeNames: q.assigneeIds.map((id) => nameOf(s, id)), answeredByName: q.answeredBy ? nameOf(s, q.answeredBy) : undefined, mine, canAnswer: mine || isOwner(p, user.id) }
+      })
     const run = p.intake.ragRunId ? s.ragRuns.find((r) => r.id === p.intake.ragRunId) : undefined
     const rag = pmTeam && run
       ? {
@@ -387,7 +392,7 @@ export async function myQuestions() {
         const p = projectOf(s, q.projectId)
         if (p.status !== 'active') return false
         const direct = q.assigneeIds.includes(user.id)
-        const covering = q.assigneeIds.some((id) => membershipsOf(p, id).some((m) => m.isHead && actAsHead(p, m.team, user.id, t).actingFor === id))
+        const covering = q.assigneeIds.some((id) => membershipsOf(p, id).some((m) => m.isHead && deputyFor(p, m.team, user.id, t) === id))
         return direct || covering
       })
       .map((q) => ({ ...q, open: openRounds.has(q.roundId) && !q.answeredAt, projectName: projectOf(s, q.projectId).name, teamLabel: TEAM_LABEL[q.team], answeredByName: q.answeredBy ? nameOf(s, q.answeredBy) : undefined, roundLabel: ROUND_LABEL[s.rounds.find((r) => r.id === q.roundId)?.purpose ?? 'intake'] }))
@@ -405,20 +410,21 @@ export async function answerQuestion(qid: ID, answer: { text: string; unknown: b
     const round = s.rounds.find((r) => r.id === q.roundId)
     if (round?.status !== 'open' || q.answeredAt) fail('This question is already closed.')
     let actingFor: ID | undefined
+    let coveredAs: 'OWNER' | undefined
     if (!q.assigneeIds.includes(user.id)) {
-      const covered = q.assigneeIds.find((id) => membershipsOf(p, id).some((m) => m.isHead && actAsHead(p, m.team, user.id, t).actingFor === id))
-      if (!covered) throw new ApiError(403, 'This question was routed to someone else.')
-      actingFor = covered
+      actingFor = q.assigneeIds.find((id) => membershipsOf(p, id).some((m) => m.isHead && deputyFor(p, m.team, user.id, t) === id))
+      if (!actingFor && isOwner(p, user.id)) coveredAs = 'OWNER' // the Project Owner may answer any question
+      else if (!actingFor) throw new ApiError(403, 'This question was routed to someone else.')
     }
     if (!answer.unknown && !answer.text.trim()) fail('Write an answer, or choose “Unknown”.')
-    Object.assign(q, { answer: answer.unknown ? 'Unknown' : answer.text.trim(), unknown: answer.unknown, answeredBy: user.id, actingFor, answeredAt: at } satisfies Partial<Question>)
+    Object.assign(q, { answer: answer.unknown ? 'Unknown' : answer.text.trim(), unknown: answer.unknown, answeredBy: user.id, actingFor, coveredAs, answeredAt: at } satisfies Partial<Question>)
     const def = s.factCatalog.find((d) => d.key === q.factKey) ?? { key: q.factKey, label: q.factKey, category: 'other' as const }
-    const fact = factFromAnswer(def, { text: answer.text, unknown: answer.unknown, defaultValue: q.defaultValue ?? s.factCatalog.find((d) => d.key === q.factKey)?.defaultIfUnknown, source: { type: 'answer', ref: q.id, label: `Answer from ${user.name}` }, userName: user.name })
+    const fact = factFromAnswer(def, { text: answer.text, unknown: answer.unknown, defaultValue: q.defaultValue ?? s.factCatalog.find((d) => d.key === q.factKey)?.defaultIfUnknown, source: { type: 'answer', ref: q.id, label: `Answer from ${user.name}${coveredAs ? ' (Project Owner)' : ''}` }, userName: user.name })
     const i = p.facts.findIndex((f) => f.key === q.factKey)
     if (i === -1) p.facts.push(fact)
     // A change-request answer replaces the old value; other answers can create a conflict.
     else p.facts[i] = round.purpose === 'change_request' ? { ...fact, credit: undefined } : mergeValue(p.facts[i], fact)
-    audit(s, { projectId: p.id, actorId: user.id, actingFor, action: 'Q/A answer', details: `${def.label}: ${answer.unknown ? 'Unknown (assumption)' : answer.text.slice(0, 80)}`, at })
+    audit(s, { projectId: p.id, actorId: user.id, actingFor, action: 'Q/A answer', details: `${def.label}: ${answer.unknown ? 'Unknown (assumption)' : answer.text.slice(0, 80)}${coveredAs ? ' (Project Owner, for the people it was sent to)' : ''}`, at })
     const left = s.questions.filter((x) => x.roundId === q.roundId && !x.answeredAt).length
     if (left === 0) notify(s, { to: [headOf(p, 'PM')!.userId], type: 'qa', title: 'All questions in the round are answered', body: `${p.name}: you can close the round and check again.`, link: `/projects/${p.id}/intake?tab=questions`, projectId: p.id, at, email: false })
   })

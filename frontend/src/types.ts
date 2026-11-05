@@ -161,6 +161,7 @@ export interface Question {
   defaultValue?: string
   answeredBy?: ID
   actingFor?: ID
+  coveredAs?: CoverRole // answered by the Project Owner in the assignees' place
   answeredAt?: string
 }
 

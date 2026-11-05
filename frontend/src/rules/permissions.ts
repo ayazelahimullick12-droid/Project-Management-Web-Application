@@ -12,6 +12,12 @@
  * example when the head is not available or has not been added yet (see actForHead). The record
  * always says who acted for whom.
  *
+ * The Project Owner holds a master key to their own projects: they may do anything any member of
+ * the project may do (answer questions, approve, edit, test, triage, fix, close…). Only WHO may
+ * act changes; every other check still applies to them (open comments, exit criteria, required
+ * reasons, the edit lock, an archived project being read-only). The checks below let the Owner
+ * through; actAsHead does it for every head's action.
+ *
  * One person may hold several roles in a project (for example tech head and stakeholder head).
  * The app warns about it, because that person then approves more than once (see teamWarnings).
  * So a person can have several memberships: use membershipsOf / inTeam rather than memberOf
@@ -105,21 +111,27 @@ export function memberLabel(m: Member): string {
   return 'PM team member'
 }
 
+/** The head this user is covering as their deputy (the head is Away), if any. */
+export function deputyFor(p: Project, team: Team, userId: ID | null | undefined, now: Date): ID | undefined {
+  const head = headOf(p, team)
+  return head && userId && deputyOf(p, team)?.userId === userId && isAway(p, head.userId, now) ? head.userId : undefined
+}
+
 /**
  * Can this user act as the head of `team` right now?
  * The head can, unless they are Away; while the head is Away, their deputy acts for them.
+ * The Project Owner can always, in the head's place (their master key).
  */
 export function actAsHead(p: Project, team: Team, userId: ID | null | undefined, now: Date): Check {
   const head = headOf(p, team)
+  if (head && userId === head.userId && !isAway(p, head.userId, now)) return yes
+  const coveredHead = deputyFor(p, team, userId, now)
+  if (coveredHead) return { ok: true, actingFor: coveredHead }
+  if (isOwner(p, userId)) return { ok: true, actingFor: head && head.userId !== userId ? head.userId : undefined, coveredAs: 'OWNER' }
   if (!head) return no(`This project has no ${HEAD_LABEL[team].toLowerCase()} yet.`)
   if (!userId) return no('Sign in first.')
-  if (userId === head.userId) {
-    if (isAway(p, head.userId, now)) return no('You are marked Away, so your deputy is acting for you. End your Away period to act yourself.')
-    return yes
-  }
-  const deputy = deputyOf(p, team)
-  if (deputy?.userId === userId && isAway(p, head.userId, now)) return { ok: true, actingFor: head.userId }
-  return no(`Only the ${HEAD_LABEL[team].toLowerCase()} can do this${deputy ? ' (or their deputy while they are Away)' : ''}.`)
+  if (userId === head.userId) return no('You are marked Away, so your deputy is acting for you. End your Away period to act yourself.')
+  return no(`Only the ${HEAD_LABEL[team].toLowerCase()} can do this${deputyOf(p, team) ? ' (or their deputy while they are Away)' : ''}.`)
 }
 
 export const COVER_LABEL: Record<CoverRole, string> = { OWNER: 'Project Owner', PM: 'Project Manager' }
@@ -195,7 +207,7 @@ export const can = {
   },
   pmTeam(p: Project, userId: ID | null, what = 'do this'): Check {
     if (p.status === 'archived') return no('This project is archived, so it is read-only.')
-    return inTeam(p, userId, 'PM') ? yes : no(`Only PM team members can ${what}.`)
+    return inTeam(p, userId, 'PM') || isOwner(p, userId) ? yes : no(`Only PM team members can ${what}.`)
   },
   pm(p: Project, userId: ID | null, now: Date): Check {
     if (p.status === 'archived') return no('This project is archived, so it is read-only.')

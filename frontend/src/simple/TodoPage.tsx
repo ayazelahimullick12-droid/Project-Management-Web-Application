@@ -42,7 +42,7 @@ export function TodoPage() {
   const uid = useSessionUserId()
   const navigate = useNavigate()
   const [all, setAll] = useState(false)
-  const { items, dash, isLoading } = useTodo()
+  const { items, ownerItems, dash, isLoading } = useTodo()
   const { data: me } = useApi(['whoami', uid], api.projects.whoami)
   const { data: chats } = useApi(['conversations', uid], api.chat.conversations, !!uid)
   const { data: notes } = useApi(['notifications', uid], api.notifications.myNotifications, !!uid)
@@ -71,6 +71,17 @@ export function TodoPage() {
         <Empty icon={<CircleCheck />} title="Nothing to do right now">
           We will send you an email when something needs you.
         </Empty>
+      )}
+
+      {ownerItems.length > 0 && (
+        <More label={`You can also do, as Project Owner (${ownerItems.length})`}>
+          <p className="mb-3 text-base text-muted">Waiting for other people in your projects. As the Project Owner you can do any of it yourself.</p>
+          <Rows>
+            {ownerItems.map((it) => (
+              <Row key={it.key} to={it.to} icon={<ProjectIcon id={it.projectId} name={it.projectName} size={36} />} title={it.title} subtitle={[it.projectName, it.whose, `waiting ${waited(it.since, now)}`].filter(Boolean).join(' · ')} right="Open" />
+            ))}
+          </Rows>
+        </More>
       )}
 
       {(!!chats?.unread || dash.portfolio) && (

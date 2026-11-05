@@ -54,11 +54,11 @@ function QuestionRow({ q, open }: { q: Q; open: boolean }) {
             {q.unknown ? <Badge tone="amber">Unknown → assumption</Badge> : q.answer}
             <div className="text-xs text-muted">
               {q.answeredByName}
-              {q.actingFor && ' (as deputy)'} · {fmtDateTime(q.answeredAt)}
+              {q.coveredAs ? ' (Project Owner)' : q.actingFor && ' (as deputy)'} · {fmtDateTime(q.answeredAt)}
             </div>
           </div>
         </div>
-      ) : open && q.mine ? (
+      ) : open && q.canAnswer ? (
         answering ? (
           <AnswerBox q={q} onDone={() => setAnswering(false)} />
         ) : (

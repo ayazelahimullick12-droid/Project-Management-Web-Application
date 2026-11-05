@@ -22,6 +22,7 @@ export interface WaitingItem {
   recipients: Recipient[]
   waitingOn: ID // the person responsible (the head, even when a deputy covers)
   reminders: boolean
+  ownerLink?: string // where the Project Owner does it, when `link` is the person's own inbox
 }
 
 export function waitingItems(s: DemoState, now: Date): WaitingItem[] {
@@ -63,6 +64,7 @@ export function waitingItems(s: DemoState, now: Date): WaitingItem[] {
           title: 'A Q/A question is waiting for your answer',
           body: `${p.name}: ${q.text}`,
           link: `/inbox/questions`,
+          ownerLink: `${base}/intake?tab=questions`,
           recipients: [headRecipient(p, uid, now)],
           waitingOn: uid,
           reminders: true,
@@ -108,6 +110,7 @@ export function waitingItems(s: DemoState, now: Date): WaitingItem[] {
         title: `${count} test case${count > 1 ? 's' : ''} assigned to you`,
         body: `${p.name}: ${run.name} (${run.stage}).`,
         link: `/inbox/tests`,
+        ownerLink: `${base}/testing/${run.stage}?tab=runs`,
         recipients: [{ to: userId }],
         waitingOn: userId,
         reminders: true,

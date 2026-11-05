@@ -51,8 +51,9 @@ export function commentTeam(p: Project, userId: ID): Team | 'OWNER' | undefined 
 export function canComment(p: Project, userId: ID | null, chainsForVersion: ApprovalChain[]): Check {
   if (!userId) return no('Sign in first.')
   if (p.status === 'archived') return no('This project is archived, so it is read-only.')
+  if (isOwner(p, userId)) return yes // the Project Owner's master key
   const teams = membershipsOf(p, userId).map((m) => m.team)
-  if (!teams.length) return isOwner(p, userId) ? yes : no('Only project members can comment.')
+  if (!teams.length) return no('Only project members can comment.')
   if (teams.includes('PM')) return yes
   const approvedByHeadOf = (team: string) =>
     chainsForVersion.some((ch) => ch.status !== 'cancelled' && ch.steps.some((s) => ROLE_TEAM[s.role] === team && (s.status === 'approved' || s.status === 'carried_over')))
@@ -63,7 +64,7 @@ export function canComment(p: Project, userId: ID | null, chainsForVersion: Appr
 /** Ticking a comment resolved: PM team only. */
 export function canTick(p: Project, userId: ID | null): Check {
   if (p.status === 'archived') return no('This project is archived, so it is read-only.')
-  return inTeam(p, userId, 'PM') ? yes : no('Only PM team members can resolve comments.')
+  return inTeam(p, userId, 'PM') || isOwner(p, userId) ? yes : no('Only PM team members can resolve comments.')
 }
 
 /** Confirming or reopening a Pending check comment: any member of the author's team. */
@@ -72,7 +73,7 @@ export function canCheckPending(p: Project, userId: ID | null, comment: Comment)
   if (comment.status !== 'pending_check') return no('This comment is not pending check.')
   if (!userId) return no('Sign in first.')
   const teams: string[] = membershipsOf(p, userId).map((m) => m.team)
-  if (userId === comment.authorId || teams.includes(comment.authorTeam) || (comment.authorTeam === 'OWNER' && isOwner(p, userId))) return yes
+  if (userId === comment.authorId || teams.includes(comment.authorTeam) || isOwner(p, userId)) return yes
   return no('Only members of the comment author’s team can confirm or reopen it.')
 }
 

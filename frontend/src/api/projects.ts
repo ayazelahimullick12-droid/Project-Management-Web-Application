@@ -205,12 +205,27 @@ export interface Dashboard {
   archived: ProjectSummary[]
   finished: ProjectSummary[]
   myTasks: (WaitingItem & { projectName: string; waitingOnName: string })[]
+  ownerCanDo: (WaitingItem & { projectName: string; waitingOnName: string })[] // waiting for others in projects this person owns
   stalled: (WaitingItem & { projectName: string; waitingOnName: string })[]
   portfolio: boolean // Owner or Admin
   kpis: { inReview: number; questionsOpen: number; defectsOpen: number; criticalDefects: number; decisionsPending: number }
   pipeline: { stage: string; label: string; count: number }[]
   activity: { id: ID; actorId?: ID | null; actorName: string; action: string; details: string; projectId?: ID; projectName?: string; createdAt: string }[]
   activityByDay: { day: string; count: number }[]
+}
+
+/**
+ * Everything waiting in the projects this person owns that is not addressed to them. The Project
+ * Owner may do any of it (master key). Shown as a list only: no notifications or reminders.
+ * A question sent to a whole team is listed once.
+ */
+function ownerCanDo<T extends WaitingItem>(items: T[], owned: Set<ID>, userId: ID): T[] {
+  const seen = new Set<string>()
+  return items.filter((i) => {
+    if (!owned.has(i.projectId) || i.recipients.some((r) => r.to === userId)) return false
+    const k = i.type === 'question' ? i.key.split(':').slice(0, 2).join(':') : i.key
+    return !seen.has(k) && !!seen.add(k)
+  })
 }
 
 export async function dashboard(): Promise<Dashboard> {
@@ -228,6 +243,7 @@ export async function dashboard(): Promise<Dashboard> {
       archived: all.filter((x) => x.project.status === 'archived'),
       finished: all.filter((x) => x.project.finished),
       myTasks: items.filter((i) => i.recipients.some((r) => r.to === user.id)),
+      ownerCanDo: ownerCanDo(items, new Set(activeSummaries.filter((x) => x.project.ownerId === user.id).map((x) => x.project.id)), user.id),
       stalled: portfolio ? items.filter((i) => visibleIds.has(i.projectId) && i.reminders) : [],
       portfolio,
       kpis: {
