@@ -22,7 +22,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       <div className="fixed top-4 left-1/2 z-[100] flex -translate-x-1/2 flex-col items-center gap-2 no-print">
         {items.map((t) => (
-          <div key={t.id} className={`flex max-w-xl items-start gap-2.5 rounded-xl bg-surface px-4 py-3 text-sm shadow-xl ring-1 ${t.kind === 'ok' ? 'ring-line' : 'ring-red-200'}`} role="status">
+          <div key={t.id} className={`glass-strong flex max-w-xl items-start gap-2.5 rounded-[24px] px-5 py-3 text-sm ${t.kind === 'ok' ? '' : 'text-red-800 dark:text-red-200'}`} role="status">
             {t.kind === 'ok' ? <CircleCheck className="mt-0.5 h-4 w-4 shrink-0 text-leaf" /> : <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />}
             <span>{t.text}</span>
             <button className="ml-2 opacity-60 hover:opacity-100" onClick={() => setItems((x) => x.filter((y) => y.id !== t.id))} aria-label="Close">

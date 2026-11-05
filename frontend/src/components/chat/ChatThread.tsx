@@ -252,7 +252,7 @@ function Reactions({ m, onReact, align }: { m: Msg; onReact: (emoji: string) => 
 
 function HoverBar({ onReact, onDecision, className }: { onReact: (emoji: string) => void; onDecision?: () => void; className?: string }) {
   return (
-    <div className={clsx('z-10 hidden items-center gap-0.5 rounded-lg bg-surface p-0.5 shadow-md ring-1 ring-line group-hover:flex', className)}>
+    <div className={clsx('glass-strong z-10 hidden items-center gap-0.5 rounded-full p-0.5 group-hover:flex', className)}>
       {QUICK_REACTIONS.map((e) => (
         <button key={e} onClick={() => onReact(e)} className="rounded-md px-1.5 py-0.5 text-sm hover:bg-ink/5" title={`React ${e}`}>
           {e}
@@ -343,7 +343,7 @@ function Composer({ chatId, data, compact }: { chatId: string; data: ChatData; c
   return (
     <div className={clsx('relative', compact ? 'p-2' : 'px-4 pt-2 pb-4')}>
       {suggestions.length > 0 && (
-        <div className="absolute bottom-full left-3 z-20 mb-1 w-64 rounded-xl bg-surface p-1 shadow-xl ring-1 ring-line">
+        <div className="glass-strong absolute bottom-full left-3 z-20 mb-1 w-64 rounded-2xl p-1">
           <div className="px-2 py-1 text-[11px] text-muted">Mention someone</div>
           {suggestions.map((m, i) => (
             <button key={m.id} onMouseDown={(e) => e.preventDefault()} onClick={() => mention(m.name)} className={clsx('flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm', i === pick ? 'bg-brand-soft' : 'hover:bg-canvas')}>
@@ -354,7 +354,7 @@ function Composer({ chatId, data, compact }: { chatId: string; data: ChatData; c
           ))}
         </div>
       )}
-      <div className="rounded-xl bg-surface ring-1 ring-line transition focus-within:ring-2 focus-within:ring-brand/60">
+      <div className="rounded-3xl bg-surface ring-1 ring-line transition focus-within:ring-2 focus-within:ring-brand/60">
         <textarea
           ref={area}
           rows={1}
@@ -578,7 +578,7 @@ export function ChatThread({ chatId, data, compact, active = true, header }: { c
         {!atBottom && (
           <button
             onClick={() => scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: 'smooth' })}
-            className="sticky bottom-2 left-full mr-3 ml-auto flex h-8 w-8 items-center justify-center rounded-full bg-surface shadow-md ring-1 ring-line"
+            className="glass-strong sticky bottom-2 left-full mr-3 ml-auto flex h-8 w-8 items-center justify-center rounded-full"
             title="Jump to the newest message"
           >
             <ChevronDown className="h-4 w-4" />

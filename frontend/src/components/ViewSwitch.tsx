@@ -15,7 +15,7 @@ export function ViewSwitch({ className, compact }: { className?: string; compact
     { id: 'full', label: 'Full', hint: 'Full view: every tool on screen', icon: <LayoutGrid className="h-3.5 w-3.5" /> },
   ] as const
   return (
-    <div role="radiogroup" aria-label="Choose the view" className={clsx('inline-flex shrink-0 rounded-lg bg-ink/[0.06] p-0.5', className)}>
+    <div role="radiogroup" aria-label="Choose the view" className={clsx('inline-flex shrink-0 rounded-full bg-canvas p-1', className)}>
       {options.map((o) => (
         <button
           key={o.id}
@@ -23,7 +23,7 @@ export function ViewSwitch({ className, compact }: { className?: string; compact
           aria-checked={view === o.id}
           title={o.hint}
           onClick={() => setPref('view', o.id)}
-          className={clsx('flex items-center gap-1.5 rounded-md font-medium transition', compact ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-sm', view === o.id ? 'bg-surface text-ink shadow-sm dark:bg-ink/15' : 'text-muted hover:text-ink')}
+          className={clsx('flex items-center gap-1.5 rounded-full font-medium transition', compact ? 'px-2.5 py-1 text-xs' : 'px-3.5 py-1.5 text-sm', view === o.id ? 'bg-paper text-ink shadow-sm dark:bg-white/15' : 'text-muted hover:text-ink')}
         >
           {o.icon}
           {o.label}

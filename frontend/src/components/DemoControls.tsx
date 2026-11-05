@@ -74,7 +74,7 @@ export function DemoControls() {
       <div className="mb-1 text-xs font-medium">Speed of the simulated steps <span className="font-normal text-muted">(file reading, call transcripts)</span></div>
       <div className="mb-3 flex gap-1.5">
         {(['normal', 'fast', 'instant'] as const).map((sp) => (
-          <button key={sp} onClick={() => speed.run(sp)} className={clsx('rounded-lg px-2 py-1 text-xs', info?.aiSpeed === sp ? 'bg-ink text-canvas' : 'bg-canvas hover:bg-ink/10')}>
+          <button key={sp} onClick={() => speed.run(sp)} className={clsx('rounded-lg px-2 py-1 text-xs', info?.aiSpeed === sp ? 'bg-ink text-paper' : 'bg-canvas hover:bg-ink/10')}>
             <Zap className="mr-1 inline h-3 w-3" />
             {sp}
           </button>

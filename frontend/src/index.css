@@ -7,16 +7,74 @@
 :root {
   --brand-primary: #D10074;
   --brand-accent: #EC008C;
-  --brand-primary-soft: #FCE7F3;
+  --brand-primary-soft: rgb(209 0 116 / 0.10);
   --brand-ink: #27281C;
   --brand-green: #008945;
-  --brand-green-soft: #E6F4EC;
-  --brand-canvas: #F5F5F3;
-  --surface: #FFFFFF;
-  --surface-2: #FAFAF8;
-  --brand-line: #E6E6E1;
+  --brand-green-soft: rgb(0 137 69 / 0.11);
+  --brand-canvas: rgb(120 120 128 / 0.10);
+  --surface: rgb(255 255 255 / 0.66);
+  --surface-2: rgb(255 255 255 / 0.4);
+  --brand-line: rgb(60 60 67 / 0.13);
   --brand-muted: #6B6C63;
+  --paper: #FFFFFF;
   --brand-font: "Inter Variable", "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  /*
+   * Glass materials (like iOS and macOS). glass: panels and cards; glass-strong: menus, dialogs
+   * and bars that float over other content; control: buttons and fields.
+   */
+  --glass-bg: rgb(255 255 255 / 0.58);
+  --glass-strong-bg: rgb(250 250 252 / 0.8);
+  --glass-control-bg: rgb(255 255 255 / 0.62);
+  --glass-border: rgb(255 255 255 / 0.75);
+  --glass-edge: rgb(15 15 30 / 0.07);
+  --glass-highlight: inset 0 1px 0 rgb(255 255 255 / 0.9);
+  --glass-shadow: 0 1px 2px rgb(20 10 40 / 0.04), 0 10px 32px -14px rgb(40 20 80 / 0.22);
+  --glass-strong-shadow: 0 2px 6px rgb(20 10 40 / 0.06), 0 24px 60px -18px rgb(40 20 80 / 0.35);
+  --glass-blur: 22px;
+  --wallpaper:
+    radial-gradient(1100px 760px at -5% -10%, rgb(236 0 140 / 0.17), transparent 62%),
+    radial-gradient(1000px 720px at 105% -5%, rgb(124 58 237 / 0.15), transparent 60%),
+    radial-gradient(900px 760px at 95% 105%, rgb(14 165 233 / 0.14), transparent 60%),
+    radial-gradient(900px 700px at 0% 100%, rgb(0 137 69 / 0.10), transparent 60%),
+    linear-gradient(180deg, #F6F5FA, #EEEEF4);
+}
+
+.dark {
+  --glass-bg: rgb(38 38 44 / 0.5);
+  --glass-strong-bg: rgb(28 28 34 / 0.82);
+  --glass-control-bg: rgb(255 255 255 / 0.08);
+  --glass-border: rgb(255 255 255 / 0.11);
+  --glass-edge: rgb(0 0 0 / 0.45);
+  --glass-highlight: inset 0 1px 0 rgb(255 255 255 / 0.07);
+  --glass-shadow: 0 10px 32px -14px rgb(0 0 0 / 0.7);
+  --glass-strong-shadow: 0 24px 60px -18px rgb(0 0 0 / 0.85);
+  --wallpaper:
+    radial-gradient(1100px 760px at -5% -10%, rgb(236 0 140 / 0.22), transparent 62%),
+    radial-gradient(1000px 720px at 105% -5%, rgb(124 58 237 / 0.22), transparent 60%),
+    radial-gradient(900px 760px at 95% 105%, rgb(14 165 233 / 0.16), transparent 60%),
+    radial-gradient(900px 700px at 0% 100%, rgb(0 137 69 / 0.12), transparent 60%),
+    linear-gradient(180deg, #0E0D14, #08080C);
+}
+
+/*
+ * "Reduce transparency" (Look: Solid in the profile menu, or the computer's own setting): solid
+ * panels on a plain grey page, no blur. Easier to read for some people. The "html" in the
+ * selectors makes these win over the colours written at startup (src/theme/brand.ts).
+ */
+html.reduce-transparency {
+  --glass-bg: var(--paper);
+  --glass-strong-bg: var(--paper);
+  --glass-control-bg: var(--paper);
+  --surface: var(--paper);
+  --glass-border: rgb(60 60 67 / 0.14);
+  --glass-blur: 0px;
+  --wallpaper: linear-gradient(#F2F2F7, #F2F2F7);
+}
+html.reduce-transparency.dark { --glass-border: rgb(255 255 255 / 0.1); --wallpaper: linear-gradient(#0B0B10, #0B0B10); }
+@media (prefers-reduced-transparency: reduce) {
+  html:root { --glass-blur: 0px; --glass-bg: var(--paper); --glass-strong-bg: var(--paper); --glass-control-bg: var(--paper); --surface: var(--paper); --wallpaper: linear-gradient(#F2F2F7, #F2F2F7); }
+  html:root.dark { --wallpaper: linear-gradient(#0B0B10, #0B0B10); }
 }
 
 @theme inline {
@@ -31,6 +89,7 @@
   --color-surface-2: var(--surface-2);
   --color-line: var(--brand-line);
   --color-muted: var(--brand-muted);
+  --color-paper: var(--paper);
   --font-sans: var(--brand-font);
 }
 
@@ -44,9 +103,9 @@
   --color-red-50: rgb(239 68 68 / 0.12); --color-red-100: rgb(239 68 68 / 0.18); --color-red-200: rgb(239 68 68 / 0.3); --color-red-300: rgb(239 68 68 / 0.45);
   --color-red-600: #f87171; --color-red-700: #fca5a5; --color-red-800: #fca5a5; --color-red-900: #fecaca;
   --color-amber-50: rgb(245 158 11 / 0.12); --color-amber-100: rgb(245 158 11 / 0.18); --color-amber-200: rgb(245 158 11 / 0.3);
-  --color-amber-600: #fbbf24; --color-amber-700: #fcd34d; --color-amber-800: #fcd34d; --color-amber-900: #fde68a;
+  --color-amber-600: #fbbf24; --color-amber-700: #fcd34d; --color-amber-800: #fcd34d; --color-amber-900: #fde68a; --color-amber-950: #fef3c7;
   --color-sky-50: rgb(14 165 233 / 0.12); --color-sky-100: rgb(14 165 233 / 0.18); --color-sky-200: rgb(14 165 233 / 0.3);
-  --color-sky-600: #38bdf8; --color-sky-700: #7dd3fc; --color-sky-800: #7dd3fc; --color-sky-900: #bae6fd;
+  --color-sky-600: #38bdf8; --color-sky-700: #7dd3fc; --color-sky-800: #7dd3fc; --color-sky-900: #bae6fd; --color-sky-950: #e0f2fe;
   --color-violet-50: rgb(139 92 246 / 0.14); --color-violet-100: rgb(139 92 246 / 0.2); --color-violet-200: rgb(139 92 246 / 0.32);
   --color-violet-600: #a78bfa; --color-violet-700: #c4b5fd; --color-violet-800: #c4b5fd; --color-violet-900: #ddd6fe; --color-violet-950: #ede9fe;
   --color-green-50: rgb(34 197 94 / 0.12); --color-green-200: rgb(34 197 94 / 0.3); --color-green-300: #86efac;
@@ -57,7 +116,8 @@
 html, body, #root { height: 100%; }
 body {
   margin: 0;
-  background: var(--brand-canvas);
+  background: var(--wallpaper);
+  background-attachment: fixed;
   color: var(--brand-ink);
   font-family: var(--brand-font);
   font-feature-settings: "cv11", "ss01";
@@ -68,9 +128,44 @@ body {
 /* Page titles: sentence case, tight tracking, like most current work apps */
 .page-title { font-weight: 650; letter-spacing: -0.02em; }
 
-/* Soft elevation used by cards and panels */
-.shadow-soft { box-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 4px 16px -8px rgb(0 0 0 / 0.08); }
-.dark .shadow-soft { box-shadow: 0 0 0 1px rgb(255 255 255 / 0.02); }
+/*
+ * Glass materials. These rules are unlayered, so they win over Tailwind's bg-, border- and
+ * shadow- classes on the same element. "shadow-soft" (cards and panels) is the glass material.
+ */
+.glass, .shadow-soft {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight), 0 0 0 0.5px var(--glass-edge), var(--glass-shadow);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(170%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(170%);
+}
+.glass-strong {
+  background: var(--glass-strong-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight), 0 0 0 0.5px var(--glass-edge), var(--glass-strong-shadow);
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 1.4)) saturate(180%);
+  backdrop-filter: blur(calc(var(--glass-blur) * 1.4)) saturate(180%);
+}
+.glass-control {
+  background: var(--glass-control-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight), 0 0 0 0.5px var(--glass-edge), 0 1px 3px rgb(20 10 40 / 0.06);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  backdrop-filter: blur(12px) saturate(160%);
+}
+/* A brand-coloured button with a soft top light, like iOS. */
+.glass-tint {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--brand-accent) 92%, white), var(--brand-primary));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35), 0 6px 16px -6px color-mix(in srgb, var(--brand-primary) 70%, transparent);
+}
+.glass-tint-green {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--brand-green) 85%, white), var(--brand-green));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.3), 0 6px 16px -6px color-mix(in srgb, var(--brand-green) 70%, transparent);
+}
+/* The overlay behind dialogs */
+.glass-scrim { background: rgb(15 10 30 / 0.22); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.dark .glass-scrim { background: rgb(0 0 0 / 0.45); }
+.reduce-transparency .glass-scrim { -webkit-backdrop-filter: none; backdrop-filter: none; }
 
 /* AI accent: a soft violet-to-magenta gradient */
 .ai-gradient { background: linear-gradient(135deg, rgb(139 92 246 / 0.12), rgb(236 0 140 / 0.10)); }

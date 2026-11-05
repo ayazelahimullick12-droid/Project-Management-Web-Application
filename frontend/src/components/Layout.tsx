@@ -77,7 +77,7 @@ function NotificationBell({ align = 'left' }: { align?: 'left' | 'right' }) {
       button={() => (
         <span className="relative rounded-lg p-1.5 text-ink/70 hover:bg-ink/5 hover:text-ink" title="Notifications">
           <Bell className="h-[18px] w-[18px]" />
-          {unread > 0 && <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-brand ring-2 ring-canvas" />}
+          {unread > 0 && <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-brand ring-2 ring-paper" />}
         </span>
       )}
     >
@@ -168,7 +168,7 @@ function UserMenu() {
 // ─── Sidebar ────────────────────────────────────────────────────────────
 
 const itemCls = (active: boolean, indent?: boolean) =>
-  clsx('flex w-full items-center gap-2.5 rounded-lg py-1.5 text-[13px] transition', indent ? 'pr-2 pl-9' : 'px-2.5', active ? 'bg-surface font-medium text-ink shadow-xs ring-1 ring-line/80 dark:bg-ink/10 dark:ring-transparent' : 'text-ink/75 hover:bg-ink/[0.045] hover:text-ink')
+  clsx('flex w-full items-center gap-2.5 rounded-xl py-1.5 text-[13px] transition', indent ? 'pr-2 pl-9' : 'px-2.5', active ? 'bg-paper/85 font-medium text-ink shadow-sm dark:bg-white/12' : 'text-ink/75 hover:bg-canvas hover:text-ink')
 
 function Count({ n }: { n?: number }) {
   return n ? <span className="min-w-5 rounded-full bg-brand px-1.5 text-center text-[10px] leading-4 font-semibold text-white">{n}</span> : null
@@ -253,10 +253,10 @@ function Sidebar({ pid, onSearch }: { pid?: string; onSearch: () => void }) {
         </Link>
       </div>
       <div className="mb-3 flex items-center gap-1">
-        <button onClick={onSearch} className="flex min-w-0 flex-1 items-center gap-2 rounded-lg bg-surface px-2.5 py-1.5 text-[13px] text-muted shadow-xs ring-1 ring-line hover:text-ink dark:bg-ink/5 dark:ring-transparent">
+        <button onClick={onSearch} className="flex min-w-0 flex-1 items-center gap-2 rounded-full bg-canvas px-3 py-1.5 text-[13px] text-muted hover:text-ink">
           <Search className="h-4 w-4 shrink-0" />
           <span className="flex-1 text-left">Search</span>
-          <kbd className="rounded-md bg-canvas px-1.5 text-[10px] ring-1 ring-line">Ctrl K</kbd>
+          <kbd className="rounded-md bg-paper/80 px-1.5 text-[10px] dark:bg-white/10">Ctrl K</kbd>
         </button>
         <ThemeToggle />
         <NotificationBell />
@@ -360,28 +360,31 @@ export function AppShell() {
   const pid = match?.params.pid !== 'new' ? match?.params.pid : undefined
   const full = location.pathname.startsWith('/messages') // the Messages page fills the panel
   return (
-    <div className="flex h-screen overflow-hidden bg-canvas">
-      <aside className="hidden w-64 shrink-0 px-3 py-3 md:block no-print">
-        <Sidebar pid={pid} onSearch={() => setPalette(true)} />
+    <div className="flex h-screen overflow-hidden">
+      <aside className="hidden w-[17rem] shrink-0 p-2.5 pr-0 md:block no-print">
+        <div className="glass h-full rounded-[26px] px-3 py-3">
+          <Sidebar pid={pid} onSearch={() => setPalette(true)} />
+        </div>
       </aside>
       {menu && (
-        <div className="fixed inset-0 z-50 bg-black/30 md:hidden" onClick={() => setMenu(false)}>
-          <aside className="h-full w-72 bg-canvas px-3 py-3 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="glass-scrim fixed inset-0 z-50 md:hidden" onClick={() => setMenu(false)}>
+          <aside className="glass-strong h-full w-72 rounded-r-[26px] px-3 py-3" onClick={(e) => e.stopPropagation()}>
             <Sidebar pid={pid} onSearch={() => setPalette(true)} />
           </aside>
         </div>
       )}
-      <div className="flex min-w-0 flex-1 flex-col md:py-2 md:pr-2">
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-surface md:rounded-2xl md:border md:border-line/70 md:shadow-soft">
-          <header className="flex h-12 shrink-0 items-center gap-2 border-b border-line px-3 md:hidden no-print">
-            <button className="rounded-lg p-1.5 hover:bg-ink/5" onClick={() => setMenu(true)} aria-label="Menu">
+      <div className="flex min-w-0 flex-1 flex-col md:p-2.5">
+        {/* Pages sit on the background with glass cards; only the Messages page gets a glass panel. */}
+        <div className={clsx('flex min-h-0 flex-1 flex-col overflow-hidden', full && 'md:shadow-soft md:rounded-[26px]')}>
+          <header className="glass-strong mx-2 mt-2 flex h-12 shrink-0 items-center gap-2 rounded-full px-3 md:hidden no-print">
+            <button className="rounded-full p-1.5 hover:bg-canvas" onClick={() => setMenu(true)} aria-label="Menu">
               {menu ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
             <Link to="/" className="flex flex-1 items-center gap-2">
               <img src="/favicon.svg" alt="" className="h-6 w-6" />
               <span className="text-sm font-semibold">{brand.appName}</span>
             </Link>
-            <button className="rounded-lg p-1.5 hover:bg-ink/5" onClick={() => setPalette(true)} aria-label="Search">
+            <button className="rounded-full p-1.5 hover:bg-canvas" onClick={() => setPalette(true)} aria-label="Search">
               <Search className="h-5 w-5" />
             </button>
             <ThemeToggle />

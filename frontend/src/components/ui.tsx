@@ -1,6 +1,8 @@
 /**
  * Basic building blocks used on every screen: buttons, badges, cards, tabs, modals, form fields.
  * Styling uses Tailwind classes; colours come from the BRAC tokens in src/theme/brand.ts.
+ * The glass look (pill buttons, translucent cards, frosted menus) comes from the glass classes in
+ * src/index.css.
  */
 import { clsx } from 'clsx'
 import { X } from 'lucide-react'
@@ -14,14 +16,14 @@ import { initials } from './format'
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success'
 
 const VARIANT: Record<Variant, string> = {
-  primary: 'bg-brand text-white shadow-sm shadow-brand/25 hover:brightness-110 disabled:bg-brand/40 disabled:shadow-none',
-  secondary: 'bg-surface text-ink shadow-xs ring-1 ring-line hover:bg-canvas disabled:text-muted',
-  ghost: 'text-ink hover:bg-ink/5 disabled:text-muted',
-  danger: 'bg-surface text-red-700 ring-1 ring-red-200 hover:bg-red-50 disabled:text-red-300',
-  success: 'bg-leaf text-white shadow-sm shadow-leaf/25 hover:brightness-110 disabled:bg-leaf/40 disabled:shadow-none',
+  primary: 'glass-tint text-white hover:brightness-110 disabled:opacity-45 disabled:hover:brightness-100',
+  secondary: 'glass-control text-ink hover:brightness-[1.03] dark:hover:bg-white/12 disabled:text-muted',
+  ghost: 'text-ink hover:bg-canvas disabled:text-muted',
+  danger: 'glass-control text-red-700 hover:bg-red-50 disabled:text-red-300',
+  success: 'glass-tint-green text-white hover:brightness-110 disabled:opacity-45 disabled:hover:brightness-100',
 }
 
-const SIZE = { sm: 'h-7 px-2.5 text-xs', md: 'h-9 px-3.5 text-sm', lg: 'h-12 px-6 text-base' } as const
+const SIZE = { sm: 'h-7 px-3 text-xs', md: 'h-9 px-4 text-sm', lg: 'h-12 px-6 text-base' } as const
 
 export function Button({ variant = 'secondary', size = 'md', className, why, children, ...rest }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: keyof typeof SIZE; why?: string }) {
   return (
@@ -29,7 +31,7 @@ export function Button({ variant = 'secondary', size = 'md', className, why, chi
       type="button"
       title={rest.disabled && why ? why : rest.title}
       className={clsx(
-        'inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition active:scale-[0.98] disabled:cursor-not-allowed disabled:active:scale-100',
+        'inline-flex items-center justify-center gap-1.5 rounded-full font-medium transition active:scale-[0.97] disabled:cursor-not-allowed disabled:active:scale-100',
         SIZE[size],
         VARIANT[variant],
         className,
@@ -56,7 +58,7 @@ export function Guarded({ check, children, ...rest }: Omit<Parameters<typeof But
 
 export function LinkButton({ to, children, variant = 'secondary', size = 'md', className }: { to: string; children: ReactNode; variant?: Variant; size?: keyof typeof SIZE; className?: string }) {
   return (
-    <Link to={to} className={clsx('inline-flex items-center justify-center gap-1.5 rounded-lg font-medium transition active:scale-[0.98]', SIZE[size], VARIANT[variant], className)}>
+    <Link to={to} className={clsx('inline-flex items-center justify-center gap-1.5 rounded-full font-medium transition active:scale-[0.97]', SIZE[size], VARIANT[variant], className)}>
       {children}
     </Link>
   )
@@ -74,7 +76,7 @@ const TONE: Record<Tone, string> = {
   red: 'bg-red-50 text-red-700 ring-transparent',
   blue: 'bg-sky-50 text-sky-800 ring-transparent',
   violet: 'bg-violet-50 text-violet-700 ring-transparent',
-  dark: 'bg-ink text-canvas ring-ink',
+  dark: 'bg-ink text-paper ring-ink',
 }
 
 const DOT: Record<Tone, string> = {
@@ -110,7 +112,7 @@ export function Badge({ tone = 'gray', children, className, title }: { tone?: To
 
 export function Card({ title, actions, children, className, padded = true, subtitle }: { title?: ReactNode; subtitle?: ReactNode; actions?: ReactNode; children?: ReactNode; className?: string; padded?: boolean }) {
   return (
-    <section className={clsx('shadow-soft rounded-2xl border border-line/70 bg-surface', className)}>
+    <section className={clsx('shadow-soft rounded-3xl', className)}>
       {(title || actions) && (
         <header className={clsx('flex flex-wrap items-start justify-between gap-2 px-5 pt-4', padded ? 'pb-0' : 'border-b border-line/70 pb-3')}>
           <div>
@@ -140,7 +142,7 @@ export function PageHeader({ title, subtitle, actions, eyebrow }: { title: React
 
 export function EmptyState({ title, children, icon }: { title: string; children?: ReactNode; icon?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-line bg-surface/60 px-6 py-10 text-center">
+    <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-line bg-surface-2 px-6 py-10 text-center">
       {icon && <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-ink/5 text-muted">{icon}</div>}
       <div className="text-sm font-medium">{title}</div>
       {children && <div className="mt-1 max-w-md text-sm text-muted">{children}</div>}
@@ -174,7 +176,7 @@ export function ErrorBox({ error }: { error: unknown }) {
 
 export function Note({ tone = 'gray', children, icon, className }: { tone?: Tone; children: ReactNode; icon?: ReactNode; className?: string }) {
   return (
-    <div className={clsx('flex items-start gap-2 rounded-xl px-3.5 py-2.5 text-sm ring-1 ring-inset', TONE[tone], className)}>
+    <div className={clsx('flex items-start gap-2 rounded-2xl px-3.5 py-2.5 text-sm ring-1 ring-inset', TONE[tone], className)}>
       {icon && <span className="mt-0.5 shrink-0">{icon}</span>}
       <div className="min-w-0 flex-1">{children}</div>
     </div>
@@ -197,7 +199,7 @@ export function Avatar({ name, id, size = 28, status, className }: { name: strin
       <span className="inline-flex items-center justify-center rounded-full font-semibold text-white" style={{ width: size, height: size, fontSize: size * 0.38, background: `linear-gradient(135deg, ${c}, ${c}cc)` }}>
         {initials(name)}
       </span>
-      {status && <span className={clsx('absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-surface', status === 'online' ? 'bg-leaf' : status === 'away' ? 'bg-amber-500' : 'bg-gray-400')} />}
+      {status && <span className={clsx('absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-paper', status === 'online' ? 'bg-leaf' : status === 'away' ? 'bg-amber-500' : 'bg-gray-400')} />}
     </span>
   )
 }
@@ -207,12 +209,12 @@ export function AvatarStack({ people, size = 24, max = 4 }: { people: { id: stri
   return (
     <span className="flex items-center">
       {people.slice(0, max).map((p, i) => (
-        <span key={p.id} className={clsx('rounded-full ring-2 ring-surface', i > 0 && '-ml-1.5')}>
+        <span key={p.id} className={clsx('rounded-full ring-2 ring-paper', i > 0 && '-ml-1.5')}>
           <Avatar name={p.name} id={p.id} size={size} />
         </span>
       ))}
       {people.length > max && (
-        <span className="-ml-1.5 inline-flex items-center justify-center rounded-full bg-canvas text-[10px] font-medium text-muted ring-2 ring-surface" style={{ width: size, height: size }}>
+        <span className="-ml-1.5 inline-flex items-center justify-center rounded-full bg-paper text-[10px] font-medium text-muted ring-2 ring-paper" style={{ width: size, height: size }}>
           +{people.length - max}
         </span>
       )}
@@ -224,7 +226,7 @@ export function AvatarStack({ people, size = 24, max = 4 }: { people: { id: stri
 export function ProjectIcon({ id, name, size = 28 }: { id: string; name: string; size?: number }) {
   const c = colorFor(id)
   return (
-    <span className="inline-flex shrink-0 items-center justify-center rounded-lg font-semibold" style={{ width: size, height: size, fontSize: size * 0.42, background: `${c}22`, color: c }}>
+    <span className="inline-flex shrink-0 items-center justify-center rounded-[30%] font-semibold" style={{ width: size, height: size, fontSize: size * 0.42, background: `linear-gradient(160deg, ${c}2e, ${c}14)`, color: c, boxShadow: `inset 0 0 0 1px ${c}26` }}>
       {name.trim()[0]?.toUpperCase()}
     </span>
   )
@@ -260,11 +262,11 @@ export function useTab(defaultTab: string): [string, (t: string) => void] {
 
 export function Tabs({ tabs, value, onChange }: { tabs: { id: string; label: ReactNode; hidden?: boolean }[]; value: string; onChange: (id: string) => void }) {
   return (
-    <div className="mb-4 flex flex-wrap gap-1 border-b border-line">
+    <div className="glass-control mb-4 flex w-fit max-w-full flex-wrap gap-0.5 rounded-[20px] p-1">
       {tabs
         .filter((t) => !t.hidden)
         .map((t) => (
-          <button key={t.id} type="button" onClick={() => onChange(t.id)} className={clsx('-mb-px border-b-2 px-3 py-2 text-sm', value === t.id ? 'border-brand font-medium text-ink' : 'border-transparent text-muted hover:text-ink')}>
+          <button key={t.id} type="button" onClick={() => onChange(t.id)} className={clsx('rounded-full px-3.5 py-1.5 text-sm transition', value === t.id ? 'bg-paper font-medium text-ink shadow-sm dark:bg-white/15' : 'text-muted hover:text-ink')}>
             {t.label}
           </button>
         ))}
@@ -283,11 +285,11 @@ export function Modal({ open, onClose, title, children, footer, wide }: { open: 
   }, [open, onClose])
   if (!open) return null
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 pt-[6vh] backdrop-blur-[2px] no-print" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className={clsx('w-full rounded-2xl bg-surface shadow-2xl ring-1 ring-line', wide ? 'max-w-4xl' : 'max-w-lg')} role="dialog" aria-modal="true">
-        <div className="flex items-center justify-between border-b border-line px-5 py-3">
+    <div className="glass-scrim fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pt-[6vh] no-print" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className={clsx('glass-strong w-full rounded-[28px]', wide ? 'max-w-4xl' : 'max-w-lg')} role="dialog" aria-modal="true">
+        <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
           <h2 className="text-base font-semibold">{title}</h2>
-          <button className="rounded p-1 text-muted hover:bg-ink/5" onClick={onClose} aria-label="Close">
+          <button className="rounded-full bg-canvas p-1.5 text-muted hover:text-ink" onClick={onClose} aria-label="Close">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -311,7 +313,7 @@ export function Field({ label, hint, children }: { label: ReactNode; hint?: Reac
   )
 }
 
-const inputCls = 'w-full rounded-lg border-0 bg-surface px-3 py-2 text-sm shadow-xs ring-1 ring-line placeholder:text-muted/70 focus:ring-2 focus:ring-brand/70 focus:outline-none disabled:bg-canvas'
+const inputCls = 'w-full rounded-xl border-0 bg-surface px-3 py-2 text-sm shadow-[inset_0_1px_2px_rgb(0_0_0/0.04)] ring-1 ring-line placeholder:text-muted/70 focus:ring-2 focus:ring-brand/60 focus:outline-none disabled:bg-canvas'
 
 export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={clsx(inputCls, props.className)} />
@@ -373,11 +375,11 @@ export function Td({ children, className }: { children?: ReactNode; className?: 
 /** A compact switch between views (like a segmented control). */
 export function Segmented({ options, value, onChange }: { options: { id: string; label: ReactNode; hidden?: boolean }[]; value: string; onChange: (id: string) => void }) {
   return (
-    <div className="inline-flex rounded-lg bg-ink/[0.05] p-0.5">
+    <div className="inline-flex rounded-full bg-canvas p-1">
       {options
         .filter((o) => !o.hidden)
         .map((o) => (
-          <button key={o.id} type="button" onClick={() => onChange(o.id)} className={clsx('rounded-md px-3 py-1 text-sm transition', value === o.id ? 'bg-surface font-medium shadow-sm dark:bg-ink/15' : 'text-muted hover:text-ink')}>
+          <button key={o.id} type="button" onClick={() => onChange(o.id)} className={clsx('rounded-full px-3.5 py-1 text-sm transition', value === o.id ? 'bg-paper font-medium shadow-sm dark:bg-white/15' : 'text-muted hover:text-ink')}>
             {o.label}
           </button>
         ))}
@@ -399,11 +401,11 @@ export function MenuButton({ label, items, align = 'right' }: { label: ReactNode
   }, [open])
   return (
     <div className="relative" ref={ref}>
-      <button type="button" onClick={() => setOpen(!open)} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-surface px-2.5 text-sm shadow-xs ring-1 ring-line hover:bg-canvas">
+      <button type="button" onClick={() => setOpen(!open)} className="glass-control inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-sm">
         {label}
       </button>
       {open && (
-        <div className={clsx('absolute top-11 z-30 min-w-52 rounded-xl bg-surface p-1 shadow-xl ring-1 ring-line', align === 'right' ? 'right-0' : 'left-0')}>
+        <div className={clsx('glass-strong absolute top-11 z-30 min-w-52 rounded-2xl p-1.5', align === 'right' ? 'right-0' : 'left-0')}>
           {items.map((it, i) =>
             it === 'divider' ? (
               <div key={i} className="my-1 border-t border-line" />

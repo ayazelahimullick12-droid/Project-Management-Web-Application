@@ -20,7 +20,7 @@ export function Dropdown({ button, children, align = 'right', width = 'w-80', up
         {button(open)}
       </button>
       {open && (
-        <div className={clsx('absolute z-50 rounded-2xl bg-surface shadow-2xl ring-1 ring-line', width, up ? 'bottom-full mb-2' : 'top-full mt-2', align === 'right' ? 'right-0' : 'left-0')}>
+        <div className={clsx('glass-strong absolute z-50 rounded-3xl', width, up ? 'bottom-full mb-2' : 'top-full mt-2', align === 'right' ? 'right-0' : 'left-0')}>
           {children(() => setOpen(false))}
         </div>
       )}

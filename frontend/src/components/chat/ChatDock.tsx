@@ -26,7 +26,7 @@ function DockWindow({ chatId, minimized }: { chatId: string; minimized: boolean 
   const direct = data ? isDirect(data.chat.kind) : false
   const away = direct && data?.members.find((m) => m.id === data.other?.id)?.away
   return (
-    <div className={clsx('pointer-events-auto flex w-[340px] flex-col overflow-hidden rounded-t-2xl bg-surface shadow-2xl ring-1 ring-line', !minimized && 'h-[min(480px,calc(100vh-6rem))]')}>
+    <div className={clsx('glass-strong pointer-events-auto flex w-[340px] flex-col overflow-hidden rounded-t-3xl', !minimized && 'h-[min(480px,calc(100vh-6rem))]')}>
       <div className={clsx('flex h-12 shrink-0 cursor-pointer items-center gap-2.5 px-2.5', !minimized && 'border-b border-line')} onClick={() => toggleMinimized(chatId)}>
         {data && (direct && data.other ? <Avatar name={data.other.name} id={data.other.id} size={30} status={data.other.unavailable ? 'off' : away ? 'away' : undefined} /> : <ChannelIcon c={{ kind: data.chat.kind, projectId: data.chat.projectId }} size={30} />)}
         <div className="min-w-0 flex-1 leading-tight">
@@ -71,13 +71,13 @@ export function ChatDock() {
   return (
     <>
       {/* Phones: a round button that opens the Messages page */}
-      <button onClick={() => navigate('/messages')} className="fixed right-4 bottom-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-brand text-white shadow-lg md:hidden no-print" aria-label="Messages">
+      <button onClick={() => navigate('/messages')} className="glass-tint fixed right-4 bottom-4 z-40 flex h-12 w-12 items-center justify-center rounded-full text-white md:hidden no-print" aria-label="Messages">
         <MessageCircle className="h-5 w-5" />
-        {unread > 0 && <span className="absolute -top-1 -right-1 min-w-5 rounded-full bg-ink px-1 text-center text-[10px] leading-5 font-semibold text-canvas">{unread}</span>}
+        {unread > 0 && <span className="absolute -top-1 -right-1 min-w-5 rounded-full bg-ink px-1 text-center text-[10px] leading-5 font-semibold text-paper">{unread}</span>}
       </button>
 
       <div className="pointer-events-none fixed right-4 bottom-0 z-40 hidden flex-row-reverse items-end gap-3 md:flex no-print">
-        <div className="pointer-events-auto w-80 overflow-hidden rounded-t-2xl bg-surface shadow-2xl ring-1 ring-line">
+        <div className="glass-strong pointer-events-auto w-80 overflow-hidden rounded-t-3xl">
           <div className="flex h-12 cursor-pointer items-center gap-2.5 px-3" onClick={() => setDockOpen(!dock.open)}>
             {me && <Avatar name={me.name} id={me.id} size={28} status="online" />}
             <span className="flex-1 text-sm font-semibold">Messages</span>

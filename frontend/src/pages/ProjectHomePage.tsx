@@ -28,7 +28,7 @@ function Discussion({ pid }: { pid: string }) {
   if (!data) return null
   const latest = data.messages.filter((m) => m.kind === 'text').slice(-3)
   return (
-    <section className="shadow-soft rounded-2xl border border-line/70 bg-surface">
+    <section className="shadow-soft rounded-3xl border border-line/70 bg-surface">
       <div className="flex items-center justify-between px-4 pt-3.5 pb-1">
         <h2 className="flex items-center gap-2 text-sm font-semibold">
           Team discussion

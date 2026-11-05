@@ -7,6 +7,10 @@
  * Colours were taken from brac.net and bracinternational.org. Replace them with BRAC's
  * official hex values when you have them. The font is Inter (bundled, works offline);
  * BRAC's websites use Helvetica Neue, which is the fallback.
+ *
+ * The web UI uses a glass look (like iOS and macOS): translucent panels over a soft coloured
+ * background. `glass` holds those translucent values; the solid colours above are still used by
+ * the exports (PDF, Word, PowerPoint), which need solid colours.
  */
 export const brand = {
   primary: '#D10074', // BRAC magenta (buttons, links, active items)
@@ -37,10 +41,21 @@ export const brand = {
     line: '#2C2C29',
     muted: '#9B9C93',
   },
+  // Web UI only. canvas = a light fill (hovers, chips), surface = translucent panels,
+  // line = hairlines, paper = a solid panel colour (the selected part of a switch, text on dark
+  // chips, avatar rings, and every panel in the Solid look).
+  glass: {
+    light: { canvas: 'rgb(120 120 128 / 0.10)', surface: 'rgb(255 255 255 / 0.66)', surface2: 'rgb(255 255 255 / 0.4)', line: 'rgb(60 60 67 / 0.13)', primarySoft: 'rgb(209 0 116 / 0.10)', greenSoft: 'rgb(0 137 69 / 0.11)', paper: '#FFFFFF' },
+    dark: { canvas: 'rgb(255 255 255 / 0.07)', surface: 'rgb(44 44 50 / 0.55)', surface2: 'rgb(255 255 255 / 0.04)', line: 'rgb(255 255 255 / 0.11)', primarySoft: 'rgb(232 57 154 / 0.18)', greenSoft: 'rgb(34 163 95 / 0.18)', paper: '#1C1C21' },
+  },
 } as const
 
-function tokens(t: { primary: string; accent: string; primarySoft: string; ink: string; green: string; greenSoft: string; canvas: string; surface: string; surface2: string; line: string; muted: string }) {
-  return `--brand-primary:${t.primary};--brand-accent:${t.accent};--brand-primary-soft:${t.primarySoft};--brand-ink:${t.ink};--brand-green:${t.green};--brand-green-soft:${t.greenSoft};--brand-canvas:${t.canvas};--surface:${t.surface};--surface-2:${t.surface2};--brand-line:${t.line};--brand-muted:${t.muted};`
+type Palette = { primary: string; accent: string; primarySoft: string; ink: string; green: string; greenSoft: string; canvas: string; surface: string; surface2: string; line: string; muted: string }
+
+/** The CSS variables for one palette, with the glass values on top. */
+function tokens(t: Palette, g: Partial<Palette> & { paper: string }) {
+  const v = { ...t, ...g }
+  return `--brand-primary:${v.primary};--brand-accent:${v.accent};--brand-primary-soft:${v.primarySoft};--brand-ink:${v.ink};--brand-green:${v.green};--brand-green-soft:${v.greenSoft};--brand-canvas:${v.canvas};--surface:${v.surface};--surface-2:${v.surface2};--brand-line:${v.line};--brand-muted:${v.muted};--paper:${g.paper};`
 }
 
 /** Writes the tokens into CSS variables so Tailwind classes like `bg-brand` use them (light and dark). */
@@ -51,5 +66,5 @@ export function applyBrand() {
     el.id = 'brand-tokens'
     document.head.appendChild(el)
   }
-  el.textContent = `:root{${tokens(brand)}--brand-font:${brand.font};}.dark{${tokens(brand.dark)}}`
+  el.textContent = `:root{${tokens(brand, brand.glass.light)}--brand-font:${brand.font};}.dark{${tokens(brand.dark, brand.glass.dark)}}`
 }

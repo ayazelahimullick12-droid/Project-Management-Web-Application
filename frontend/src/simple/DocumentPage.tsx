@@ -37,7 +37,7 @@ function MoreMenu({ items }: { items: { label: string; to?: string; href?: strin
       width="w-72"
       label="More"
       button={() => (
-        <span className="inline-flex h-12 items-center gap-2 rounded-lg px-4 text-base font-medium ring-1 ring-line hover:bg-canvas">
+        <span className="glass-control inline-flex h-12 items-center gap-2 rounded-full px-5 text-base font-medium">
           <MoreHorizontal className="h-5 w-5" /> More
         </span>
       )}
@@ -212,7 +212,7 @@ export function SimpleDocumentPage() {
       {needPeople && !notice && <MissingPeople pid={pid} missing={data.missing} canAdd={data.canAddPeople} optional="You (the Project Owner or the Project Manager) approve that step in their place. You can add them now if you like." large />}
 
       {notice && (
-        <div className="rounded-2xl bg-surface p-5 ring-1 ring-line">
+        <div className="shadow-soft rounded-3xl p-5">
           <StatusLineInner tone={notice.tone}>{notice.text}</StatusLineInner>
           {notice.actions && <div className="mt-4 flex flex-wrap gap-3">{notice.actions}</div>}
         </div>
@@ -231,9 +231,9 @@ export function SimpleDocumentPage() {
 
       <div>
         {isPackage && (
-          <div role="tablist" aria-label="Part" className="mb-4 inline-flex rounded-xl bg-ink/[0.06] p-1">
+          <div role="tablist" aria-label="Part" className="mb-4 inline-flex rounded-full bg-canvas p-1">
             {(['proposal', 'charter', 'slides'] as const).map((t) => (
-              <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={clsx('rounded-lg px-5 py-2 text-base font-medium transition', tab === t ? 'bg-surface text-ink shadow-sm dark:bg-ink/15' : 'text-muted hover:text-ink')}>
+              <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={clsx('rounded-full px-5 py-2 text-base font-medium transition', tab === t ? 'bg-paper text-ink shadow-sm dark:bg-white/15' : 'text-muted hover:text-ink')}>
                 {t === 'proposal' ? 'Proposal' : t === 'charter' ? 'Charter' : 'Slides'}
               </button>
             ))}
@@ -255,7 +255,7 @@ export function SimpleDocumentPage() {
           )}
         </div>
         <div className={clsx('grid gap-6', showComments && 'lg:grid-cols-[minmax(0,1fr)_360px]')}>
-          <article className="min-w-0 rounded-2xl bg-surface px-6 py-8 text-[1.0625rem] ring-1 ring-line md:px-12 [&_.md]:text-[1.0625rem]">
+          <article className="min-w-0 rounded-3xl bg-white/90 shadow-[0_1px_2px_rgb(0_0_0/0.04),0_14px_40px_-22px_rgb(40_20_80/0.3)] ring-1 ring-black/5 backdrop-blur-xl dark:bg-[#1c1c21]/90 dark:ring-white/10 px-6 py-8 text-[1.0625rem] md:px-12 [&_.md]:text-[1.0625rem]">
             <Reader
               sections={shown}
               regenerated={current.regeneratedSectionIds}

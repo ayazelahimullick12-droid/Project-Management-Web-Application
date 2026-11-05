@@ -66,7 +66,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-full overflow-hidden bg-canvas">
+    <div className="relative min-h-full overflow-hidden">
       {/* soft brand glow behind the page, as on many current product sites */}
       <div className="pointer-events-none absolute -top-40 -left-40 h-[520px] w-[520px] rounded-full bg-brand/20 blur-[120px]" />
       <div className="pointer-events-none absolute top-1/3 -right-40 h-[420px] w-[420px] rounded-full bg-leaf/15 blur-[120px]" />
@@ -88,7 +88,7 @@ export function LoginPage() {
             <div className="mb-1 font-semibold">This is a prototype</div>
             All people, projects and documents are fictional. The AI runs on this laptop in LM Studio and keeps its answers short. Data is kept in one file on this laptop; use <b>Start again</b> in the <b>Demo</b> menu to start over.
           </div>
-          <div className="shadow-soft rounded-2xl bg-surface p-5 ring-1 ring-line">
+          <div className="shadow-soft rounded-3xl bg-surface p-5 ring-1 ring-line">
             <Field label="Email">
               <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@brac.example" />
             </Field>
@@ -108,7 +108,7 @@ export function LoginPage() {
           <p className="mb-4 text-xs text-muted">Click a person to sign in as them. You can switch user at any time from the <b>Demo</b> menu, and each browser tab can be a different person.</p>
           <div className="grid gap-4 sm:grid-cols-2">
             {GROUPS.map(([group, ids]) => (
-              <div key={group} className="shadow-soft rounded-2xl bg-surface/80 p-3 ring-1 ring-line backdrop-blur">
+              <div key={group} className="shadow-soft rounded-3xl bg-surface/80 p-3 ring-1 ring-line backdrop-blur">
                 <div className="mb-2 text-xs font-semibold tracking-wide text-muted uppercase">{group}</div>
                 {ids.map((id) => {
                   const u = byId.get(id)
@@ -126,7 +126,7 @@ export function LoginPage() {
               </div>
             ))}
             {others.length > 0 && (
-              <div className="shadow-soft rounded-2xl bg-surface/80 p-3 ring-1 ring-line backdrop-blur">
+              <div className="shadow-soft rounded-3xl bg-surface/80 p-3 ring-1 ring-line backdrop-blur">
                 <div className="mb-2 text-xs font-semibold tracking-wide text-muted uppercase">Added in this demo</div>
                 {others.map((u) => (
                   <button key={u.id} onClick={() => login.run(u.id, 'demo1234')} className="flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left hover:bg-canvas">

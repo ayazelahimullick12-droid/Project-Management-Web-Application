@@ -149,3 +149,12 @@ The user's rule: the Project Owner can do everything in their project (answer ev
 - **A list, not reminders:** the Owner's To do (Simple view) has a folded section **You can also do, as Project Owner**, and My work (Full view) a tab **As Project Owner**: everything waiting for other people in their projects, with whose turn it is. The Owner gets no extra notifications or reminders. Chosen by the user.
 - Rule: `actAsHead` in `src/rules/permissions.ts` lets the Owner act for any head (and for a head the project does not have); the other "who" checks (PM team, SQA tester, developer, the assigned tester or developer, the reporter's team) let the Owner through one by one. Deputies still cover only their own Away head (`deputyFor`).
 - A test case's "SQA tester" and "developer" separation still applies to everyone else; the Owner may do both.
+
+## Glass look for both views (5 November 2026)
+
+- **Apple's glass style (iOS and macOS):** a soft background of BRAC magenta, violet, blue and green glows; frosted glass for everything that floats over content (the Full view's sidebar, the Simple view's floating top bar, menus, dialogs, the chat dock, AI progress cards, toasts, the bottom action bar); translucent cards with a light top edge; pill-shaped buttons; iOS-style segmented switches and tab strips. The user asked for it.
+- **Document text stays on a near-solid white "sheet"**, and secondary text keeps at least 4.5:1 contrast on the glass cards (measured 5.0:1; body text 14:1) — the Simple view is for users over 35, and glass can make text harder to read.
+- **"Look: Solid"** in the profile menu (and the computer's own "reduce transparency" setting) switches the glass off: solid white panels on a plain grey page, no blur — the same idea as Apple's "Reduce transparency".
+- **Blur only where something floats over content** (bars, menus, dialogs, the sidebar); cards are translucent with a light blur only from the shared card style — many blurred elements would make scrolling slow on a laptop.
+- **Exports keep their solid colours:** the glass values are separate tokens (`brand.glass`) used only by the web UI; PDF, Word and PowerPoint still use the solid BRAC colours.
+- On phones the Simple view's top bar drops the logo and the small arrows (the To do tab is in the second row), so the bar fits at every text size.

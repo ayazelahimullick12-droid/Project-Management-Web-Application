@@ -69,6 +69,12 @@ server.
 
 ## Using it
 
+**The look:** both views use a glass design like iOS and macOS: a soft coloured background,
+frosted panels (the sidebar, the floating top bar, menus, dialogs, the chat dock), translucent
+cards, pill-shaped buttons and iOS-style switches. Profile menu → **Look: Solid** turns the glass
+off (solid white panels, no blur), like Apple's "Reduce transparency"; the app also follows the
+computer's own "reduce transparency" setting. Printed and exported documents are not affected.
+
 The app has **two views** of the same pages, switched with **Simple | Full** in the top bar (or
 the sidebar). The switch keeps you on the page you are on, and is remembered in this browser.
 
@@ -182,6 +188,7 @@ Three folders matter most:
 | Change the Simple view's wording | `src/simple/words.ts` |
 | Make the Full view the default | `view` in `DEFAULTS`, `src/components/prefs.ts` |
 | Change dark-mode colours | `brand.dark` in `src/theme/brand.ts`; status colours in `src/index.css` (`.dark`) |
+| Change the glass look (background, how see-through panels are, blur) | `brand.glass` in `src/theme/brand.ts`; the glass materials and background in `src/index.css` |
 | Change demo direct messages or what shows as unread | `seed/messages.json` |
 | Change dummy projects, people or documents | files in `seed/`, then Demo → Start again |
 | Change what the AI is told, or how long its answers may be | `src/ai/prompts.ts` (`LIMITS` holds the length limits) |

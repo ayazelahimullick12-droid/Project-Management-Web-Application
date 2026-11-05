@@ -87,8 +87,8 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     onClose()
   }
   return createPortal(
-    <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/30 p-4 pt-[12vh] no-print" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="w-full max-w-xl overflow-hidden rounded-xl bg-surface shadow-2xl ring-1 ring-line">
+    <div className="glass-scrim fixed inset-0 z-[60] flex items-start justify-center p-4 pt-[12vh] no-print" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="glass-strong w-full max-w-xl overflow-hidden rounded-3xl">
         <div className="flex items-center gap-2 border-b border-line px-4">
           <Search className="h-4 w-4 text-muted" />
           <input

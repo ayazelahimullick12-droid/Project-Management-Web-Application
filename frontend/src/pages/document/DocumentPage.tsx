@@ -159,7 +159,7 @@ export function DocumentPage() {
       <div>
         {breadcrumb}
         <h1 className="page-title mb-8 text-2xl">{data.label}</h1>
-        <div className="mx-auto max-w-lg shadow-soft rounded-2xl border border-line/70 bg-surface px-8 py-10 text-center">
+        <div className="mx-auto max-w-lg shadow-soft rounded-3xl border border-line/70 bg-surface px-8 py-10 text-center">
           <Sparkles className="mx-auto mb-3 h-6 w-6 text-violet-600" />
           <div className="font-semibold">Not drafted yet</div>
           <p className="mt-1 mb-5 text-sm text-muted">
@@ -348,7 +348,7 @@ export function DocumentPage() {
 
       {tab === 'document' && (
         <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_340px]">
-          <article className="min-w-0 rounded-xl border border-line/70 bg-surface px-6 py-8 shadow-[0_1px_3px_rgba(0,0,0,0.04)] md:px-12">
+          <article className="min-w-0 rounded-3xl bg-white/90 shadow-[0_1px_2px_rgb(0_0_0/0.04),0_14px_40px_-22px_rgb(40_20_80/0.3)] ring-1 ring-black/5 backdrop-blur-xl dark:bg-[#1c1c21]/90 dark:ring-white/10 px-6 py-8 md:px-12">
             {editing ? (
               <DocEditor key={draft!.baseVersionId} docId={doc.id} draft={draft!} onStop={() => toast.error('You no longer hold the edit lock. Your draft is saved.')} />
             ) : showLive ? (

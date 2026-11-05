@@ -41,7 +41,7 @@ export function MyWorkPage() {
       </div>
       {tab === 'all' &&
         (data.myTasks.length ? (
-          <ul className="divide-y divide-line/70 overflow-hidden shadow-soft rounded-2xl border border-line/70 bg-surface">
+          <ul className="divide-y divide-line/70 overflow-hidden shadow-soft rounded-3xl border border-line/70 bg-surface">
             {groupTasks(data.myTasks).map((t) => (
               <li key={t.key}>
                 <Link to={t.link === '/inbox/questions' ? '/my-work?tab=questions' : t.link === '/inbox/tests' ? '/my-work?tab=tests' : t.link} className="flex items-center gap-3 px-4 py-3 hover:bg-canvas">
@@ -60,14 +60,14 @@ export function MyWorkPage() {
             ))}
           </ul>
         ) : (
-          <div className="flex items-center gap-2 shadow-soft rounded-2xl border border-line/70 bg-surface px-4 py-4 text-sm text-muted">
+          <div className="flex items-center gap-2 shadow-soft rounded-3xl border border-line/70 bg-surface px-4 py-4 text-sm text-muted">
             <CircleCheck className="h-4 w-4 text-leaf" /> You are all caught up.
           </div>
         ))}
       {tab === 'owner' && (
         <>
           <p className="mb-3 text-sm text-muted">Waiting for other people in projects you own. As the Project Owner you can do any of it yourself; these are not reminded.</p>
-          <ul className="divide-y divide-line/70 overflow-hidden shadow-soft rounded-2xl border border-line/70 bg-surface">
+          <ul className="divide-y divide-line/70 overflow-hidden shadow-soft rounded-3xl border border-line/70 bg-surface">
             {groupTasks(data.ownerCanDo).map((t) => (
               <li key={t.key}>
                 <Link to={t.ownerLink ?? t.link} className="flex items-center gap-3 px-4 py-3 hover:bg-canvas">

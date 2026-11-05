@@ -9,6 +9,9 @@
  *
  * theme: light (default), dark, or follow the computer's setting (system).
  *
+ * transparency: "glass" (default: translucent panels, like iOS and macOS) or "reduced" (solid
+ * panels, easier to read for some people; like Apple's "Reduce transparency").
+ *
  * showNotes: shows the prototype's explanations ("In the real app…" notes and Open question
  * markers). Off by default so the app looks like the real product; switch it on in the Demo menu
  * when reviewing the spec.
@@ -20,15 +23,17 @@ const KEY = 'brac-pm-prototype:prefs'
 export type Theme = 'light' | 'dark' | 'system'
 export type View = 'simple' | 'full'
 export type TextSize = 'normal' | 'large' | 'larger'
+export type Transparency = 'glass' | 'reduced'
 
 interface Prefs {
   showNotes: boolean
   theme: Theme
   view: View
   textSize: TextSize
+  transparency: Transparency
 }
 
-const DEFAULTS: Prefs = { showNotes: false, theme: 'light', view: 'simple', textSize: 'normal' }
+const DEFAULTS: Prefs = { showNotes: false, theme: 'light', view: 'simple', textSize: 'normal', transparency: 'glass' }
 
 const listeners = new Set<() => void>()
 let cache: Prefs | null = null
@@ -74,6 +79,14 @@ export function useThemeClass(forceLight = false) {
     media.addEventListener('change', apply)
     return () => media.removeEventListener('change', apply)
   }, [theme, forceLight])
+}
+
+/** Puts the "reduce-transparency" class on <html> when solid panels are chosen (and in print). */
+export function useTransparencyClass(forceSolid = false) {
+  const { transparency } = usePrefs()
+  useEffect(() => {
+    document.documentElement.classList.toggle('reduce-transparency', forceSolid || transparency === 'reduced')
+  }, [transparency, forceSolid])
 }
 
 const TEXT_SIZE: Record<TextSize, string> = { normal: '100%', large: '112.5%', larger: '125%' }

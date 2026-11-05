@@ -62,7 +62,7 @@ export function JobTray() {
   return (
     <div className="fixed bottom-4 left-4 z-40 flex w-80 flex-col gap-2 no-print md:left-[17rem]">
       {visible.map((j) => (
-        <div key={j.id} className="rounded-xl bg-surface p-3 text-sm shadow-xl ring-1 ring-violet-200">
+        <div key={j.id} className="glass-strong rounded-3xl p-3.5 text-sm">
           <div className="flex items-start gap-2">
             {j.status === 'running' ? <Spinner className="mt-0.5 border-violet-600" /> : j.status === 'done' ? <CircleCheck className="mt-0.5 h-4 w-4 text-leaf" /> : <TriangleAlert className="mt-0.5 h-4 w-4 text-red-600" />}
             <div className="min-w-0 flex-1">

@@ -22,7 +22,7 @@ function greeting(now: Date) {
 function TaskCard({ item, first }: { item: TodoItem; first: boolean }) {
   const now = useNow()
   return (
-    <Link to={item.to} className={clsx('group flex flex-wrap items-center gap-4 rounded-2xl bg-surface p-5 ring-1 transition hover:ring-brand/50', first ? 'ring-2 ring-brand/40' : 'ring-line')}>
+    <Link to={item.to} className={clsx('shadow-soft group flex flex-wrap items-center gap-4 rounded-3xl p-5 transition hover:-translate-y-px', first && 'ring-2 ring-brand/35')}>
       <ProjectIcon id={item.projectId} name={item.projectName} size={44} />
       <div className="min-w-0 flex-1">
         <div className="text-lg font-semibold">{item.title}</div>
@@ -32,7 +32,7 @@ function TaskCard({ item, first }: { item: TodoItem; first: boolean }) {
           {item.coveringFor && ` · for ${item.coveringFor} (away)`}
         </div>
       </div>
-      <span className={clsx('inline-flex h-11 items-center rounded-lg px-5 text-base font-medium transition', first ? 'bg-brand text-white shadow-sm group-hover:brightness-110' : 'bg-surface ring-1 ring-line group-hover:bg-canvas')}>{item.button}</span>
+      <span className={clsx('inline-flex h-11 items-center rounded-full px-5 text-base font-medium transition', first ? 'glass-tint text-white group-hover:brightness-110' : 'glass-control')}>{item.button}</span>
     </Link>
   )
 }

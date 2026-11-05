@@ -13,7 +13,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-route
 import { onSaveError, subscribe } from './demo/store'
 import { subscribeSession } from './demo/session'
 import { useSessionUserId } from './api/hooks'
-import { usePrefs, useTextSize, useThemeClass } from './components/prefs'
+import { usePrefs, useTextSize, useThemeClass, useTransparencyClass } from './components/prefs'
 import { AppShell } from './components/Layout'
 import { ToastProvider } from './components/toast'
 import { LoginPage } from './pages/LoginPage'
@@ -72,6 +72,7 @@ function Theme() {
   const print = location.pathname.startsWith('/print/')
   useThemeClass(print)
   useTextSize(print)
+  useTransparencyClass(print)
   return null
 }
 

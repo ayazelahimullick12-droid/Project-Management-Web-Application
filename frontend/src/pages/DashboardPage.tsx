@@ -108,7 +108,7 @@ function Tile({ icon, tone, value, label, sub, to }: { icon: ReactNode; tone: st
       {sub && <div className="mt-0.5 text-[11px]">{sub}</div>}
     </>
   )
-  const cls = 'group shadow-soft rounded-2xl border border-line/70 bg-surface p-4 transition'
+  const cls = 'group shadow-soft rounded-3xl border border-line/70 bg-surface p-4 transition'
   return to ? (
     <Link to={to} className={clsx(cls, 'hover:-translate-y-0.5 hover:shadow-md')}>
       {body}

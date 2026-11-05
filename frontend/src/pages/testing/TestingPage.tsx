@@ -248,7 +248,7 @@ function Builds({ d }: { d: TData }) {
         <Field label="Test environment link"><Input value={form.envUrl} onChange={(e) => setForm({ ...form, envUrl: e.target.value })} placeholder="https://test.brac.example/…" /></Field>
         <Field label="Release notes"><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></Field>
         <Field label="Defects this build fixes" hint="They are marked Fixed in this build.">
-          <div className="max-h-40 space-y-1 overflow-y-auto rounded-md bg-canvas p-2">
+          <div className="max-h-40 space-y-1 overflow-y-auto rounded-xl bg-canvas p-2">
             {fixable.map((x) => (
               <label key={x.id} className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={form.fixesDefectIds.includes(x.id)} onChange={(e) => setForm({ ...form, fixesDefectIds: e.target.checked ? [...form.fixesDefectIds, x.id] : form.fixesDefectIds.filter((i) => i !== x.id) })} />
@@ -343,7 +343,7 @@ type DefectRow = TData['defects'][number]
 function DefectCard({ x, pid, draggable }: { x: DefectRow; pid: string; draggable: boolean }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: x.id, disabled: !draggable })
   return (
-    <div ref={setNodeRef} {...attributes} {...listeners} style={transform ? { transform: `translate(${transform.x}px, ${transform.y}px)` } : undefined} className={clsx('rounded-md bg-surface p-2 text-xs shadow-sm ring-1 ring-line', draggable && 'cursor-grab', isDragging && 'z-50 opacity-80 shadow-lg')}>
+    <div ref={setNodeRef} {...attributes} {...listeners} style={transform ? { transform: `translate(${transform.x}px, ${transform.y}px)` } : undefined} className={clsx('rounded-xl bg-surface p-2.5 text-xs shadow-sm ring-1 ring-line', draggable && 'cursor-grab', isDragging && 'z-50 opacity-80 shadow-lg')}>
       <div className="mb-1 flex items-center gap-1.5">
         <Link to={`/projects/${pid}/defects/${x.id}`} className="font-mono font-medium text-brand" onPointerDown={(e) => e.stopPropagation()}>{x.key}</Link>
         <SeverityChip severity={x.severity} />
@@ -358,7 +358,7 @@ function DefectCard({ x, pid, draggable }: { x: DefectRow; pid: string; draggabl
 function Column({ status, children, can }: { status: DefectStatus; children: React.ReactNode; can: boolean }) {
   const { setNodeRef, isOver } = useDroppable({ id: status })
   return (
-    <div ref={setNodeRef} className={clsx('flex w-52 shrink-0 flex-col rounded-lg p-2', isOver ? (can ? 'bg-leaf-soft ring-2 ring-leaf' : 'bg-red-50 ring-2 ring-red-300') : 'bg-canvas')}>
+    <div ref={setNodeRef} className={clsx('flex w-52 shrink-0 flex-col rounded-2xl p-2', isOver ? (can ? 'bg-leaf-soft ring-2 ring-leaf' : 'bg-red-50 ring-2 ring-red-300') : 'bg-canvas')}>
       <div className="mb-2 flex items-center justify-between px-1">
         <DefectStatusChip status={status} />
       </div>
@@ -403,9 +403,9 @@ function Defects({ d }: { d: TData }) {
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <Guarded variant="primary" check={d.perms.raise} onClick={() => setRaising(true)}><Bug className="h-4 w-4" /> Raise a defect</Guarded>
-        <div className="ml-2 flex overflow-hidden rounded-md ring-1 ring-line">
-          <button onClick={() => setView('board')} className={clsx('px-2.5 py-1.5', view === 'board' ? 'bg-ink text-canvas' : 'bg-surface')}><Columns3 className="h-4 w-4" /></button>
-          <button onClick={() => setView('list')} className={clsx('px-2.5 py-1.5', view === 'list' ? 'bg-ink text-canvas' : 'bg-surface')}><List className="h-4 w-4" /></button>
+        <div className="ml-2 flex rounded-full bg-canvas p-1">
+          <button onClick={() => setView('board')} className={clsx('rounded-full px-2.5 py-1', view === 'board' ? 'bg-paper shadow-sm dark:bg-white/15' : 'text-muted')} aria-label="Board"><Columns3 className="h-4 w-4" /></button>
+          <button onClick={() => setView('list')} className={clsx('rounded-full px-2.5 py-1', view === 'list' ? 'bg-paper shadow-sm dark:bg-white/15' : 'text-muted')} aria-label="List"><List className="h-4 w-4" /></button>
         </div>
         {([['all', 'All'], ['mine', 'Assigned to me'], ['raised', 'Raised by me'], ['retest', 'Waiting for my retest'], ['untriaged', 'Untriaged']] as const).map(([k, l]) => (
           <button key={k} onClick={() => setFilter(k)} className={clsx('rounded-full px-2.5 py-1 text-xs ring-1', filter === k ? 'bg-brand-soft text-brand ring-brand' : 'bg-surface ring-line')}>{l}</button>

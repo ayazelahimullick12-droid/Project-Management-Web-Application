@@ -84,7 +84,7 @@ export function ConversationList({ lists, activeId, onOpen, currentPid }: { list
         </label>
         <div className="flex gap-1">
           {tabs.map((t) => (
-            <button key={t.id} onClick={() => setFilter(t.id)} className={clsx('inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition', filter === t.id ? 'bg-ink text-canvas' : 'text-muted hover:bg-ink/5 hover:text-ink')}>
+            <button key={t.id} onClick={() => setFilter(t.id)} className={clsx('inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition', filter === t.id ? 'bg-ink text-paper' : 'text-muted hover:bg-ink/5 hover:text-ink')}>
               {t.label}
               {t.n > 0 && <span className={clsx('rounded-full px-1 text-[10px]', filter === t.id ? 'bg-canvas/20' : 'bg-brand text-white')}>{t.n}</span>}
             </button>

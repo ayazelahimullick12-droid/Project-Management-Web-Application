@@ -47,7 +47,7 @@ export function ToneIcon({ tone }: { tone: Tone }) {
 /** Where things stand, in one sentence. */
 export function StatusLine({ tone, children }: { tone: Tone; children: ReactNode }) {
   return (
-    <div className="flex items-start gap-3 rounded-2xl bg-surface px-5 py-4 text-lg ring-1 ring-line">
+    <div className="shadow-soft flex items-start gap-3 rounded-3xl px-5 py-4 text-lg">
       <ToneIcon tone={tone} />
       <div className="min-w-0 flex-1">{children}</div>
     </div>
@@ -57,7 +57,7 @@ export function StatusLine({ tone, children }: { tone: Tone; children: ReactNode
 /** The one thing this person should do here. Shown only when there is something to do. */
 export function NextStep({ title = 'Your next step', children, actions }: { title?: string; children: ReactNode; actions?: ReactNode }) {
   return (
-    <section className="rounded-2xl border-2 border-brand/30 bg-brand-soft/40 p-5 md:p-6">
+    <section className="rounded-3xl border border-brand/30 bg-brand-soft p-5 shadow-[inset_0_1px_0_rgb(255_255_255/0.6),0_10px_30px_-16px_var(--brand-primary)] backdrop-blur-xl md:p-6 dark:shadow-none">
       <div className="text-base font-semibold text-brand">{title}</div>
       <div className="mt-1 text-lg">{children}</div>
       {actions && <div className="mt-4 flex flex-wrap items-center gap-3">{actions}</div>}
@@ -88,16 +88,16 @@ export function Row({ to, onClick, icon, title, subtitle, right, muted }: { to?:
       {(to || onClick) && <ChevronRight className="h-5 w-5 shrink-0 text-muted" />}
     </>
   )
-  const cls = 'flex w-full items-center gap-4 rounded-2xl bg-surface px-5 py-4 text-left ring-1 ring-line transition'
+  const cls = 'shadow-soft flex w-full items-center gap-4 rounded-3xl px-5 py-4 text-left transition'
   if (to)
     return (
-      <Link to={to} className={clsx(cls, 'hover:bg-brand-soft/30 hover:ring-brand/40')}>
+      <Link to={to} className={clsx(cls, 'hover:-translate-y-px hover:brightness-[1.02]')}>
         {inner}
       </Link>
     )
   if (onClick)
     return (
-      <button type="button" onClick={onClick} className={clsx(cls, 'hover:bg-brand-soft/30 hover:ring-brand/40')}>
+      <button type="button" onClick={onClick} className={clsx(cls, 'hover:-translate-y-px hover:brightness-[1.02]')}>
         {inner}
       </button>
     )
@@ -125,8 +125,8 @@ export function More({ label = 'More', children, defaultOpen = false }: { label?
 /** The page's main button(s), always at the bottom of the screen. */
 export function ActionBar({ children, more }: { children?: ReactNode; more?: ReactNode }) {
   return (
-    <div className="sticky bottom-0 z-20 -mx-4 border-t border-line bg-surface/95 px-4 py-4 backdrop-blur md:-mx-8 md:px-8">
-      <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3">
+    <div className="sticky bottom-3 z-20">
+      <div className="glass-strong mx-auto flex max-w-5xl flex-wrap items-center gap-3 rounded-[30px] px-4 py-3">
         {children}
         {more && <div className="ml-auto">{more}</div>}
       </div>
@@ -136,7 +136,7 @@ export function ActionBar({ children, more }: { children?: ReactNode; more?: Rea
 
 export function Empty({ icon, title, children }: { icon: ReactNode; title: ReactNode; children?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center rounded-2xl bg-surface px-6 py-12 text-center ring-1 ring-line">
+    <div className="shadow-soft flex flex-col items-center rounded-3xl px-6 py-12 text-center">
       <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-leaf-soft text-leaf [&>svg]:h-7 [&>svg]:w-7">{icon}</span>
       <div className="text-xl font-semibold">{title}</div>
       {children && <div className="mt-2 max-w-md text-base text-muted">{children}</div>}
