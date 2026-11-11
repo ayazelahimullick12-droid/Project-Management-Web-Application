@@ -26,7 +26,7 @@ itself).
 | --- | --- | --- |
 | `field-loan.json` | Intake, just created | The full walkthrough (the AI writes its documents live). Its simulated OCR text and transcript are in `ai/field-loan.json` |
 | `branch-cash.json` | BRD in review | Comments, pending check log, suggestions, versions, minor-correction history, the stakeholder head Away with a deputy covering, a meeting transcript, decisions |
-| `savings-portal.json` | UAT | Test cases, four builds, runs, defects in every status, SQA signed off |
+| `savings-portal.json` | UAT | Testing points, four versions, PASS / FAIL results with comments, SQA signed off on 1.0 |
 | `collection-tracker.json`, `officer-dashboard.json` | Finished | Past projects for RAG matches and the duplicate warning |
 
 ## Writing a document file
@@ -57,7 +57,7 @@ The main parts (see `branch-cash.json` for a full example):
 - `messages`: `chat` is `project` or `doc:BRD`; add `decisionBy` to mark a message as a decision,
   and `reactions` (for example `{ "👍": ["u-pm", "u-tech"] }`) for emoji reactions. Write
   `@Full Name` to mention someone.
-- `testing`: test cases, builds, runs (`[testKey, result, tester, [defectKeys]]`) and defects.
+- `testing`: `points` (key, stage, requirements, text), `versions`, `checks` (per stage and version: `[pointKey, "pass" | "fail", tester, comment?]`) and `signoffs` (the version signed off).
 
 Dates are written in Bangladesh time (`+06:00`). The loader shifts them by whole weeks so the demo
 always starts on a recent Wednesday morning.

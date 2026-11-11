@@ -193,7 +193,7 @@ export function TraceTab({ data }: { data: DocData }) {
   const reqs = data.requirements
   const srs = reqs.filter((r) => r.docType === 'SRS')
   const byId = (id?: string) => reqs.find((r) => r.id === id)
-  const tests = (id: string, stage: 'SQA' | 'UAT') => data.testCases.filter((t) => t.stage === stage && t.requirementIds.includes(id))
+  const tests = (id: string, stage: 'SQA' | 'UAT') => data.testPoints.filter((t) => t.stage === stage && t.requirementIds.includes(id))
   if (!data.traceBuilt)
     return (
       <div className="space-y-3">
@@ -215,7 +215,7 @@ export function TraceTab({ data }: { data: DocData }) {
         <AiBadge label="Links written by the AI" /> <OpenQuestion id="traceability" />
       </div>
       <Card padded={false}>
-        <Table head={['SRS requirement', 'BRD requirement', 'Charter objective', 'SQA tests', 'UAT tests', '']}>
+        <Table head={['SRS requirement', 'BRD requirement', 'Charter objective', 'SQA points', 'UAT points', '']}>
           {srs.map((r) => {
             const brd = byId(r.parentId)
             const obj = byId(brd?.parentId)

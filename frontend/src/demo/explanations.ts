@@ -70,20 +70,10 @@ export const AI_AGENTS: Record<string, { name: string; realApp: string; prototyp
     realApp: 'The LLM pulls candidate decisions out of the corrected transcript. The PM confirms each one (into the Fact Sheet, or as a scope change) or dismisses it.',
     prototype: 'Live: “Suggest with AI” proposes which fact a decision sets and its value. Candidate decisions from calls are still simulated.',
   },
-  testcases: {
-    name: 'Test case drafting',
-    realApp: 'The LLM drafts test cases from each requirement, one requirement per call so prompts stay small.',
-    prototype: 'Live: one short request per requirement.',
-  },
-  defectwriter: {
-    name: 'Defect writer',
-    realApp: 'The LLM turns a tester’s rough note into a title, steps, expected and actual result. The tester checks and edits it before saving.',
-    prototype: 'Live: the local model writes it in a few seconds.',
-  },
-  duplicates: {
-    name: 'Duplicate defect check',
-    realApp: 'Embeddings of open defects are compared with the new defect; close matches are shown before it is saved. It never blocks saving.',
-    prototype: 'Live: the embedding model in LM Studio compares meaning.',
+  testpoints: {
+    name: 'Testing points',
+    realApp: 'The LLM writes up to 3 short testing points per requirement (SRS for SQA, BRD for UAT), one requirement per call so prompts stay small. Testers add, edit, regenerate or delete them.',
+    prototype: 'Live: one short request per requirement; Regenerate rewrites one point.',
   },
   signoff: {
     name: 'Sign-off summary',

@@ -1,7 +1,8 @@
-/** Consistent status chips across documents, facts, approvals, tests and defects. */
-import type { DefectStatus, FactStatus, Severity, TestResult } from '../types'
+/** Consistent status chips across documents, facts, approvals and testing points. */
+import type { FactStatus } from '../types'
+import type { PointStatus } from '../rules/testing'
 import type { StatusKey } from '../rules/pipeline'
-import { Badge, Dot, type Tone } from './ui'
+import { Dot, type Tone } from './ui'
 
 const DOC_TONE: Record<StatusKey, Tone> = {
   not_started: 'gray',
@@ -22,31 +23,9 @@ export function FactChip({ status }: { status: FactStatus }) {
   return <Dot tone={FACT_TONE[status]}>{status}</Dot>
 }
 
-const SEV_TONE: Record<Severity, Tone> = { Critical: 'red', High: 'amber', Medium: 'blue', Low: 'gray' }
-export function SeverityChip({ severity }: { severity: Severity }) {
-  return <Badge tone={SEV_TONE[severity]}>{severity}</Badge>
-}
-
-const DEF_TONE: Record<DefectStatus, Tone> = {
-  New: 'magenta',
-  Open: 'blue',
-  'In progress': 'blue',
-  Fixed: 'violet',
-  'Ready for retest': 'amber',
-  Closed: 'green',
-  Reopened: 'red',
-  Rejected: 'gray',
-  Duplicate: 'gray',
-  Deferred: 'gray',
-  'Change request': 'gray',
-}
-export function DefectStatusChip({ status }: { status: DefectStatus }) {
-  return <Dot tone={DEF_TONE[status]}>{status}</Dot>
-}
-
-const RES: Record<TestResult, [Tone, string]> = { pass: ['green', 'Pass'], fail: ['red', 'Fail'], blocked: ['amber', 'Blocked'], not_run: ['gray', 'Not run'] }
-export function ResultChip({ result }: { result: TestResult | undefined }) {
-  const [tone, label] = RES[result ?? 'not_run']
+const POINT: Record<PointStatus, [Tone, string]> = { pass: ['green', 'PASS'], fail: ['red', 'FAIL'], to_check: ['gray', 'To check'] }
+export function PointChip({ status }: { status: PointStatus }) {
+  const [tone, label] = POINT[status]
   return <Dot tone={tone}>{label}</Dot>
 }
 

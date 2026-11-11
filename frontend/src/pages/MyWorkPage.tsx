@@ -1,7 +1,6 @@
 /**
  * My work: everything waiting on me in one place (idea from Asana's My Tasks):
- * approvals and sign-offs, Q/A questions (SPEC.md "My questions") and assigned tests
- * (SPEC_SQA_UAT.md "My tests").
+ * approvals and sign-offs, Q/A questions (SPEC.md "My questions") and testing points to check.
  */
 import { ArrowRight, CircleCheck } from 'lucide-react'
 import { Link } from 'react-router-dom'
@@ -22,7 +21,7 @@ export function MyWorkPage() {
   const { data: tests } = useApi(['my-tests'], api.testing.myTests)
   if (isLoading || !data) return <Loading />
   const qOpen = (questions ?? []).filter((q) => q.open).length
-  const tOpen = (tests ?? []).filter((e) => e.result === 'not_run').length
+  const tOpen = (tests ?? []).reduce((n, x) => n + (x.version ? x.toCheck : 0), 0)
   return (
     <div>
       <h1 className="page-title text-2xl">My work</h1>

@@ -191,7 +191,7 @@ export function ProjectHomePage() {
                           <DocStatusChip status={d.status} />
                         )}
                         {d.status.waitingOn && <span className="ml-2">{nameOf(d.status.waitingOn)} · {ago(d.status.since, now)}</span>}
-                        {testing && testing.tests > 0 && <span className="ml-2">{testing.passed}/{testing.tests} passing · {testing.defectsOpen} open defects</span>}
+                        {testing && testing.points > 0 && testing.version && <span className="ml-2">v{testing.version}: {testing.passed}/{testing.points} passed{testing.failed ? ` · ${testing.failed} failed` : ''}</span>}
                       </span>
                       <span className="flex items-center gap-3 text-xs text-muted">
                         {d.openComments + d.pendingComments > 0 && (

@@ -8,8 +8,8 @@ as different people: they share the same data and update each other live.
 **What the AI really does** (the model in LM Studio): fact extraction from the description and
 text uploads, the Q/A questions, the Proposal & Charter, BRD and SRS (section by section),
 **Rewrite with AI**, the scope check on edits, updating sections for a change request, summaries
-and slides, test cases, the defect writer, the sign-off paragraph and "Suggest with AI" for
-decisions. **Similar past projects**, **possible duplicate defects** and the fact a decision sets
+and slides, SQA/UAT testing points (write and regenerate), the sign-off paragraph and "Suggest
+with AI" for decisions. **Similar past projects** and the fact a decision sets
 are found by meaning, with an embedding model.
 
 **Still simulated:** reading PDF, Word and scanned files (OCR; plain `.txt`, `.md` and `.csv`
@@ -19,7 +19,7 @@ Everything the AI writes is kept **short on purpose** (about 2 sentences or 3 bu
 roughly 200 words per document) so a small model answers in seconds. Measured on this laptop with
 `qwen2.5-coder-0.5b-instruct`: Proposal & Charter (6 sections) about 18 s, BRD about 20 s, SRS
 about 17 s, facts from a description about 10–13 s, one question about 1 s, a rewrite about 5 s,
-a test case about 5 s, summary and slides about 15–25 s (in the background).
+testing points for one requirement about 3 s, summary and slides about 15–25 s (in the background).
 
 If LM Studio is off or does not answer, the action stops with a clear message and nothing is
 changed (no made-up text).
@@ -69,6 +69,13 @@ server.
 
 ## Using it
 
+**Testing (SQA and UAT):** pick the version being tested (or add one), then mark each testing
+point **PASS** or **FAIL**, with an optional comment. The AI writes the points from the SRS (SQA)
+or the BRD (UAT); testers add, edit, regenerate and delete them. A failed point is fixed in a new
+version, and every point is checked again on it. When every point passes on one version, the
+sign-off report is made for that version. SQA: SQA testers. UAT: developers, stakeholders and the
+PM team. The Project Owner can do both.
+
 **The look:** both views use a glass design like iOS and macOS: a soft coloured background,
 frosted panels (the sidebar, the floating top bar, menus, dialogs, the chat dock), translucent
 cards, pill-shaped buttons and iOS-style switches. Profile menu → **Look: Solid** turns the glass
@@ -95,13 +102,13 @@ each page low:
 - **Questions**: one question at a time, a large answer box and **I don't know**.
 - Plain words (Project facts, Business requirements, Ask for changes…), text of at least 16px,
   large buttons, a **text size** setting (profile menu), light colours by default.
-- Pages without a Simple version yet (intake, testing, defects, team, changes, admin) open their
+- Pages without a Simple version yet (intake, testing, team, changes, admin) open their
   Full version inside the Simple frame.
 
 **Full view** shows every tool, for people who use the app all day:
 
 - **Home** is a dashboard: numbers at a glance (waiting on you, documents in review, open
-  questions, defects, decisions), what is waiting on you and for how long, your recent
+  questions, failed testing points, decisions), what is waiting on you and for how long, your recent
   conversations, a card per project (health, progress, next step, heads) and the last two weeks of
   activity. The Owner and Admin also see the pipeline by stage and stalled items.
 - **My work** lists your approvals, Q/A questions and tests in one place; **Inbox** holds
@@ -133,7 +140,7 @@ each page low:
 
 The layout borrows familiar patterns: a Linear-style sidebar with the page in a rounded panel,
 a quick switcher, a bento-style home dashboard, an Asana-style "My work" list, a Google Docs-style
-document page with a comments rail, GitHub-style reviewers, a Jira-style defect board, and
+document page with a comments rail, GitHub-style reviewers, and
 LinkedIn/Messenger-style chat.
 - `DEMO.md` is a 20-minute walkthrough script. `FEATURE_TOUR.md` shows every feature, part by part,
   with the account to use for each step.
@@ -164,7 +171,7 @@ frontend/
 Three folders matter most:
 
 - **`src/rules/`** is real logic: who can do what, the approval chain, comment carry-forward,
-  working-hours reminders, the defect status flow, build release rules, exit criteria. Each file
+  working-hours reminders, who tests what, a testing point's result on a version, exit criteria. Each file
   starts with a comment naming the spec section it follows. These move to the Python backend
   later; their `*.test.ts` files are the checklist of what to move.
 - **`src/api/`** plays the part of the FastAPI backend. Every action checks permissions with the
@@ -204,7 +211,7 @@ Three folders matter most:
 ## Tech stack
 
 React 19, TypeScript, Vite, Tailwind CSS 4, React Router, TanStack Query, TipTap 3 (free
-extensions only), jsdiff, dnd-kit (defect board), docx and pptxgenjs (exports, loaded on demand),
+extensions only), jsdiff, docx and pptxgenjs (exports, loaded on demand),
 Vitest. This is the frontend stack of `BUILD_PROMPT.md`, so this code can grow into the real
 frontend.
 

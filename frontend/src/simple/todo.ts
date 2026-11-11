@@ -47,6 +47,9 @@ export function plainStep(title: string): string {
     .replace(/^All questions answered: close the round$/, 'All questions are answered: close the round')
     .replace(/^Stakeholders describe what they need$/, 'Describe what you need')
     .replace(/^Run the intake analysis$/, 'Let the AI read the request and files')
+    .replace(/^Write the (SQA|UAT) testing points$/, (_m, st) => (st === 'SQA' ? 'Write the points to test (technical testing)' : 'Write the points to test (user testing)'))
+    .replace(/^Add the version to test$/, 'Add the version of the system to test')
+    .replace(/^Make the (SQA|UAT) sign-off report$/, (_m, st) => `Everything passed: make the ${st === 'SQA' ? 'technical' : 'user'} testing report`)
     .replace(/Q\/A/g, 'question')
 }
 
@@ -67,8 +70,14 @@ export function useTodo() {
       const testing = s.stage === 'SQA' || s.stage === 'UAT'
       let mine: boolean
       if (step.title.startsWith('Stakeholders describe')) mine = m.team === 'STAKEHOLDER'
-      else if (testing) mine = step.title.startsWith('Prepare') && (s.stage === 'SQA' ? !!m.isSqa : m.team === 'PM')
-      else mine = m.team === 'PM'
+      else if (testing) {
+        // Write the points: the stage's testers. Add a version: the tech team. Make the report: SQA tester / PM.
+        const tester = s.stage === 'SQA' ? !!m.isSqa : (m.team === 'TECH' && !m.isSqa) || m.team === 'STAKEHOLDER' || m.team === 'PM'
+        if (step.title.startsWith('Write')) mine = tester
+        else if (step.title.startsWith('Add the version')) mine = m.team === 'TECH'
+        else if (step.title.startsWith('Make')) mine = s.stage === 'SQA' ? !!m.isSqa : m.team === 'PM'
+        else mine = false
+      } else mine = m.team === 'PM'
       if (mine) out.push({ key: `next:${s.project.id}`, title: plainStep(step.title), button: step.action?.startsWith('Open') ? 'Open' : step.action ?? 'Open', to: step.link, projectId: s.project.id, projectName: s.project.name, since: step.since })
     }
     // Longest waiting first; items without a date at the end.

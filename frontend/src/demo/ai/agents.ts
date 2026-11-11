@@ -10,7 +10,7 @@
  * Where pre-written content exists for a demo project (seed/ai/<slug>.json) it is used.
  */
 import { diffWords } from 'diff'
-import type { Defect, Fact, FactDef, Project, Requirement, Section, Template, TestStage } from '../../types'
+import type { Fact, FactDef, Project, Requirement, Section, Template, TestStage } from '../../types'
 import { markdownToPlain, normalize } from '../../rules/text'
 import { cannedFor } from './content'
 
@@ -128,7 +128,7 @@ export function transcribe(project: Project, participantIds: string[]) {
 
 // ─── Testing ────────────────────────────────────────────────────────────
 
-export function signoffSummary(stage: TestStage, st: { total: number; pass: number; fail: number; blocked: number; notRun: number; known: Defect[] }, buildVersion?: string): string {
-  const who = stage === 'SQA' ? 'The SQA team' : 'Business users'
-  return `${who} tested build ${buildVersion ?? '—'} with ${st.total} test cases: ${st.pass} passed, ${st.fail} failed, ${st.blocked} blocked and ${st.notRun} not run. ${st.known.length ? `${st.known.length} known issue${st.known.length > 1 ? 's are' : ' is'} listed below; none of them blocks sign-off.` : 'There are no known issues.'} ${stage === 'SQA' ? 'The build is ready for user acceptance testing.' : 'The system is ready for go-live, subject to the known issues.'}`
+export function signoffSummary(stage: TestStage, st: { total: number; pass: number; fail: number; toCheck: number }, version?: string): string {
+  const who = stage === 'SQA' ? 'The SQA team' : 'Developers, stakeholders and the PM team'
+  return `${who} checked version ${version ?? '—'} against ${st.total} testing points: ${st.pass} passed, ${st.fail} failed and ${st.toCheck} not checked. ${stage === 'SQA' ? 'The version is ready for user acceptance testing.' : 'The system is ready for go-live.'}`
 }

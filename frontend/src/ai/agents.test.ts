@@ -14,7 +14,7 @@ vi.mock('./client', () => ({
   cosine: vi.fn(() => 0.9),
 }))
 
-const { draftSection, draftTestCase, extractFacts, findSimilarProjects, scopeVerdict, summarize, tidy, updateForFacts, writeQuestions } = await import('./agents')
+const { draftSection, draftTestPoints, extractFacts, findSimilarProjects, rewriteTestPoint, scopeVerdict, summarize, tidy, updateForFacts, writeQuestions } = await import('./agents')
 
 const def = (key: string, label: string): FactDef => ({ key, label, category: 'scope', round: 'intake' }) as FactDef
 const p = project({ name: 'Branch Loan Approval App', intake: { description: 'Loan officers approve loans on paper.', analysed: false } })
@@ -93,12 +93,29 @@ describe('scopeVerdict', () => {
   })
 })
 
-describe('draftTestCase', () => {
-  it('reads the title, steps and expected result, skipping heading-like steps', async () => {
-    answer.text = 'Title: Verify borrower history\nSteps:\n1. Open the Application:\n2. Open a loan application\n3. Tap Check history\nExpected: - The borrower history is shown.'
-    const req: Requirement = { id: 'SR-02', projectId: 'p1', docType: 'SRS', text: 'Check borrower history' }
-    const tc = await draftTestCase('SQA', req)
-    expect(tc).toMatchObject({ title: 'Verify borrower history', steps: ['Open a loan application', 'Tap Check history'], expected: 'The borrower history is shown.', requirementIds: ['SR-02'], ai: true })
+describe('draftTestPoints', () => {
+  const req: Requirement = { id: 'SR-02', projectId: 'p1', docType: 'SRS', text: 'Check borrower history' }
+
+  it('reads up to 3 points, skipping headings and a point cut off at the length limit', async () => {
+    answer.text = ['Testing points:', '- An officer opens a loan and sees the borrower history.', '- **History shows the last 3 loans.**', '- A borrower with no history shows a clear message.', '- Loading takes under 2 seconds.', '- Works on'].join('\n')
+    expect(await draftTestPoints('SQA', req)).toEqual(['An officer opens a loan and sees the borrower history.', 'History shows the last 3 loans.', 'A borrower with no history shows a clear message.'])
+  })
+
+  it('accepts plain lines when the model forgets the bullets', async () => {
+    answer.text = 'The officer sees the borrower history on the loan screen.'
+    expect(await draftTestPoints('UAT', req)).toEqual(['The officer sees the borrower history on the loan screen.'])
+  })
+
+  it('refuses an answer with no usable point', async () => {
+    answer.text = 'OK'
+    await expect(draftTestPoints('SQA', req)).rejects.toThrow()
+  })
+})
+
+describe('rewriteTestPoint', () => {
+  it('keeps the first real line, without a bullet or quotes', async () => {
+    answer.text = '- "The officer sees the last 3 loans of the borrower."\nThis is clearer.'
+    expect(await rewriteTestPoint('SQA', 'Check borrower history', 'History works', {})).toBe('The officer sees the last 3 loans of the borrower.')
   })
 })
 

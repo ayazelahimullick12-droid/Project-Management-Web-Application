@@ -1,12 +1,12 @@
 /**
  * Home, laid out as a "bento" grid like current work apps (Linear, Asana Home, Monday):
- * - Numbers at a glance (waiting on you, in review, open questions, defects, decisions).
+ * - Numbers at a glance (waiting on you, in review, open questions, failed testing points, decisions).
  * - What is waiting on you, with how long it has waited; recent conversations beside it.
  * - Project cards: health, progress ring, next step and the heads on it.
  * - Activity over the last two weeks, and for the Owner and Admin the pipeline and stalled items.
  * SPEC.md "Dashboard".
  */
-import { Activity, ArrowRight, Bug, CircleCheck, FileText, Gavel, MessageCircle, MessageCircleQuestion, Plus, SquareCheckBig, TriangleAlert } from 'lucide-react'
+import { Activity, ArrowRight, CircleCheck, CircleX, FileText, Gavel, MessageCircle, MessageCircleQuestion, Plus, SquareCheckBig } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { clsx } from 'clsx'
@@ -64,9 +64,6 @@ const GROUP_TITLE: Record<string, (n: number) => string> = {
   decision: (n) => `${n} decisions are waiting for your confirmation`,
   question: (n) => `${n} Q/A questions are waiting for your answer`,
   'fact-update': (n) => `${n} Fact Sheet updates were proposed from edits`,
-  defect: (n) => `${n} new defects to triage`,
-  retest: (n) => `${n} defects are ready for your retest`,
-  tests: (n) => `${n} test runs have tests assigned to you`,
 }
 
 /** Groups many items of the same kind in the same project into one row ("3 decisions…"). */
@@ -158,7 +155,7 @@ function ProjectCard({ s, now }: { s: ProjectSummary; now: Date }) {
         <AvatarStack people={s.heads} size={24} max={5} />
         <div className="flex items-center gap-3 text-xs text-muted">
           {s.unansweredQuestions > 0 && <span className="flex items-center gap-1" title="Open Q/A questions"><MessageCircleQuestion className="h-3.5 w-3.5" />{s.unansweredQuestions}</span>}
-          {s.openDefects > 0 && <span className="flex items-center gap-1" title="Open defects"><Bug className="h-3.5 w-3.5" />{s.openDefects}</span>}
+          {s.failedPoints > 0 && <span className="flex items-center gap-1" title="Failed testing points"><CircleX className="h-3.5 w-3.5" />{s.failedPoints}</span>}
           {s.pendingDecisions > 0 && <span className="flex items-center gap-1" title="Decisions to confirm"><Gavel className="h-3.5 w-3.5" />{s.pendingDecisions}</span>}
         </div>
       </div>
@@ -251,13 +248,7 @@ export function DashboardPage() {
         <Tile icon={<SquareCheckBig />} tone="bg-brand-soft text-brand" value={tasks.length} label="Waiting on you" to="/my-work" />
         <Tile icon={<FileText />} tone="bg-sky-50 text-sky-700" value={data.kpis.inReview} label="Documents in review" />
         <Tile icon={<MessageCircleQuestion />} tone="bg-amber-50 text-amber-700" value={data.kpis.questionsOpen} label="Open Q/A questions" to="/my-work?tab=questions" />
-        <Tile
-          icon={<Bug />}
-          tone="bg-red-50 text-red-700"
-          value={data.kpis.defectsOpen}
-          label="Open defects"
-          sub={data.kpis.criticalDefects > 0 && <span className="inline-flex items-center gap-1 font-medium text-red-700"><TriangleAlert className="h-3 w-3" />{data.kpis.criticalDefects} critical</span>}
-        />
+        <Tile icon={<CircleX />} tone="bg-red-50 text-red-700" value={data.kpis.failedPoints} label="Failed testing points" />
         <Tile icon={<Gavel />} tone="bg-violet-50 text-violet-700" value={data.kpis.decisionsPending} label="Decisions to confirm" />
       </div>
 

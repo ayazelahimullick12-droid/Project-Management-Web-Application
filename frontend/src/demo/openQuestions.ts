@@ -24,10 +24,8 @@ export const OPEN_QUESTIONS: OpenQuestion[] = [
   { id: 'sqa-team', source: 'SPEC_SQA_UAT.md', question: 'Where does BRAC’s SQA team sit?', assumption: 'Inside the tech team, tagged SQA.', where: 'Team page' },
   { id: 'sqa-approver', source: 'SPEC_SQA_UAT.md', question: 'Who approves the SQA sign-off?', assumption: 'The tech head.', where: 'SQA → Sign-off' },
   { id: 'uat-chain', source: 'SPEC_SQA_UAT.md', question: 'Is the UAT sign-off chain right?', assumption: 'PM, tech head, stakeholder head, then the sponsor head signs.', where: 'UAT → Sign-off' },
-  { id: 'blocking', source: 'SPEC_SQA_UAT.md', question: 'Which severities block sign-off and cannot be deferred?', assumption: 'Critical and High (Admin setting).', where: 'Defects, sign-off' },
-  { id: 'sqa-visible', source: 'SPEC_SQA_UAT.md', question: 'Should stakeholders and sponsors see SQA defects?', assumption: 'Yes, read-only.', where: 'SQA → Defects' },
   { id: 'prototype-review', source: 'SPEC_SQA_UAT.md', question: 'Should a Prototype Review stage be added before development?', assumption: 'Not included.', where: 'Stage tracker' },
-  { id: 'rag-tests', source: 'SPEC_SQA_UAT.md', question: 'Should test cases and defects from finished projects be reused through RAG?', assumption: 'Not included.', where: 'RAG panel' },
+  { id: 'rag-tests', source: 'SPEC_SQA_UAT.md', question: 'Should testing points from finished projects be reused through RAG?', assumption: 'Not included.', where: 'RAG panel' },
 ]
 
 export const openQuestion = (id: string) => OPEN_QUESTIONS.find((q) => q.id === id)

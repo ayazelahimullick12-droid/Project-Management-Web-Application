@@ -41,16 +41,16 @@ The three active projects have the same team, so each person has the same role e
 | --- | --- | --- |
 | **Farhana Kabir** | Admin (system-wide) | Admin pages: templates, users, settings, import, AI activity, audit log; the portfolio view |
 | **Imran Chowdhury** | Project Owner of every project | Home portfolio view, starting projects, team changes, Away, archive; the **master key**: he can do anything anyone in his projects can do (Part 12) |
-| **Nusrat Jahan** | Project Manager (PM head) | Running intake, generating documents, approvals, decisions, change requests, defect triage, UAT sign-off |
+| **Nusrat Jahan** | Project Manager (PM head) | Running intake, generating documents, approvals, decisions, change requests, UAT testing and sign-off |
 | **Sadia Islam** | Deputy PM | Acting for the PM when Nusrat is Away |
 | **Rafiq Hasan**, **Mehnaz Akter** | PM team members | Editing documents, accepting suggestions, the edit lock |
 | **Arif Rahman** | Tech head | Approving documents, confirming the SQA test list, approving the SQA sign-off, answering technical questions |
 | **Kamrul Hossain** | Deputy tech head | Acting for the tech head |
-| **Shuvo Das**, **Nabila Sultana** | Developers | Registering builds, fixing defects; seeing what developers are not allowed to do |
-| **Tania Ferdous**, **Mahmud Karim** | SQA testers (tech team, SQA tag) | SQA test cases, runs, builds, release to UAT, retesting |
+| **Shuvo Das**, **Nabila Sultana** | Developers | Adding versions, fixing failed points, UAT testing; seeing what developers are not allowed to do |
+| **Tania Ferdous**, **Mahmud Karim** | SQA testers (tech team, SQA tag) | SQA testing points, PASS / FAIL on each version, the SQA sign-off report |
 | **Rokeya Begum** | Stakeholder head (**Away** in Branch Cash) | Confirming the Fact Sheet, approving documents, confirming the UAT test list |
 | **Jahid Hasan** | Deputy stakeholder head | Approving **as deputy** while Rokeya is Away |
-| **Shirin Akhter**, **Habib Ullah** | Stakeholders (UAT testers) | Writing the description, answering questions, commenting, UAT testing, raising defects |
+| **Shirin Akhter**, **Habib Ullah** | Stakeholders (UAT testers) | Writing the description, answering questions, commenting, UAT testing (PASS / FAIL) |
 | **Selim Reza** | Sponsor head | Answering budget questions, **signing** the Proposal & Charter, BRD and SRS |
 | **Laila Nasrin** | Deputy sponsor head | Suggestions in Branch Cash |
 | **Grace Mwangi** | Sponsor, outside BRAC | An external member (signs with an email code) |
@@ -105,14 +105,14 @@ The view most people will use. Show it first, then flip to **Full** to show the 
 ## Part 2 — Home dashboard and project overview (6 min)
 
 1. Be **Imran Chowdhury** (Owner). **Home** shows:
-   - **Number tiles:** waiting on you, documents in review, open Q/A questions, open defects (with
+   - **Number tiles:** waiting on you, documents in review, open Q/A questions, failed testing points (with
      critical ones), decisions to confirm. Some tiles open the list behind them.
    - **Waiting on you:** each item with how long it has waited (grey under a day, amber up to 3
      days, red after that).
    - **Conversations:** recent and unread chats. Click one to open it in a chat window.
    - **Project cards:** health (On track, Waiting, Delayed, Needs attention), progress ring,
      stage, the **next step** (who must act and for how long), the heads, and counts of
-     questions, defects and decisions.
+     questions, failed testing points and decisions.
    - **Activity:** a 14-day chart and the latest actions.
    - **Pipeline** (projects by stage) and **Stalled across the portfolio** (longest waiting
      first, with “deputy covering” where it applies). Only the Owner and the Admin see these.
@@ -258,13 +258,12 @@ Proposal & Charter, with signing at the end.
    answer → be **Nusrat** → close it. Then generate, approve and sign the SRS.
 4. **SRS → Traceability → Build the matrix:** each requirement linked to its BRD and Charter
    parent. Any requirement the AI wrote without a link is flagged.
-5. The project moves to **SQA**. Draft its tests with AI:
-   - Be **Tania Ferdous** (SQA) → **SQA → Test cases → Draft test cases with AI**: one draft per
-     SRS requirement (about 5 seconds each), labelled AI until accepted → **Accept all … AI
-     drafts** (or edit one, then **Save and accept**).
-   - Be **Arif** → **Confirm the list (tech head)**. Testing can now start.
-   - UAT works the same way: the PM team drafts UAT tests from the BRD and the stakeholder head
-     (Rokeya) confirms the list.
+5. The project moves to **SQA**. Write its testing points with AI:
+   - Be **Tania Ferdous** (SQA) → **SQA → Write points with AI**: up to 3 short points per SRS
+     requirement (a few seconds each), labelled AI until someone edits them. **Add a point** adds
+     one by hand; the pencil edits, the sparkle **regenerates** one with AI, the bin deletes.
+   - UAT works the same way from the BRD: developers, stakeholders and the PM team write the UAT
+     points.
 6. The rest of testing is shown with a project that is already in UAT (Part 8).
 
 ## Part 7 — Branch Cash: deputies, signing, Fact Sheet updates, decisions, change requests (12 min)
@@ -307,55 +306,43 @@ Proposal & Charter, with signing at the end.
    4. **Create new versions and restart the pipeline** → **Go to the Proposal**. Later documents
       are **Out of sync**. Their banner has **Choose sections to regenerate**, and an unchanged
       Proposal can be sent for re-approval.
-7. **Audit log** (Team → Audit log): builds, approvals, deputy actions, decisions, the change
+7. **Audit log** (Team → Audit log): versions, PASS / FAIL, approvals, deputy actions, decisions, the change
    request.
 
-## Part 8 — SQA and UAT testing (15 min) — Member Savings Statement Portal
+## Part 8 — SQA and UAT testing (10 min) — Member Savings Statement Portal
 
-1. Be **Nusrat** → **Member Savings Statement Portal → UAT**. Walk the tabs: **Overview**
-   (progress), **Test cases** (with requirement coverage; BR-06 is **Not testable**), **Builds**,
-   **Runs**, **Defects**, **Sign-off**.
-2. **Test cases:** each has an ID, steps, expected result, requirement, priority, type and
-   history. Both lists were confirmed already (by Arif for SQA and Rokeya for UAT). AI drafting
-   is shown in Part 6, because every Savings requirement already has tests.
-   - Be **Tania Ferdous** (SQA) → **SQA → Test cases → New** to add one by hand.
-   - Be **Nusrat** → **UAT → Test cases**: **mark Not testable** on a requirement with a reason
-     (and **undo**). Only the PM can.
-3. **Builds:**
-   - Be **Shuvo Das** (developer) → **SQA → Builds → Register a build**: version, test
-     environment, notes and **Defects this build fixes** → **Register**. It is available to SQA
-     at once.
-   - Be **Mahmud Karim** (SQA). Build **1.1**: **Release to UAT** is greyed out, and the reason is
-     shown.
-4. Be **Mahmud** → **My work → Tests** → **Run test** on **SQA-TC-3** → **Pass** → record it.
-5. **SQA → Defects:** **SQA-5** is **Ready for retest** → open it → **Retest passed: close**.
-6. **SQA → Builds:** for **UAT-4** in build 1.1, click **Fix works** (or **Still fails**), then
-   **Release to UAT**. UAT-4 is now ready for its reporter to retest.
-7. Be **Habib** (stakeholder):
-   - **My work → Tests** → **Run test** on **UAT-TC-4** → **Fail**. Type a rough note and click
-     **Write**: the AI defect writer fills in the title, steps, expected and actual (a few
-     seconds). If it means the same as an open defect, that one is shown as a possible duplicate
-     (compared by meaning). **Attach a screenshot** → **Raise defect**.
-   - Open **UAT-5** (Ready for retest) → **Retest passed: close**.
-8. Be **Nusrat** → **UAT → Defects** (board view):
-   - Drag the new defect from **New** to **Open** and choose a developer (triage).
-   - Drag a card where she is not allowed: it snaps back with the reason.
-   - **Show rejected, duplicate, deferred** reveals the outcome columns.
-   - Switch to the **list** view (filters).
-   - Open **UAT-1** → **Reject (not a defect)**, **Mark duplicate**, **Defer to after go-live**
-     (Medium/Low only) or **Turn into a change request**.
-9. Open any defect page (as anyone): comments with @tags, **Attach**, **Watch**, the full history.
-10. Be **Shuvo** (developer) → **UAT-2** → **Start work** → **Mark fixed** (choose the build).
-    There is no **Close** button for developers: only the reporter's team closes defects.
-11. **New test run:** be **Tania** for SQA (or **Nusrat** for UAT) → **Runs → New test run** →
-    choose build and tests → **Create run**. The tests appear in each tester's **My work → Tests**.
-12. **Sign-off:**
-    - **SQA → Sign-off** shows the signed SQA sign-off (approved by the tech head, which released
-      build 1.0 to UAT automatically).
-    - Be **Nusrat** → **UAT → Sign-off** → **Generate report**: numbers counted from the data, an
-      AI summary paragraph, and the known issues. The **exit criteria** checklist is red (UAT-2 is
-      Critical and open), so **Send for approval** is blocked with the reason. Once criteria are
-      met, the chain is PM → tech head → stakeholder head, and the sponsor head signs.
+How it works: pick the version being tested, then mark each testing point **PASS** or **FAIL**,
+with an optional comment. A failed point is fixed in a new version, and every point is checked
+again on it. When every point passes on one version, the sign-off report is made for it.
+
+1. Be **Nusrat** → **Member Savings Statement Portal → UAT**. At the top, the **version** box
+   (1.1 is the newest; 1.0 is marked "passed SQA") with PASS / FAIL / to check counts, and the
+   notes and link of the version. Below: **Testing points** and **Sign-off**.
+2. **Testing points:** each has a key (UAT-1…), the text, its requirement and a **History**.
+   **Requirements covered** on the right: BR-06 is **Not testable** (only the PM can mark it, with
+   a reason, and **undo**).
+3. Be **Habib** (stakeholder) → his To do → **Start testing**:
+   - On version 1.1 every point is **To check**. Type a comment (optional) and press **PASS** or
+     **FAIL**. A comment can go with either.
+   - A FAIL tells the developers. **Check again** replaces a result.
+   - The filters show **To check**, **FAIL** or **PASS** only.
+4. Pick **1.0.1** in the version box: its results and comments are kept (UAT-2 and UAT-5 failed
+   there). Every point's **History** shows all its checks; checks made before the point was
+   edited are struck through, because they no longer count.
+5. Be **Shuvo Das** (developer): To do → **Fix the points that failed testing**, and also **Test
+   the new system** (developers do UAT too). **Add a version** (for example 1.2, with notes on
+   what it fixes): the testers are told, and every point is **To check** again on it.
+6. Editing a point (pencil) or regenerating it (sparkle) means it is checked again. When a
+   requirement changes in a change request, its points show **Requirement changed: check
+   again**.
+7. **Sign-off:**
+   - **SQA** shows version **1.0**, the version that was signed off (every point passed), and the
+     signed SQA sign-off (approved by the tech head).
+   - Be **Nusrat** → **UAT → Sign-off**: the list for the chosen version is red while points are
+     to check or failed, so **Send for approval** is blocked with the reason. When every point
+     passes, **Make the report** for that version: numbers counted from the data, each point with
+     its result and comment, earlier versions, and an AI summary paragraph. The chain is PM →
+     tech head → stakeholder head, and the sponsor head signs.
 
 ## Part 9 — Chat, calls and meetings (8 min)
 
@@ -421,11 +408,10 @@ Each refusal shows the reason. Show a few:
   tab (PM team only).
 - Be **Shuvo** (developer) on a document his head has approved: he cannot comment any more.
 - Be **Nusrat** → **Send for approval** with an open comment: greyed out, with the reason.
-- Be **Nusrat** on the defect board: drag a card to a column she may not use, and it snaps back.
-- When **Nusrat** triages a defect, only developers can be chosen: SQA testers cannot be assigned
-  defects. Be **Shuvo** on a defect: developers cannot close it.
+- Be **Nusrat** → **SQA**: she cannot mark SQA points (only SQA testers can), and the reason is
+  shown. Be **Habib** (stakeholder): he cannot add a version (the tech or PM team does).
 - Be **Nusrat** on the **Team** page: only the Owner changes the team.
-- The other way round, the **Project Owner has a master key**: be **Imran**. His To do has **You can also do, as Project Owner** (My work → **As Project Owner** in the Full view): everything waiting for other people in his projects. He can answer any question, record any tester's result (**Run for Habib** on a test run), triage, mark fixed, close, release a build, approve or sign any step. The record says "(Project Owner)". The same checks still apply to him: for example he cannot defer a Critical defect or send a document with open comments.
+- The other way round, the **Project Owner has a master key**: be **Imran**. His To do has **You can also do, as Project Owner** (My work → **As Project Owner** in the Full view): everything waiting for other people in his projects. He can answer any question, write and check SQA and UAT points, add versions, make the sign-off reports, approve or sign any step. The record says "(Project Owner)". The same checks still apply to him: for example he cannot send a sign-off before every point passes, or send a document with open comments.
 - Be **Mithila Sarker** (past project member): she has no active projects. From Field Loan she sees
   only the conversation Nusrat started, nothing else.
 
@@ -457,9 +443,8 @@ Each refusal shows the reason. Show a few:
 | Signing with password or email code, frozen versions, fingerprints | 6, 7 |
 | SRS traceability matrix | 6 |
 | Deputy approvals, Fact Sheet updates from edits, decisions, change requests, Out of sync | 7 |
-| Test cases (AI drafts), list confirmation, Not testable, builds, release to UAT | 8 |
-| Test runs, My tests, Pass / Fail / Blocked, AI defect writer, duplicates | 8 |
-| Defect board, triage, outcomes, retests, defect page, sign-off reports, exit criteria | 8 |
+| Testing points (AI write and regenerate), Not testable, versions | 6, 8 |
+| PASS / FAIL with comments, history per point, fix in a new version, sign-off reports | 8 |
 | Chat dock, channels, direct messages, reactions, mentions, Mark as decision | 9 |
 | Calls, transcription, transcripts, meeting audio | 9 |
 | Reminders, time travel, Inbox, Mailbox | 10 |

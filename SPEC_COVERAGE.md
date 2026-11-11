@@ -137,22 +137,17 @@ Every feature and rule in `SPEC.md` and `SPEC_SQA_UAT.md`, and where to see it i
 
 - [x] Stages SQA then UAT on the stage tracker; Complete after the UAT sign-off is signed — Project home
 - [x] SQA tag inside the tech team; developers = tech members without the tag — Team page
-- [x] Who does what (writing tests, confirming, builds, release, running, raising, triage, fixing, closing, outcomes, sign-offs) — enforced in `src/rules/testing.ts`; try as different users
-- [x] Testers and developers kept apart (SQA cannot be assigned; developers cannot close) — defect page
-- [x] Test cases: ID, steps, expected, requirement, priority, type, history; AI drafting; labelled until accepted — Savings → Test cases
-- [x] Coverage with Not testable (PM) — Savings → UAT → Test cases (BR-06)
-- [x] Extended traceability (requirement → tests) — Savings → SRS → Traceability
-- [x] Test case list confirmed by the tech head (SQA) / stakeholder head (UAT) — Test cases tab
-- [x] Builds: register, claimed fixes, available to SQA at once, Release to UAT only after an SQA run and with no open Critical/High SQA defects — Savings → Builds
-- [x] Fixes during UAT go through SQA first (“Fix works” / “Still fails”) — Savings → Builds (UAT-4 in build 1.1)
-- [x] Test runs, My tests inbox, Pass / Fail (must link a defect) / Blocked (reason), files — My work → Tests
-- [x] Defects: fields, severity, status flow, outcomes (Rejected, Duplicate, Deferred — Medium/Low only, Change request) — Savings → Defects
-- [x] Board with drag and drop (only allowed moves), list with filters and saved shortcuts, defect page with comments, @tags, files, history, watchers — Savings → Defects
-- [x] AI defect writer; possible duplicates (compared by meaning) — Raise a defect / record a Fail
-- [x] Exit criteria checklist; generated report (numbers counted by code, AI summary paragraph labelled); known issues; Not testable list — Sign-off tab
-- [x] SQA sign-off approved by the tech head (auto-releases the build to UAT); UAT sign-off PM → tech → stakeholder head, sponsor signs — Sign-off tab
+- [~] **Simplified (11 November 2026, the user's request; see DECISIONS.md):** test cases, test-list confirmation, builds released to UAT, test runs with assignments, Blocked, and the defect board are replaced by **testing points** checked **PASS / FAIL** (optional comment) on a chosen **version**
+- [x] Who does what: SQA testers write and check SQA points; developers, stakeholders and the PM team write and check UAT points; the tech or PM team adds versions; an SQA tester / the PM makes the report; the Owner can do all of it — `src/rules/testing.ts`; try as different users
+- [x] Testing points: the AI writes up to 3 per requirement; add, edit, regenerate (AI), delete; labelled AI until edited; history — Savings → SQA / UAT
+- [x] Coverage with Not testable (PM) — Savings → UAT (BR-06)
+- [x] Extended traceability (requirement → points) — Savings → SRS → Traceability
+- [x] Versions: added by the tech or PM team, shared by SQA and UAT; every point is checked again on a new version; older versions keep their results — version picker on the testing page
+- [x] A FAIL tells the developers; "Fix N failed points" waits on them until a new version is added — To do / My work
+- [x] Exit criteria for the chosen version (every point checked and passed); generated report for that version (numbers counted by code, AI summary labelled), with each point's result and comment, and earlier versions — Sign-off tab
+- [x] SQA sign-off approved by the tech head; UAT sign-off PM → tech → stakeholder head, sponsor signs — Sign-off tab
 - [x] Request changes on a report → regenerate → chain restarts
-- [x] Changes during testing: linked tests Needs review (reset), sign-offs Out of sync, re-done in order — after a change request or a requirement edit
-- [x] Notifications and reminders for tests, builds, defects, retests, list confirmation, sign-offs — Notifications
-- [x] Dashboard: SQA/UAT status, progress and defects; untriaged defects and retests in stalled items — Project overview, Home
-- [x] Audit log entries for builds, results, defect changes, Not testable, sign-offs — Audit log
+- [x] Changes during testing: linked points marked "Requirement changed: check again" (earlier results stop counting), sign-offs Out of sync, re-done in order — after a change request or a requirement edit
+- [x] Notifications and reminders: points to check on the newest version, failed points to fix, new versions, sign-offs — Notifications
+- [x] Dashboard: SQA/UAT status, PASS / FAIL progress on the version, failed points; points to check and to fix in stalled items — Project overview, Home
+- [x] Audit log entries for versions, points generated or deleted, PASS / FAIL, Not testable, sign-offs — Audit log

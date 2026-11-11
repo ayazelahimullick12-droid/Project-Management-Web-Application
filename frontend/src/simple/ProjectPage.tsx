@@ -62,12 +62,13 @@ export function SimpleProjectPage() {
       subtitle={summary.unansweredQuestions ? `${summary.unansweredQuestions} question${summary.unansweredQuestions > 1 ? 's' : ''} waiting for answers` : 'What the project needs to know, and the answers so far'}
     />
   )
+  const testingLine = (t: (typeof data.testing)['SQA']) => `${t.status}${t.points && t.version ? ` · version ${t.version}: ${t.passed} of ${t.points} points passed${t.failed ? `, ${t.failed} failed` : ''}` : ''}`
   const testingRow = testingStage && (
     <Row
       to={`/projects/${pid}/testing/${testingStage}`}
       icon={<FlaskConical className="h-6 w-6 text-muted" />}
       title={testingStage === 'SQA' ? 'Technical testing' : 'User testing'}
-      subtitle={`${data.testing[testingStage].status}${data.testing[testingStage].tests ? ` · ${data.testing[testingStage].passed} of ${data.testing[testingStage].tests} tests passing · ${data.testing[testingStage].defectsOpen} problems open` : ''}`}
+      subtitle={testingLine(data.testing[testingStage])}
     />
   )
 

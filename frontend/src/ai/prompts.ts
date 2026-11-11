@@ -23,8 +23,8 @@ export const LIMITS = {
   scope: 50,
   summary: 100,
   slides: 200,
-  testCase: 90,
-  defect: 140,
+  testPoints: 90,
+  testPoint: 40,
   signoff: 80,
   decision: 40,
 } as const
@@ -110,29 +110,18 @@ ${text}
 
 Make 3 presentation slides about it. For each slide write a line "Slide: <title under 6 words>", then 2 lines starting with "- " (each under 12 words).`,
 
-  testCase: (stage: 'SQA' | 'UAT', reqId: string, reqText: string) =>
-    `Write one ${stage === 'SQA' ? 'technical (SQA)' : 'user acceptance (UAT)'} test case for this requirement.
-${reqId}: ${reqText}
-Use exactly this layout:
-Title: <under 10 words>
-Steps:
-1. <step under 8 words${stage === 'UAT' ? ' a business user can follow' : ''}>
-2. <step under 8 words>
-3. <step under 8 words>
-Expected: <one sentence>`,
+  testPoints: (stage: 'SQA' | 'UAT', reqId: string, reqText: string) =>
+    `Requirement ${reqId}: ${reqText}
+Write 3 ${stage === 'SQA' ? 'technical testing' : 'user acceptance testing'} points for it. Each point is one thing a tester ${stage === 'UAT' ? '(a business user) ' : ''}can try and then mark PASS or FAIL.
+Write each point on its own line starting with "- ", under 15 words, as a statement (for example "- A member can log in with the code sent by SMS"). Nothing else.`,
 
-  defect: (note: string, test?: { title: string; steps: string[]; expected: string }) =>
-    `A tester wrote this rough note about a problem:
-"${note}"
-${test ? `It happened while running the test "${test.title}" (steps: ${test.steps.join('; ')}; expected: ${test.expected}).\n` : ''}Write it up as a defect, using only what the note says, in exactly this layout:
-Title: <under 12 words>
-Steps:
-1. <short step>
-Expected: <one sentence>
-Actual: <one sentence>`,
+  testPoint: (stage: 'SQA' | 'UAT', reqText: string, oldText: string) =>
+    `Requirement: ${reqText}
+A ${stage === 'SQA' ? 'technical' : 'user acceptance'} testing point for it was: "${oldText}"
+Write it again, better and clearer: one thing a tester can try and mark PASS or FAIL, under 15 words, as a statement. Write only the point.`,
 
-  signoff: (stage: 'SQA' | 'UAT', counts: string, build: string, known: number) =>
-    `Write 2 short sentences summarising ${stage === 'SQA' ? 'technical (SQA)' : 'user acceptance (UAT)'} testing of build ${build}. Results: ${counts}. Known issues still open: ${known}. Use only these numbers.`,
+  signoff: (stage: 'SQA' | 'UAT', counts: string, version: string) =>
+    `Write 2 short sentences summarising ${stage === 'SQA' ? 'technical (SQA)' : 'user acceptance (UAT)'} testing of version ${version}. Results: ${counts}. Use only these numbers.`,
 
   // The field itself is chosen by meaning (embeddings, see agents.ts); the model only writes the value.
   decisionValue: (text: string, label: string) =>

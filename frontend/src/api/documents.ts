@@ -17,7 +17,7 @@ import { approve as approveRule, canAct, chainNeeds, CHAIN_CONFIG, cancel, curre
 import { blockingCounts, canCheckPending, canComment, canTick, carryForward, commentTeam } from '../rules/comments'
 import { actAsHead, can, COVER_LABEL, headOf, headRecipient, inTeam, isOwner, isSqa, memberOf, onBehalfText, TEAM_LABEL, type Check } from '../rules/permissions'
 import { activeChain, canGenerate, chainsOf, DOC_LABEL, docStatus, isComplete, laterTypes, PART_LABEL, PIPELINE, previousComplete, sectionPart } from '../rules/pipeline'
-import { exitCriteria, markReadyForRetest } from '../rules/testing'
+import { exitCriteria } from '../rules/testing'
 import { normalize } from '../rules/text'
 import { act, ApiError, ensure, fail, me, nameOf, pipelineCtx, projectOf, read } from './core'
 import { allMembers, audit, notify, teamMembers } from './effects'
@@ -127,7 +127,7 @@ export async function getDocument(pid: ID, type: DocType) {
       summaryError,
       requirements: reqs,
       traceBuilt: !!s.traceLinksDone[pid],
-      testCases: s.testCases.filter((tc) => tc.projectId === pid),
+      testPoints: s.testPoints.filter((pt) => pt.projectId === pid),
       chatId: doc ? `${doc.id}-chat` : undefined,
       members: p.members.map((m) => ({ userId: m.userId, name: nameOf(s, m.userId), team: m.team })),
       perms: {
@@ -157,18 +157,20 @@ export async function getDocument(pid: ID, type: DocType) {
 
 function criteriaCheck(s: DemoState, pid: ID, stage: 'SQA' | 'UAT'): Check {
   const ctx = pipelineCtx(s, pid)
+  // The sign-off is for the version its current report was made for.
+  const doc = s.docs.find((d) => d.projectId === pid && d.type === (stage === 'SQA' ? 'SQA_SIGNOFF' : 'UAT_SIGNOFF'))
+  const report = s.versions.find((v) => v.id === doc?.currentVersionId)
+  const tested = s.productVersions.find((v) => v.id === report?.testedVersionId)
   const r = exitCriteria({
     stage,
     previousDone: previousComplete(ctx, stage === 'SQA' ? 'SQA_SIGNOFF' : 'UAT_SIGNOFF'),
-    confirmations: s.testConfirmations,
-    projectId: pid,
     requirements: s.requirements.filter((x) => x.projectId === pid),
-    tests: s.testCases.filter((x) => x.projectId === pid),
-    executions: s.executions.filter((x) => x.projectId === pid),
-    defects: s.defects.filter((x) => x.projectId === pid),
-    blocking: s.settings.signoffBlocking,
+    points: s.testPoints.filter((x) => x.projectId === pid && x.stage === stage),
+    checks: s.pointChecks.filter((x) => x.projectId === pid && x.stage === stage),
+    versionId: tested?.id,
+    versionLabel: tested?.version,
   })
-  return r.ok ? { ok: true } : { ok: false, reason: `Exit criteria not met: ${r.items.filter((i) => !i.ok).map((i) => i.label.toLowerCase()).join('; ')}.` }
+  return r.ok ? { ok: true } : { ok: false, reason: `Not ready yet: ${r.items.filter((i) => !i.ok).map((i) => i.label.toLowerCase()).join('; ')}.` }
 }
 
 /** Can the PM declare the current version a minor correction? (SPEC.md "Minor correction") */
@@ -308,9 +310,10 @@ function updateRequirements(s: DemoState, p: Project, type: DocType, sections: S
   const changed = reqs.filter((r) => old.find((o) => o.id === r.id && normalize(o.text) !== normalize(r.text))).map((r) => r.id)
   s.requirements = [...s.requirements.filter((r) => !(r.projectId === p.id && r.docType === type)), ...reqs.map((r) => ({ ...r, notTestable: old.find((o) => o.id === r.id)?.notTestable }))]
   const at = nowIso()
-  for (const tc of s.testCases.filter((x) => x.projectId === p.id && x.requirementIds.some((id) => changed.includes(id)))) {
-    tc.needsReview = true
-    tc.history.push({ by: null, at, text: 'Needs review: a linked requirement changed, so the latest result was reset to Not run.' })
+  for (const pt of s.testPoints.filter((x) => x.projectId === p.id && x.requirementIds.some((id) => changed.includes(id)))) {
+    pt.needsReview = true
+    pt.changedAt = at // its earlier PASS / FAIL no longer counts
+    pt.history.push({ by: null, at, text: 'A linked requirement changed: check this point again (and edit it if needed).' })
   }
 }
 
@@ -770,8 +773,8 @@ export async function decideSuggestion(sugId: ID, accept: boolean) {
 const NEXT_STEP: Partial<Record<DocType, string>> = {
   PROPOSAL: 'The Proposal & Charter is signed. Next: the business processes Q/A round, then the BRD.',
   BRD: 'The BRD is signed. Next: the technical Q/A round (tech team), then the SRS.',
-  SRS: 'The SRS is signed. SQA can start: draft the SQA test cases.',
-  SQA_SIGNOFF: 'SQA is signed off. The build is released to UAT.',
+  SRS: 'The SRS is signed. SQA can start: write the SQA testing points.',
+  SQA_SIGNOFF: 'SQA is signed off. UAT can start: developers, stakeholders and the PM team check the UAT points.',
   UAT_SIGNOFF: 'UAT is signed off. Documentation complete: the Owner may archive the project.',
 }
 
@@ -826,16 +829,6 @@ function afterChainFinished(s: DemoState, doc: Doc, chain: ApprovalChain, at: st
   doc.outOfSync = undefined
   const verb = chain.status === 'signed' ? 'signed' : 'approved'
   notify(s, { to: allMembers(p), type: 'approved', title: `${DOC_LABEL[doc.type]} v${v.number} ${verb}`, body: `${p.name}: ${NEXT_STEP[doc.type] ?? ''}`, link: docLink(doc), projectId: p.id, at, exclude: actor.id, email: false })
-  if (doc.type === 'SQA_SIGNOFF' && v.buildId) {
-    const b = s.builds.find((x) => x.id === v.buildId)
-    if (b && !b.releasedToUatAt) {
-      b.releasedToUatAt = at
-      b.releasedBy = null
-      s.defects = markReadyForRetest(s.defects, b, 'UAT', new Date(at))
-      notify(s, { to: [...teamMembers(p, 'STAKEHOLDER'), ...teamMembers(p, 'PM')], type: 'build', title: `Build ${b.version} is ready for UAT`, body: `${p.name}: SQA signed off build ${b.version}. UAT can start.`, link: `/projects/${p.id}/testing/UAT`, projectId: p.id, at })
-      audit(s, { projectId: p.id, actorId: null, action: 'Build released to UAT', details: `${b.version} (automatically, on SQA sign-off)`, at })
-    }
-  }
   if (doc.type === 'UAT_SIGNOFF') notify(s, { to: [p.ownerId], type: 'complete', title: `${p.name}: documentation complete`, body: 'UAT is signed. You may archive the project.', link: `/projects/${p.id}`, projectId: p.id, at })
   // A change request closes once every affected document is approved again.
   const ctx = pipelineCtx(s, p.id)

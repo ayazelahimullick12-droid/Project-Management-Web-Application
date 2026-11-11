@@ -100,18 +100,18 @@ view and notifications without switching back and forth.
 
 ## 5. SQA and UAT (5 min) — Member Savings Statement Portal
 
-1. Be **Mahmud Karim** (SQA tester). **SQA → Builds**: build 1.1 cannot be released to UAT
-   yet; the reason is shown. Open **My work → Tests**, run **SQA-TC-3** and record **Pass**.
-2. **SQA → Defects**: SQA-5 is **Ready for retest** → open it → **Retest passed: close**.
-3. **SQA → Builds**: for UAT-4 click **Fix works**, then **Release to UAT**. UAT-4 is now ready
-   for its reporter to retest.
-4. Be **Habib**. **My work → Tests** → run **UAT-TC-4** → **Fail**, type a rough note and click
-   **Write** (AI defect writer, a few seconds). If the defect means the same as an open one, it is
-   shown as a possible duplicate. Raise the defect.
-5. Be **Nusrat**. **UAT → Defects** board: drag the new defect from **New** to **Open** (choose a
-   developer). Try dragging a card where you are not allowed: it snaps back with the reason.
-   **Show rejected, duplicate, deferred** reveals the outcome columns.
-6. **UAT → Sign-off**: the exit criteria checklist is red (UAT-2 is Critical and still open).
+1. Be **Habib** (stakeholder). His To do says **Test the new system**. Open it: the UAT page with
+   version **1.1** picked (the newest). Every point is **To check**, because every point is
+   checked again on a new version.
+2. Type a comment on **UAT-1** ("Bangla text fits now") and press **PASS**. On **UAT-2** type
+   what went wrong and press **FAIL**.
+3. Pick version **1.0.1** in the version box: the results on that version are still there, with
+   their comments. Open **History** on a point to see every check across versions.
+4. Be **Shuvo Das** (developer). His To do has **Fix the points that failed testing**. Developers
+   also check UAT points.
+5. **SQA** shows the SQA sign-off for version 1.0 (every point passed there).
+6. Be **Nusrat** → **UAT → Sign-off**: the list is red (points still to check or failed on the
+   version), so the report cannot be sent yet.
 
 ## 6. Meetings and decisions (2 min) — Field Loan Application App
 

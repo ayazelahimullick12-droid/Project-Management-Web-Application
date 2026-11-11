@@ -13,7 +13,7 @@ import { reassign } from '../rules/approval'
 import { blockingCounts } from '../rules/comments'
 import { actAsHead, can, HEAD_LABEL, headOf, headRecipient, inTeam, isAway, isDeveloper, isOwner, isSqa, memberLabel, memberOf, membershipIn, membershipsOf, roleLabel, TEAM_LABEL, teamProblems, teamWarnings } from '../rules/permissions'
 import { docOf, docStatus, factSheetConfirmed, projectStage, STAGE_LABEL, STAGES, type DocStatus } from '../rules/pipeline'
-import { UNRESOLVED } from '../rules/testing'
+import { versionCounts, versionToShow } from '../rules/testing'
 import { act, ApiError, ensure, fail, me, nameOf, pipelineCtx, projectOf, read } from './core'
 import { audit, notify } from './effects'
 import { waitingItems, type WaitingItem } from './waiting'
@@ -78,7 +78,7 @@ export interface ProjectSummary {
   unansweredQuestions: number
   openChangeRequests: number
   pendingDecisions: number
-  openDefects: number
+  failedPoints: number // SQA and UAT points failing on the newest version
   myRole: string
   next: NextStep
   progress: number // 0–100, by stage
@@ -126,7 +126,7 @@ export function summarize(s: DemoState, p: Project, userId: ID, t: Date): Projec
     unansweredQuestions: s.questions.filter((q) => q.projectId === p.id && !q.answeredAt && openRounds.has(q.roundId)).length,
     openChangeRequests: s.changeRequests.filter((c) => c.projectId === p.id && c.status !== 'closed').length,
     pendingDecisions: s.decisions.filter((d) => d.projectId === p.id && d.status === 'pending').length,
-    openDefects: s.defects.filter((d) => d.projectId === p.id && UNRESOLVED.includes(d.status)).length,
+    failedPoints: (['SQA', 'UAT'] as TestStage[]).reduce((n, stage) => n + testingNumbers(s, p.id, stage).fail, 0),
     myRole: roleLabel(p, userId),
     next: nextStep(s, p, projectStage(ctx), docs, t),
     progress: Math.round((STAGES.indexOf(projectStage(ctx)) / (STAGES.length - 1)) * 100),
@@ -184,11 +184,12 @@ function nextStep(s: DemoState, p: Project, stage: ReturnType<typeof projectStag
   if (card.status.key === 'changes_requested') return { title: `PM team updates the ${name}`, detail: 'Changes were requested. A new version restarts the approval chain (a minor correction resumes it).', link, action: `Open ${name}`, tone: 'action', since: card.status.since }
   if (card.status.key === 'out_of_sync') return { title: `Re-approve the ${name}`, detail: 'An earlier document changed. Documents are re-approved in order.', link, action: `Open ${name}`, tone: 'problem' }
   if (stage === 'SQA' || stage === 'UAT') {
-    const tests = s.testCases.filter((x) => x.projectId === p.id && x.stage === stage).length
-    const open = s.defects.filter((d) => d.projectId === p.id && d.stage === stage && UNRESOLVED.includes(d.status)).length
-    return tests
-      ? { title: `${stage} testing in progress`, detail: `${tests} test cases · ${open} unresolved defect${open === 1 ? '' : 's'}`, link: `${base}/testing/${stage}`, action: `Open ${stage}`, tone: 'action' }
-      : { title: `Prepare the ${stage} test cases`, detail: stage === 'SQA' ? 'SQA tests come from the signed SRS.' : 'UAT tests come from the signed BRD.', link: `${base}/testing/${stage}`, action: `Open ${stage}`, tone: 'action' }
+    const n = testingNumbers(s, p.id, stage)
+    if (!n.total) return { title: `Write the ${stage} testing points`, detail: stage === 'SQA' ? 'The AI writes them from the signed SRS; SQA testers add and edit.' : 'The AI writes them from the signed BRD; developers, stakeholders and the PM team add and edit.', link: `${base}/testing/${stage}`, action: `Open ${stage}`, tone: 'action' }
+    if (!n.version) return { title: `Add the version to test`, detail: 'The tech team adds the product version (for example 1.0), then the points are checked on it.', link: `${base}/testing/${stage}`, action: `Open ${stage}`, tone: 'action' }
+    if (n.fail) return { title: `Fix ${n.fail} failed ${stage} point${n.fail > 1 ? 's' : ''}`, detail: `They failed on version ${n.version}. Developers fix them and add a new version; then every point is checked again.`, link: `${base}/testing/${stage}`, action: `Open ${stage}`, tone: 'problem' }
+    if (n.toCheck) return { title: `${stage} testing in progress`, detail: `Version ${n.version}: ${n.pass} of ${n.total} points passed, ${n.toCheck} to check.`, link: `${base}/testing/${stage}`, action: `Open ${stage}`, tone: 'action' }
+    return { title: `Make the ${stage} sign-off report`, detail: `Every point passed on version ${n.version}.`, link: `${base}/testing/${stage}?tab=signoff`, action: `Open ${stage}`, tone: 'action' }
   }
   if (card.status.key === 'not_started') {
     const round = type === 'BRD' ? 'brd_business' : type === 'SRS' ? 'srs_technical' : undefined
@@ -208,7 +209,7 @@ export interface Dashboard {
   ownerCanDo: (WaitingItem & { projectName: string; waitingOnName: string })[] // waiting for others in projects this person owns
   stalled: (WaitingItem & { projectName: string; waitingOnName: string })[]
   portfolio: boolean // Owner or Admin
-  kpis: { inReview: number; questionsOpen: number; defectsOpen: number; criticalDefects: number; decisionsPending: number }
+  kpis: { inReview: number; questionsOpen: number; failedPoints: number; decisionsPending: number }
   pipeline: { stage: string; label: string; count: number }[]
   activity: { id: ID; actorId?: ID | null; actorName: string; action: string; details: string; projectId?: ID; projectName?: string; createdAt: string }[]
   activityByDay: { day: string; count: number }[]
@@ -249,8 +250,7 @@ export async function dashboard(): Promise<Dashboard> {
       kpis: {
         inReview: activeSummaries.reduce((n, x) => n + x.docs.filter((d) => d.status.key === 'in_review').length, 0),
         questionsOpen: activeSummaries.reduce((n, x) => n + x.unansweredQuestions, 0),
-        defectsOpen: activeSummaries.reduce((n, x) => n + x.openDefects, 0),
-        criticalDefects: s.defects.filter((d) => activeIds.has(d.projectId) && d.severity === 'Critical' && UNRESOLVED.includes(d.status)).length,
+        failedPoints: activeSummaries.reduce((n, x) => n + x.failedPoints, 0),
         decisionsPending: activeSummaries.reduce((n, x) => n + x.pendingDecisions, 0),
       },
       pipeline: STAGES.map((st) => ({ stage: st, label: STAGE_LABEL[st], count: activeSummaries.filter((x) => x.stage === st).length })),
@@ -289,7 +289,7 @@ export interface ProjectView {
   /** People with more than one role (allowed, with a warning). */
   warnings: { userId: ID; name: string; roles: string[] }[]
   factSheetConfirmed: boolean
-  testing: Record<TestStage, { tests: number; run: number; passed: number; defectsOpen: number; status: string }>
+  testing: Record<TestStage, { points: number; passed: number; failed: number; toCheck: number; version?: string; status: string }>
   openItems: { label: string; count: number; link: string }[]
 }
 
@@ -302,15 +302,8 @@ export async function getProject(pid: ID): Promise<ProjectView> {
     const m = memberOf(p, user.id)
     const testing = {} as ProjectView['testing']
     for (const stage of ['SQA', 'UAT'] as TestStage[]) {
-      const tests = s.testCases.filter((x) => x.projectId === pid && x.stage === stage)
-      const latest = tests.map((tc) => s.executions.filter((e) => e.testCaseId === tc.id && e.result !== 'not_run').sort((a, b) => (a.executedAt ?? '').localeCompare(b.executedAt ?? '')).at(-1))
-      testing[stage] = {
-        tests: tests.length,
-        run: latest.filter(Boolean).length,
-        passed: latest.filter((e) => e?.result === 'pass').length,
-        defectsOpen: s.defects.filter((d) => d.projectId === pid && d.stage === stage && UNRESOLVED.includes(d.status)).length,
-        status: testingStatus(s, pid, stage, summary),
-      }
+      const n = testingNumbers(s, pid, stage)
+      testing[stage] = { points: n.total, passed: n.pass, failed: n.fail, toCheck: n.toCheck, version: n.version, status: testingStatus(s, pid, stage, summary) }
     }
     const pendingFactUpdates = s.factUpdates.filter((f) => f.projectId === pid && f.status === 'pending').length
     return {
@@ -344,20 +337,27 @@ export async function getProject(pid: ID): Promise<ProjectView> {
         { label: 'Decisions waiting for the PM', count: summary.pendingDecisions, link: `/projects/${pid}/decisions` },
         { label: 'Open change requests', count: summary.openChangeRequests, link: `/projects/${pid}/changes` },
         { label: 'Proposed Fact Sheet updates', count: pendingFactUpdates, link: `/projects/${pid}/changes` },
-        { label: 'Unresolved defects', count: summary.openDefects, link: `/projects/${pid}/testing/UAT?tab=defects` },
+        { label: 'Failed testing points', count: summary.failedPoints, link: `/projects/${pid}/testing/${summary.stage === 'SQA' ? 'SQA' : 'UAT'}` },
       ],
     }
   })
 }
 
-/** SQA/UAT status for the dashboard (SPEC_SQA_UAT.md "Dashboard"). */
+/** A stage's points on its version (the newest, or the signed-off one): how many passed, failed and are still to check. */
+function testingNumbers(s: DemoState, pid: ID, stage: TestStage) {
+  const version = versionToShow(pipelineCtx(s, pid), stage, s.productVersions.filter((v) => v.projectId === pid))
+  const points = s.testPoints.filter((x) => x.projectId === pid && x.stage === stage)
+  return { ...versionCounts(points, version?.id, s.pointChecks.filter((c) => c.projectId === pid && c.stage === stage)), version: version?.version }
+}
+
+/** SQA/UAT status for the dashboard and the project page. */
 function testingStatus(s: DemoState, pid: ID, stage: TestStage, summary: ProjectSummary): string {
   const card = summary.docs.find((d) => d.type === (stage === 'SQA' ? 'SQA_SIGNOFF' : 'UAT_SIGNOFF'))
   if (card && card.status.key !== 'not_started' && card.status.key !== 'draft') return card.status.key === 'approved' || card.status.key === 'signed' ? 'Signed off' : card.status.label
-  const tests = s.testCases.filter((x) => x.projectId === pid && x.stage === stage)
-  const runs = s.testRuns.filter((r) => r.projectId === pid && r.stage === stage).sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-  if (runs.length) return `Testing (build ${s.builds.find((b) => b.id === runs[0].buildId)?.version})`
-  return tests.length ? 'Preparing tests' : 'Not started'
+  const n = testingNumbers(s, pid, stage)
+  if (!n.total) return 'Not started'
+  const checked = s.pointChecks.some((c) => c.projectId === pid && c.stage === stage)
+  return checked && n.version ? `Testing version ${n.version}` : 'Points written'
 }
 
 // ─── New project wizard ─────────────────────────────────────────────────
@@ -528,7 +528,6 @@ export async function replacePerson(pid: ID, oldId: ID, newId_: ID, team: Team) 
     m.userId = newId_
     if (m.isHead) moveHeadWork(s, p, m.team, oldId, newId_, at)
     for (const q of s.questions.filter((q) => q.projectId === p.id && !q.answeredAt && q.team === team)) q.assigneeIds = q.assigneeIds.map((x) => (x === oldId ? newId_ : x))
-    if (team === 'TECH') for (const d of s.defects.filter((d) => d.projectId === p.id && d.assigneeId === oldId)) d.assigneeId = newId_
     notify(s, { to: [newId_], type: 'role', title: `A role was reassigned to you in ${p.name}`, body: `${owner} gave you ${nameOf(s, oldId)}'s role (${memberLabel(m)}).`, link: `/projects/${p.id}`, projectId: p.id, at })
     return `${nameOf(s, oldId)} replaced by ${nameOf(s, newId_)} (${memberLabel(m)})`
   })

@@ -6,7 +6,7 @@
  * Still simulated (see src/demo/ai/agents.ts): reading PDF, Word and scanned uploads (OCR) and
  * call transcription.
  */
-import type { DocType, Fact, FactDef, Project, Requirement, Section, TemplateSection, TestCase, TestStage } from '../types'
+import type { DocType, Fact, FactDef, Project, Requirement, Section, TemplateSection, TestStage } from '../types'
 import { markdownToPlain } from '../rules/text'
 import { AiError, ask, cosine, embed } from './client'
 import { LIMITS, prompts } from './prompts'
@@ -58,20 +58,6 @@ function keyValues(text: string, keys: string[]): Map<string, string> {
     if (m && key && keys.includes(key) && !out.has(key)) out.set(key, clean(m[2]))
   }
   return out
-}
-
-/** The text after "Label:" up to the next labelled line, for layouts like Title / Steps / Expected. */
-function part(text: string, label: string, labels: string[]): string {
-  const starts = (l: string, x: string) => new RegExp(`^${x}\\s*:`, 'i').test(l)
-  const lines = linesOf(text)
-  const i = lines.findIndex((l) => starts(l, label))
-  if (i === -1) return ''
-  const out = [lines[i].replace(new RegExp(`^${label}\\s*:\\s*`, 'i'), '')]
-  for (const l of lines.slice(i + 1)) {
-    if (labels.some((x) => starts(l, x))) break
-    out.push(l)
-  }
-  return out.join('\n').trim()
 }
 
 /** "Unknown", "Not specified in the text", "No specific risks are mentioned": the text does not answer it. */
@@ -327,52 +313,25 @@ export async function findSimilarProjects(p: Project, past: PastProject[], topK:
 
 // ─── Testing ────────────────────────────────────────────────────────────
 
-export async function draftTestCase(stage: TestStage, req: Requirement): Promise<Omit<TestCase, 'id' | 'projectId' | 'key' | 'createdAt' | 'history' | 'createdBy'>> {
-  const text = await ask({ agent: 'testcases', title: `Test case for ${req.id}`, projectId: req.projectId, prompt: prompts.testCase(stage, req.id, req.text), maxTokens: LIMITS.testCase })
-  const labels = ['Title', 'Steps', 'Expected']
-  const steps = bullets(linesOf(part(text, 'Steps', labels))).filter((x) => !/:$/.test(x)).map(brief).slice(0, 4) // lines ending in ':' are headings
-  const title = clean(part(text, 'Title', labels).split('\n')[0] ?? '')
-  const expected = brief(part(text, 'Expected', labels).replace(BULLET, ''))
-  if (!title || !steps.length) throw unusable()
-  return {
-    stage,
-    title,
-    preconditions: stage === 'SQA' ? 'Test data prepared in the test environment.' : 'A business user with realistic data.',
-    steps,
-    expected: expected || req.text,
-    requirementIds: [req.id],
-    priority: 'Medium',
-    type: stage === 'SQA' ? 'Functional' : 'Business scenario',
-    ai: true,
-  }
+/** Up to 3 testing points for one requirement (each one thing to mark PASS or FAIL). */
+export async function draftTestPoints(stage: TestStage, req: Requirement): Promise<string[]> {
+  const text = await ask({ agent: 'testpoints', title: `Testing points for ${req.id}`, projectId: req.projectId, prompt: prompts.testPoints(stage, req.id, req.text), maxTokens: LIMITS.testPoints })
+  const lines = linesOf(text)
+  const items = bullets(lines).length ? bullets(lines) : lines
+  const points = dropCutOff(items.map((x) => clean(markdownToPlain(x))).filter((x) => x.length > 8 && !/:$/.test(x))).slice(0, 3)
+  if (!points.length) throw unusable()
+  return points
 }
 
-export async function writeDefect(note: string, test: TestCase | undefined, ctx: Ctx) {
-  const text = await ask({ agent: 'defectwriter', title: 'Writing a defect from a note', projectId: ctx.projectId, prompt: prompts.defect(note, test), maxTokens: LIMITS.defect })
-  const labels = ['Title', 'Steps', 'Expected', 'Actual']
-  const title = clean(part(text, 'Title', labels).split('\n')[0] ?? '')
-  const steps = bullets(linesOf(part(text, 'Steps', labels))).map(clean).filter(Boolean)
-  if (!title) throw unusable()
-  return {
-    title,
-    steps: (steps.length ? steps : [clean(note)]).map((s, i) => `${i + 1}. ${s}`).join('\n'),
-    expected: clean(part(text, 'Expected', labels)) || test?.expected || '',
-    actual: clean(part(text, 'Actual', labels)) || clean(note),
-  }
+/** One testing point written again (the tester pressed Regenerate). */
+export async function rewriteTestPoint(stage: TestStage, reqText: string, oldText: string, ctx: Ctx): Promise<string> {
+  const text = await ask({ agent: 'testpoints', title: 'Rewriting a testing point', projectId: ctx.projectId, prompt: prompts.testPoint(stage, reqText, oldText), maxTokens: LIMITS.testPoint })
+  const line = linesOf(text).map((l) => clean(markdownToPlain(l.replace(BULLET, '')))).find((l) => l.length > 8)
+  if (!line) throw unusable()
+  return line
 }
 
-/** Existing defects that mean the same thing (embeddings). */
-export async function similarDefects<D extends { title: string; actual: string }>(text: string, defects: D[], threshold: number, ctx: Ctx) {
-  if (!text.trim() || !defects.length) return []
-  const [q, ...vs] = await embed([text, ...defects.map((d) => `${d.title}. ${d.actual}`)], { agent: 'duplicates', title: 'Looking for duplicate defects', projectId: ctx.projectId })
-  return defects
-    .map((defect, i) => ({ defect, score: Math.round(cosine(q, vs[i]) * 100) / 100 }))
-    .filter((x) => x.score >= threshold)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3)
-}
-
-export async function signoffParagraph(stage: TestStage, st: { total: number; pass: number; fail: number; blocked: number; notRun: number; known: unknown[] }, buildVersion: string, ctx: Ctx): Promise<string> {
-  const counts = `${st.total} test cases: ${st.pass} passed, ${st.fail} failed, ${st.blocked} blocked, ${st.notRun} not run`
-  return tidy(await ask({ agent: 'signoff', title: `${stage} sign-off summary`, projectId: ctx.projectId, prompt: prompts.signoff(stage, counts, buildVersion, st.known.length), maxTokens: LIMITS.signoff }))
+export async function signoffParagraph(stage: TestStage, st: { total: number; pass: number; fail: number; toCheck: number }, version: string, ctx: Ctx): Promise<string> {
+  const counts = `${st.total} testing points: ${st.pass} passed, ${st.fail} failed, ${st.toCheck} not checked`
+  return tidy(await ask({ agent: 'signoff', title: `${stage} sign-off summary`, projectId: ctx.projectId, prompt: prompts.signoff(stage, counts, version), maxTokens: LIMITS.signoff }))
 }

@@ -8,8 +8,8 @@
  * All seed dates are shifted by whole weeks so the demo always starts on a recent Wednesday.
  */
 import type {
-  ApprovalChain, ApprovalStep, Build, CandidateDecision, Chat, Comment, Defect, DemoState, Doc, DocType, DocVersion,
-  Execution, Fact, FactDef, Member, Message, Project, Requirement, Section, Settings, Team, Template, TestCase, TestRun, User,
+  ApprovalChain, ApprovalStep, CandidateDecision, Chat, Comment, DemoState, Doc, DocType, DocVersion,
+  Fact, FactDef, Member, Message, Project, Requirement, Section, Settings, Team, Template, TestStage, User,
 } from '../types'
 import { CHAIN_CONFIG, ROLE_TEAM } from '../rules/approval'
 import { CHARTER_PREFIX, DOC_LABEL } from '../rules/pipeline'
@@ -86,7 +86,7 @@ export async function buildSeedState(options: { withProjects?: boolean } = {}): 
     docs: [], versions: [], drafts: [], locks: [], comments: [], suggestions: [], chains: [], signatures: [],
     changeRequests: [], factUpdates: [], chats: [], messages: [], calls: [], transcripts: [], decisions: [],
     notifications: [], emails: [], audit: [], aiCalls: [], jobs: [], summaries: {}, reminders: {}, otps: {}, chatReads: {},
-    requirements: [], traceLinksDone: {}, testCases: [], testConfirmations: [], builds: [], testRuns: [], executions: [], defects: [],
+    requirements: [], traceLinksDone: {}, testPoints: [], productVersions: [], pointChecks: [],
   }
 
   const signTasks: Promise<void>[] = []
@@ -317,76 +317,33 @@ async function makeSignature(s: DemoState, p: Project, doc: Doc, version: DocVer
 }
 
 function loadTesting(s: DemoState, p: Project, t: Raw, T: (x: string) => string, head: (t: Team) => string, docByType: Map<string, Doc>) {
-  const caseId = (key: string) => `${p.id}-${key}`
-  const defectId = (key: string) => `${p.id}-${key}`
-  for (const c of t.confirmations ?? []) s.testConfirmations.push({ projectId: p.id, stage: c.stage, by: c.by, at: T(c.at) })
-  for (const c of t.testCases ?? []) {
-    const tc: TestCase = { id: caseId(c.key), projectId: p.id, stage: c.stage, key: c.key, title: c.title, preconditions: c.pre ?? '', steps: c.steps ?? [], expected: c.expected ?? '', requirementIds: c.req ?? [], priority: c.priority ?? 'Medium', type: c.type ?? 'Functional', ai: true, acceptedBy: c.stage === 'SQA' ? 'u-sqa1' : 'u-pm1', createdBy: null, createdAt: T('2026-08-20T10:00:00+06:00'), history: [{ by: null, at: T('2026-08-20T10:00:00+06:00'), text: 'Drafted by AI from the requirements' }] }
-    s.testCases.push(tc)
-  }
-  for (const b of t.builds ?? []) {
-    const build: Build = { id: `${p.id}-${b.id}`, projectId: p.id, version: b.version, envUrl: b.env ?? '', notes: b.notes ?? '', fixesDefectIds: (b.fixes ?? []).map(defectId), registeredBy: b.by, registeredAt: T(b.at), releasedToUatAt: b.releasedAt ? T(b.releasedAt) : undefined, releasedBy: b.releasedAt ? b.releasedBy : undefined }
-    s.builds.push(build)
-  }
-  const buildId = (id: string) => `${p.id}-${id}`
-  for (const r of t.runs ?? []) {
-    const run: TestRun = { id: `${p.id}-${r.id}`, projectId: p.id, stage: r.stage, buildId: buildId(r.build), name: r.name, createdBy: r.by, createdAt: T(r.at) }
-    s.testRuns.push(run)
-    r.results.forEach((x: Raw[], i: number) => {
-      const [key, result, assignee, defects] = x
-      const at = new Date(new Date(T(r.at)).getTime() + (i + 1) * 40 * 60000).toISOString()
-      const ex: Execution = { id: `${run.id}-e${i + 1}`, runId: run.id, projectId: p.id, stage: r.stage, testCaseId: caseId(key as string), buildId: run.buildId, assigneeId: assignee as string, result: result as Execution['result'], defectIds: ((defects as string[]) ?? []).map(defectId), files: [], executedBy: result === 'not_run' ? undefined : (assignee as string), executedAt: result === 'not_run' ? undefined : at, actual: result === 'fail' ? 'See linked defect.' : undefined }
-      s.executions.push(ex)
+  const pointId = (key: string) => `${p.id}-${key}`
+  const versionId = (id: string) => `${p.id}-${id}`
+  const created = T('2026-08-20T10:00:00+06:00')
+  for (const x of t.points ?? [])
+    s.testPoints.push({ id: pointId(x.key), projectId: p.id, stage: x.stage, key: x.key, text: x.text, requirementIds: x.req ?? [], ai: false, changedAt: created, createdBy: null, createdAt: created, history: [{ by: null, at: created, text: `Written by AI from ${(x.req ?? []).join(', ')}` }, { by: x.stage === 'SQA' ? 'u-sqa1' : 'u-pm1', at: created, text: 'Edited' }] })
+  for (const v of t.versions ?? []) s.productVersions.push({ id: versionId(v.id), projectId: p.id, version: v.version, notes: v.notes ?? '', link: v.link ?? '', addedBy: v.by, addedAt: T(v.at) })
+  for (const c of t.checks ?? [])
+    c.results.forEach((r: Raw[], i: number) => {
+      const [key, result, by, comment] = r as [string, 'pass' | 'fail', string, string | undefined]
+      const at = new Date(new Date(T(c.at)).getTime() + (i + 1) * 25 * 60000).toISOString()
+      s.pointChecks.push({ id: `${p.id}-chk-${c.version}-${key}`, projectId: p.id, stage: c.stage, pointId: pointId(key), versionId: versionId(c.version), result, comment, by, at })
     })
-  }
-  const name = (id?: string) => s.users.find((u) => u.id === id)?.name ?? '—'
-  for (const d of t.defects ?? []) {
-    const created = T(d.at)
-    const found = s.builds.find((b) => b.id === buildId(d.found))
-    const fixed = d.fixed ? s.builds.find((b) => b.id === buildId(d.fixed)) : undefined
-    const history: Defect['history'] = []
-    let clock = new Date(created).getTime()
-    const step = (by: string | null, text: string) => {
-      clock += 3 * 60 * 60 * 1000
-      history.push({ by, at: new Date(Math.min(clock, new Date(s.meta.seedNow).getTime() - 60000)).toISOString(), text })
-    }
-    history.push({ by: d.reporter, at: created, text: `Raised by ${name(d.reporter)} in build ${found?.version ?? '?'} (${d.severity})` })
-    const st = d.status as Defect['status']
-    if (d.assignee && st !== 'New') step(head('PM'), `Triaged by ${name(head('PM'))}: severity confirmed, assigned to ${name(d.assignee)}`)
-    if (d.assignee && ['In progress', 'Fixed', 'Ready for retest', 'Closed', 'Reopened'].includes(st)) step(d.assignee, 'Work started')
-    if (fixed) step(d.assignee ?? null, `Marked fixed in build ${fixed.version}`)
-    if (d.sqaVerified) step(d.sqaVerified.by, `Fix checked by SQA (${name(d.sqaVerified.by)}) in build ${fixed?.version}`)
-    if (['Ready for retest', 'Closed', 'Reopened'].includes(st) && fixed) step(null, `Ready for retest: build ${fixed.version} is available to ${d.stage}`)
-    if (st === 'Closed') step(d.reporter, `Retest passed: closed by ${name(d.reporter)}`)
-    if (st === 'Reopened') step(d.reporter, `Retest failed: reopened by ${name(d.reporter)}`)
-    if (['Rejected', 'Duplicate', 'Deferred', 'Change request'].includes(st)) step(head('PM'), `${st} by ${name(head('PM'))}: ${d.reason}`)
-    const member = p.members.find((m) => m.userId === d.reporter)
-    s.defects.push({
-      id: defectId(d.key), projectId: p.id, stage: d.stage, key: d.key, title: d.title, steps: d.steps ?? '', expected: d.expected ?? '', actual: d.actual ?? '', severity: d.severity, status: st,
-      reporterId: d.reporter, reporterTeam: member?.isSqa ? 'SQA' : (member?.team ?? 'STAKEHOLDER'), assigneeId: d.assignee, testCaseId: d.test ? caseId(d.test) : undefined, requirementId: d.req,
-      foundInBuildId: buildId(d.found), fixedInBuildId: d.fixed ? buildId(d.fixed) : undefined, outcomeReason: d.reason, duplicateOfId: d.duplicateOf ? defectId(d.duplicateOf) : undefined,
-      changeRequestId: d.changeRequest, sqaVerified: d.sqaVerified ? { buildId: buildId(d.sqaVerified.build), by: d.sqaVerified.by, at: T(d.sqaVerified.at) } : undefined,
-      reopenCount: d.reopenCount ?? 0, ai: false, watchers: [d.reporter, ...(d.assignee ? [d.assignee] : [])], files: [], comments: [], history, createdAt: created, updatedAt: history.at(-1)!.at,
-    })
-  }
   for (const so of t.signoffs ?? []) {
     const type = so.type as DocType
-    const stage = type === 'SQA_SIGNOFF' ? 'SQA' : 'UAT'
+    const stage: TestStage = type === 'SQA_SIGNOFF' ? 'SQA' : 'UAT'
     const doc: Doc = { id: `${p.id}-${type}`, projectId: p.id, type, title: DOC_LABEL[type] }
     docByType.set(type, doc)
     s.docs.push(doc)
-    const build = s.builds.find((b) => b.id === buildId(so.build))
-    // Report computed from the data as it was then: executions up to the sign-off date.
-    const executions = s.executions.filter((e) => e.stage === stage && (!e.executedAt || e.executedAt <= T(so.at)))
-    const defects = s.defects.filter((d) => d.stage === stage && d.createdAt <= T(so.at))
-    const input = { stage: stage as 'SQA', requirements: s.requirements.filter((r) => r.projectId === p.id), tests: s.testCases.filter((x) => x.projectId === p.id), executions, defects, blocking: s.settings.signoffBlocking }
-    const stats = reportStats(input)
-    const sections = buildReportSections({ ...input, build, users: s.users, summary: signoffSummary(stage, stats, build?.version) }).map((x) => ({ id: `${doc.id}:${x.key}`, key: x.key, title: x.title, content: x.content, factKeys: [] }))
-    const version: DocVersion = { id: `${doc.id}-v1`, docId: doc.id, projectId: p.id, number: 1, authorId: so.by, message: `Report generated for build ${build?.version}`, kind: 'report', sections, buildId: build?.id, regeneratedSectionIds: [], factSheetVersion: 1, templateVersion: 1, frozen: true, createdAt: T(so.at) }
-    s.versions.push(version)
-    doc.currentVersionId = version.id
+    const version = s.productVersions.find((v) => v.id === versionId(so.version))
+    // The report as it was then: checks made up to the sign-off date.
+    const input = { stage, version, requirements: s.requirements.filter((r) => r.projectId === p.id), points: s.testPoints.filter((x) => x.projectId === p.id && x.stage === stage), checks: s.pointChecks.filter((c) => c.projectId === p.id && c.stage === stage && c.at <= T(so.at)) }
+    const sections = buildReportSections({ ...input, versions: s.productVersions.filter((v) => v.projectId === p.id), users: s.users, summary: signoffSummary(stage, reportStats(input), version?.version) }).map((x) => ({ id: `${doc.id}:${x.key}`, key: x.key, title: x.title, content: x.content, factKeys: [] }))
+    const dv: DocVersion = { id: `${doc.id}-v1`, docId: doc.id, projectId: p.id, number: 1, authorId: so.by, message: `Report made for version ${version?.version}`, kind: 'report', sections, testedVersionId: version?.id, regeneratedSectionIds: [], factSheetVersion: 1, templateVersion: 1, frozen: true, createdAt: T(so.at) }
+    s.versions.push(dv)
+    doc.currentVersionId = dv.id
     const techHead = head('TECH')
-    s.chains.push({ id: `${doc.id}-c1`, docId: doc.id, projectId: p.id, versionId: version.id, status: 'approved', startedAt: T(so.at), startedBy: so.by, endedAt: T(so.approvedAt), steps: [{ role: 'TECH_HEAD', assigneeId: techHead, status: 'approved', actedAt: T(so.approvedAt), actedBy: techHead }] })
+    s.chains.push({ id: `${doc.id}-c1`, docId: doc.id, projectId: p.id, versionId: dv.id, status: 'approved', startedAt: T(so.at), startedBy: so.by, endedAt: T(so.approvedAt), steps: [{ role: 'TECH_HEAD', assigneeId: techHead, status: 'approved', actedAt: T(so.approvedAt), actedBy: techHead }] })
     s.chats.push({ id: `${doc.id}-chat`, projectId: p.id, kind: 'document', docId: doc.id, title: `${DOC_LABEL[type]} chat` })
   }
 }

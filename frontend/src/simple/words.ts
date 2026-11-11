@@ -80,7 +80,6 @@ interface TaskLike {
 export function plainTask(t: TaskLike): { title: string; button: string; to: string } {
   const n = t.count ?? 1
   const docType = /\/docs\/([A-Z_]+)/.exec(t.link)?.[1] as DocType | undefined
-  const code = /: ([A-Z]+-\d+)$/.exec(t.title)?.[1]
   switch (t.type) {
     case 'approval': {
       const sign = t.title.includes('approve and sign')
@@ -93,15 +92,9 @@ export function plainTask(t: TaskLike): { title: string; button: string; to: str
     case 'factsheet':
       return { title: 'Check and confirm the project facts', button: 'Check', to: t.link }
     case 'tests':
-      return { title: 'Test the new system', button: 'Start testing', to: '/my-work?tab=tests' }
-    case 'defect':
-      return t.title.startsWith('Critical')
-        ? { title: `Fix an urgent problem${code ? ` (${code})` : ''}`, button: 'Open', to: t.link }
-        : { title: `Assign a new problem report${code ? ` (${code})` : ''}`, button: 'Open', to: t.link }
-    case 'retest':
-      return { title: `Check that a problem is fixed${code ? ` (${code})` : ''}`, button: 'Check', to: t.link }
-    case 'test-list':
-      return { title: 'Confirm the list of tests', button: 'Review', to: t.link }
+      return { title: n > 1 ? `Test the new system (${n} lists)` : 'Test the new system: mark each point PASS or FAIL', button: 'Start testing', to: t.link }
+    case 'fix':
+      return { title: 'Fix the points that failed testing', button: 'See what failed', to: t.link }
     case 'decision':
       return { title: n > 1 ? `Confirm ${n} decisions from the team` : 'Confirm a decision from the team', button: 'Review', to: t.link }
     case 'fact-update':

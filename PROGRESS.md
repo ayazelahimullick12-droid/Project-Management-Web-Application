@@ -120,3 +120,11 @@ Then follow `frontend/DEMO.md`.
 - Profile menu → **Look: Glass / Solid** (Solid = no transparency or blur); the computer's "reduce transparency" setting is followed too. Exports are unchanged.
 - Fixed on the way: in dark mode the "What changed since version N" box had dark text on a dark background.
 - Checked: 108 tests pass, type-check passes. Screenshots (headless Chrome, on a separate test data file) of the Simple To do, the Full home, a Full document page, the defects board, dark mode and the login page; computed styles for the glass materials, the Solid look, contrast (body text 14:1, secondary text 5.0:1 on cards), and no sideways scrolling at phone width in either view at every text size.
+
+## 11 November 2026 — simpler SQA and UAT: testing points, versions, PASS / FAIL
+
+- New testing page (both views): version picker and **Add a version**; points with **PASS** / **FAIL** and an optional comment, filters, history per point; **Write points with AI**, **Add a point**, edit, **Regenerate** (AI), delete; requirements covered; Sign-off tab for the chosen version.
+- Removed: test cases, list confirmation, builds and release to UAT, test runs and assignments, Blocked, the defect board and defect page (old defect links open UAT testing), the defect settings in Admin, and the drag-and-drop package.
+- To do / My work: "Check N points on version X" for testers, "Fix N failed points" for developers. Dashboard: failed testing points.
+- Old data is converted when loaded (`src/demo/migrate.ts`); the demo project's testing data was rewritten in the new shape.
+- Checked: all tests pass (new tests for the rules, the AI point parsing and the conversion), type-check and build pass. In the browser on separate test data: a copy of the real data (converted correctly; PASS with comment, FAIL, a new version resets every point to To check, an older version keeps its results, adding or editing a point, sign-off criteria per version) and the demo projects (stakeholder and developer To do, signed-off SQA shows its signed version, phone width with no sideways scrolling). LM Studio was off, so writing and regenerating points with the AI was checked by unit tests only.

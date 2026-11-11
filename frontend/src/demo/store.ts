@@ -13,6 +13,7 @@
  */
 import type { DemoState } from '../types'
 import { buildSeedState } from './seed'
+import { migrate } from './migrate'
 
 type Change = (draft: DemoState) => unknown
 
@@ -94,7 +95,7 @@ async function flush() {
 
 /** Another tab saved first: re-apply our unsaved changes on top of the newer data. */
 function rebase(latest: { version: number; state: DemoState }) {
-  let next = latest.state
+  let next = migrate(latest.state)
   const kept: Change[] = []
   for (const fn of unsaved) {
     const draft = structuredClone(next)
@@ -120,7 +121,7 @@ async function pull() {
   const latest = (await r.json()) as { version: number; state: DemoState | null }
   if (latest.state && latest.version > version && !unsaved.length) {
     version = latest.version
-    state = latest.state
+    state = migrate(latest.state)
     emit()
   }
 }
@@ -131,7 +132,7 @@ export async function initStore(): Promise<void> {
   if (!r?.ok) throw new Error('The app server is not running. Start the app with "npm run dev" (or "npm start").')
   const loaded = (await r.json()) as { version: number; state: DemoState | null }
   version = loaded.version
-  if (loaded.state) state = loaded.state
+  if (loaded.state) state = migrate(loaded.state)
   else {
     state = await buildSeedState()
     unsaved.push((d) => Object.assign(d, structuredClone(state)))

@@ -1,179 +1,90 @@
 /**
- * SQA and UAT rules: defect status flow, builds, coverage and exit criteria.
+ * SQA and UAT rules: who writes and checks the testing points, each point's result on a version,
+ * coverage of the requirements, and what must be true before a sign-off can be sent.
  *
- * Spec: SPEC_SQA_UAT.md — "Who does what", "Builds", "Defects" (status flow and other
- * outcomes), "Sign-off" (exit criteria) and "Changes during testing".
+ * How testing works (simplified from SPEC_SQA_UAT.md, see DECISIONS.md):
+ * 1. The AI writes testing points from the requirements (SRS for SQA, BRD for UAT); testers add,
+ *    edit, regenerate and delete them.
+ * 2. Someone adds the product version to test (for example 1.2) and the tester picks it.
+ * 3. Each point is marked PASS or FAIL on that version, with an optional comment.
+ * 4. A failed point is fixed in a new version; on the new version every point is checked again.
+ * 5. When every point passes on one version, the sign-off report is made for that version.
  */
-import type { Build, CoverRole, Defect, DefectStatus, Execution, ID, Project, Requirement, Severity, TestCase, TestListConfirmation, TestRun, TestStage } from '../types'
-import { actAsHead, isOwner, isSqa, memberOf, no, yes, type Check, inTeam, membershipIn } from './permissions'
+import type { CheckResult, ID, PointCheck, Project, Requirement, TestPoint, TestStage } from '../types'
+import { actAsHead, inTeam, isDeveloper, isOwner, isSqa, no, yes, type Check } from './permissions'
+import { isComplete, previousComplete, type PipelineCtx } from './pipeline'
 
-/** Statuses where the defect still needs work. */
-export const UNRESOLVED: DefectStatus[] = ['New', 'Open', 'In progress', 'Fixed', 'Ready for retest', 'Reopened']
-export const BOARD_COLUMNS: DefectStatus[] = ['New', 'Open', 'In progress', 'Fixed', 'Ready for retest', 'Reopened', 'Closed']
-export const OUTCOMES: DefectStatus[] = ['Rejected', 'Duplicate', 'Deferred', 'Change request']
+const archived = (p: Project): Check | undefined => (p.status === 'archived' ? no('This project is archived, so it is read-only.') : undefined)
 
-export type Actor = 'triager' | 'assignee' | 'reporter_team' | 'pm' | 'sqa'
-export type Need = 'build' | 'reason' | 'original' | 'assignee'
-
-export interface Transition {
-  from: DefectStatus[]
-  to: DefectStatus
-  who: Actor[]
-  needs: Need[]
-  label: string
+/**
+ * Who writes and checks the points.
+ * SQA: SQA testers. UAT: developers, stakeholders and the PM team.
+ * The Project Owner can do both (master key).
+ */
+export function canTest(p: Project, userId: ID | null, stage: TestStage): Check {
+  const a = archived(p)
+  if (a) return a
+  if (isOwner(p, userId)) return { ok: true, coveredAs: 'OWNER' }
+  if (stage === 'SQA') return isSqa(p, userId) ? yes : no('Only SQA testers write and check SQA points.')
+  return isDeveloper(p, userId) || inTeam(p, userId, 'STAKEHOLDER') || inTeam(p, userId, 'PM') ? yes : no('UAT points are written and checked by developers, stakeholders and the PM team.')
 }
 
-/** The defect status flow (SPEC_SQA_UAT.md "Status flow" and "Other outcomes"). */
-export const TRANSITIONS: Transition[] = [
-  { from: ['New'], to: 'Open', who: ['triager'], needs: ['assignee'], label: 'Triage and assign' },
-  { from: ['Open', 'Reopened'], to: 'In progress', who: ['assignee'], needs: [], label: 'Start work' },
-  { from: ['Open', 'Reopened', 'In progress'], to: 'Fixed', who: ['assignee'], needs: ['build'], label: 'Mark fixed' },
-  { from: ['Ready for retest'], to: 'Closed', who: ['reporter_team'], needs: [], label: 'Retest passed: close' },
-  { from: ['Ready for retest'], to: 'Reopened', who: ['reporter_team'], needs: ['reason'], label: 'Retest failed: reopen' },
-  { from: ['Fixed'], to: 'Reopened', who: ['sqa'], needs: ['reason'], label: 'Fix failed SQA check: reopen' },
-  { from: UNRESOLVED, to: 'Rejected', who: ['pm'], needs: ['reason'], label: 'Reject (not a defect)' },
-  { from: UNRESOLVED, to: 'Duplicate', who: ['pm'], needs: ['reason', 'original'], label: 'Mark duplicate' },
-  { from: UNRESOLVED, to: 'Deferred', who: ['pm'], needs: ['reason'], label: 'Defer to after go-live' },
-  { from: UNRESOLVED, to: 'Change request', who: ['pm'], needs: ['reason'], label: 'Turn into a change request' },
-  { from: ['Rejected', 'Deferred'], to: 'Open', who: ['pm'], needs: [], label: 'Move back to Open' },
-]
-
-export interface DefectCtx {
-  project: Project
-  userId: ID | null
-  now: Date
-  blocking: Severity[]
-  fixBuildReleased?: boolean // for SQA reopening a UAT fix: only before the build reaches UAT
+/** Adding a product version: the tech team (developers and SQA), the PM team and the Owner. */
+export function canAddVersion(p: Project, userId: ID | null): Check {
+  const a = archived(p)
+  if (a) return a
+  return isOwner(p, userId) || inTeam(p, userId, 'TECH') || inTeam(p, userId, 'PM') ? yes : no('The tech team or the PM team adds versions.')
 }
 
-/** Which roles the user has for this defect. The Project Owner has them all (master key). */
-function actorsFor(d: Defect, ctx: DefectCtx): { actors: Actor[]; actingFor?: ID; coveredAs?: CoverRole } {
-  if (isOwner(ctx.project, ctx.userId)) return { actors: ['triager', 'assignee', 'reporter_team', 'pm', 'sqa'], coveredAs: 'OWNER' }
-  const out: Actor[] = []
-  let actingFor: ID | undefined
-  const pm = actAsHead(ctx.project, 'PM', ctx.userId, ctx.now)
-  const tech = actAsHead(ctx.project, 'TECH', ctx.userId, ctx.now)
-  if (pm.ok) {
-    out.push('pm', 'triager')
-    actingFor = pm.actingFor
+/** Who makes the sign-off report: an SQA tester for SQA, the PM for UAT (the Owner for both). */
+export function canMakeReport(p: Project, userId: ID | null, stage: TestStage, now: Date): Check {
+  const a = archived(p)
+  if (a) return a
+  if (isOwner(p, userId)) return yes
+  if (stage === 'SQA') return isSqa(p, userId) ? yes : no('An SQA tester makes the SQA sign-off report.')
+  return actAsHead(p, 'PM', userId, now).ok ? yes : no('The PM makes the UAT sign-off report.')
+}
+
+// ─── Results ────────────────────────────────────────────────────────────
+
+export type PointStatus = CheckResult | 'to_check'
+
+/** The check that counts for a point on a version: the latest one made after the point last changed. */
+export function latestCheck(point: TestPoint, versionId: ID | undefined, checks: PointCheck[]): PointCheck | undefined {
+  if (!versionId) return undefined
+  return checks
+    .filter((c) => c.pointId === point.id && c.versionId === versionId && c.at >= point.changedAt)
+    .sort((a, b) => a.at.localeCompare(b.at))
+    .at(-1)
+}
+
+export function pointStatus(point: TestPoint, versionId: ID | undefined, checks: PointCheck[]): PointStatus {
+  return latestCheck(point, versionId, checks)?.result ?? 'to_check'
+}
+
+/** Counts for one stage on one version. */
+export function versionCounts(points: TestPoint[], versionId: ID | undefined, checks: PointCheck[]) {
+  const statuses = points.map((pt) => pointStatus(pt, versionId, checks))
+  return {
+    total: points.length,
+    pass: statuses.filter((x) => x === 'pass').length,
+    fail: statuses.filter((x) => x === 'fail').length,
+    toCheck: statuses.filter((x) => x === 'to_check').length,
   }
-  if (tech.ok) {
-    out.push('triager')
-    actingFor = actingFor ?? tech.actingFor
-  }
-  if (ctx.userId && d.assigneeId === ctx.userId) out.push('assignee')
-  if (memberOf(ctx.project, ctx.userId)) {
-    // "The reporter's team": SQA defects → SQA-tagged members; UAT defects → the reporter's team.
-    if (d.stage === 'SQA' && isSqa(ctx.project, ctx.userId)) out.push('reporter_team')
-    if (d.stage === 'UAT' && d.reporterTeam !== 'SQA' && d.reporterTeam !== 'TECH' && inTeam(ctx.project, ctx.userId, d.reporterTeam)) out.push('reporter_team')
-    if (isSqa(ctx.project, ctx.userId)) out.push('sqa')
-  }
-  return { actors: out, actingFor }
-}
-
-export function checkTransition(d: Defect, to: DefectStatus, ctx: DefectCtx): Check {
-  if (ctx.project.status === 'archived') return no('This project is archived, so it is read-only.')
-  const t = TRANSITIONS.find((x) => x.to === to && x.from.includes(d.status))
-  if (!t) return no(`A defect cannot move from ${d.status} to ${to}.`)
-  if (to === 'Deferred' && ctx.blocking.includes(d.severity)) return no(`${d.severity} defects cannot be deferred. They must be fixed, rejected or turned into a change request.`)
-  if (t.who.includes('sqa') && d.stage !== 'UAT') return no('Only UAT fixes are checked by SQA before release.')
-  if (t.who.includes('sqa') && ctx.fixBuildReleased) return no('This fix has already been released to UAT.')
-  const { actors, actingFor, coveredAs } = actorsFor(d, ctx)
-  if (!t.who.some((w) => actors.includes(w))) {
-    const who: Record<Actor, string> = {
-      triager: 'the PM or the tech head',
-      assignee: 'the assigned developer',
-      reporter_team: d.stage === 'SQA' ? 'an SQA tester' : 'the reporter’s team',
-      pm: 'the PM',
-      sqa: 'an SQA tester',
-    }
-    return no(`Only ${t.who.map((w) => who[w]).join(' or ')} can do this.`)
-  }
-  return { ok: true, actingFor, coveredAs }
-}
-
-/** The moves this user can make now (used for buttons and for the board). */
-export function allowedTransitions(d: Defect, ctx: DefectCtx): Transition[] {
-  return TRANSITIONS.filter((t) => t.from.includes(d.status) && checkTransition(d, t.to, ctx).ok)
-}
-
-export function transitionFor(d: Defect, to: DefectStatus): Transition | undefined {
-  return TRANSITIONS.find((x) => x.to === to && x.from.includes(d.status))
-}
-
-/** Who may be assigned to fix defects: developers only (not SQA testers). */
-export function canBeAssigned(p: Project, userId: ID): Check {
-  const m = membershipIn(p, userId, 'TECH')
-  if (!m) return no('Defects are assigned to developers in the tech team.')
-  if (m.isSqa) return no('SQA testers cannot be assigned defects to fix. Testers and developers stay separate.')
-  return yes
-}
-
-// ─── Builds ─────────────────────────────────────────────────────────────
-
-/** A build is in SQA as soon as it is registered; it reaches UAT only when released. */
-export function buildAvailable(b: Build, stage: TestStage): boolean {
-  return stage === 'SQA' ? true : !!b.releasedToUatAt
-}
-
-/** Has the SQA team completed a run on this build (every test in it has a result)? */
-export function sqaRunCompleted(buildId: ID, runs: TestRun[], executions: Execution[]): boolean {
-  return runs
-    .filter((r) => r.stage === 'SQA' && r.buildId === buildId)
-    .some((r) => {
-      const ex = executions.filter((e) => e.runId === r.id)
-      return ex.length > 0 && ex.every((e) => e.result !== 'not_run')
-    })
-}
-
-/** Release to UAT is allowed only after SQA has checked the build (SPEC_SQA_UAT.md "Builds"). */
-export function releaseCheck(args: { build: Build; project: Project; userId: ID | null; runs: TestRun[]; executions: Execution[]; defects: Defect[]; blocking: Severity[] }): Check {
-  const { build } = args
-  if (!isSqa(args.project, args.userId) && !isOwner(args.project, args.userId)) return no('Only SQA testers can release a build to UAT.')
-  if (build.releasedToUatAt) return no('Already released to UAT.')
-  if (!sqaRunCompleted(build.id, args.runs, args.executions)) return no('The SQA team must first complete a test run on this build.')
-  const claimed = args.defects.filter((d) => build.fixesDefectIds.includes(d.id))
-  const unverifiedUat = claimed.filter((d) => d.stage === 'UAT' && d.status === 'Fixed' && d.sqaVerified?.buildId !== build.id)
-  if (unverifiedUat.length) return no(`SQA must check the UAT fixes in this build first: ${unverifiedUat.map((d) => d.key).join(', ')}.`)
-  const reopened = claimed.filter((d) => d.status === 'Reopened')
-  if (reopened.length) return no(`Some fixes in this build failed: ${reopened.map((d) => d.key).join(', ')}.`)
-  const blockers = args.defects.filter((d) => d.stage === 'SQA' && UNRESOLVED.includes(d.status) && args.blocking.includes(d.severity))
-  if (blockers.length) return no(`Unresolved ${args.blocking.join(' or ')} SQA defects: ${blockers.map((d) => d.key).join(', ')}.`)
-  return yes
-}
-
-/** When a fix build becomes available to the defect's stage, the defect is ready for retest. */
-export function markReadyForRetest(defects: Defect[], build: Build, stage: TestStage, now: Date): Defect[] {
-  return defects.map((d) =>
-    d.stage === stage && d.status === 'Fixed' && d.fixedInBuildId === build.id
-      ? { ...d, status: 'Ready for retest', updatedAt: now.toISOString(), history: [...d.history, { by: null, at: now.toISOString(), text: `Ready for retest: build ${build.version} is available to ${stage}.` }] }
-      : d,
-  )
 }
 
 // ─── Coverage and exit criteria ─────────────────────────────────────────
 
-/** SQA tests the SRS requirements; UAT tests the BRD requirements. */
+/** SQA checks the SRS requirements; UAT checks the BRD requirements. */
 export function requirementsFor(stage: TestStage, reqs: Requirement[]): Requirement[] {
   return reqs.filter((r) => r.docType === (stage === 'SQA' ? 'SRS' : 'BRD'))
 }
 
-export function coverage(stage: TestStage, reqs: Requirement[], tests: TestCase[]) {
+export function coverage(stage: TestStage, reqs: Requirement[], points: TestPoint[]) {
   return requirementsFor(stage, reqs).map((r) => ({
     requirement: r,
-    tests: tests.filter((t) => t.stage === stage && t.requirementIds.includes(r.id)),
+    points: points.filter((pt) => pt.stage === stage && pt.requirementIds.includes(r.id)),
   }))
-}
-
-/** The latest result of each test case in a stage. */
-export function latestResults(stage: TestStage, tests: TestCase[], executions: Execution[]) {
-  return tests
-    .filter((t) => t.stage === stage)
-    .map((t) => {
-      // A test marked Needs review (its requirement changed) counts as not run until run again.
-      const runs = executions.filter((e) => e.testCaseId === t.id && e.result !== 'not_run' && (!t.needsReview || (e.executedAt ?? '') > (t.history.at(-1)?.at ?? ''))).sort((a, b) => (a.executedAt ?? '').localeCompare(b.executedAt ?? ''))
-      return { test: t, latest: runs.at(-1) }
-    })
 }
 
 export interface CriteriaItem {
@@ -182,48 +93,69 @@ export interface CriteriaItem {
   detail?: string
 }
 
-/** Exit criteria for a sign-off (SPEC_SQA_UAT.md "Sign-off"). All must pass before sending. */
+/** What must be true before a sign-off is sent. All items must be met. */
 export function exitCriteria(args: {
   stage: TestStage
   previousDone: Check
-  confirmations: TestListConfirmation[]
-  projectId: ID
   requirements: Requirement[]
-  tests: TestCase[]
-  executions: Execution[]
-  defects: Defect[]
-  blocking: Severity[]
+  points: TestPoint[] // this stage's points
+  checks: PointCheck[]
+  versionId?: ID // the version being signed off
+  versionLabel?: string
 }): { ok: boolean; items: CriteriaItem[] } {
-  const { stage, blocking } = args
+  const { stage, points, checks, versionId } = args
   const items: CriteriaItem[] = []
   items.push({ label: stage === 'SQA' ? 'The SRS is signed' : 'The SQA sign-off is approved', ok: args.previousDone.ok, detail: args.previousDone.ok ? undefined : args.previousDone.reason })
-  const confirmed = args.confirmations.some((c) => c.projectId === args.projectId && c.stage === stage)
-  items.push({ label: 'The test case list is confirmed', ok: confirmed, detail: confirmed ? undefined : stage === 'SQA' ? 'The tech head confirms the SQA list.' : 'The stakeholder head confirms the UAT list.' })
 
-  const cov = coverage(stage, args.requirements, args.tests)
-  const uncovered = cov.filter((c) => c.tests.length === 0 && !c.requirement.notTestable)
-  items.push({ label: 'Every requirement has a test case (or is marked Not testable)', ok: uncovered.length === 0, detail: uncovered.length ? `No test yet: ${uncovered.map((c) => c.requirement.id).join(', ')}` : undefined })
+  const uncovered = coverage(stage, args.requirements, points).filter((c) => !c.points.length && !c.requirement.notTestable)
+  items.push({
+    label: 'There are testing points, and every requirement has at least one (or is marked Not testable)',
+    ok: points.length > 0 && uncovered.length === 0,
+    detail: !points.length ? 'No testing points yet.' : uncovered.length ? `No point yet: ${uncovered.map((c) => c.requirement.id).join(', ')}` : undefined,
+  })
 
-  const stageDefects = args.defects.filter((d) => d.stage === stage)
-  const problems: string[] = []
-  for (const { test, latest } of latestResults(stage, args.tests, args.executions)) {
-    if (!latest) problems.push(`${test.key} not run`)
-    else if (latest.result === 'fail' || latest.result === 'blocked') {
-      const linked = stageDefects.filter((d) => latest.defectIds.includes(d.id))
-      // A failure caused by a Critical/High defect counts until the test is run again and passes.
-      const onlyMinor = linked.length > 0 && linked.every((d) => !blocking.includes(d.severity))
-      if (!onlyMinor) problems.push(`${test.key} ${latest.result === 'fail' ? 'failed' : 'blocked'}`)
-    }
-  }
-  items.push({ label: 'Every test case has been run; any failure is only because of Medium or Low defects', ok: problems.length === 0, detail: problems.length ? problems.join(', ') : undefined })
-
-  const blockers = stageDefects.filter((d) => UNRESOLVED.includes(d.status) && blocking.includes(d.severity))
-  items.push({ label: `No ${blocking.join(' or ')} defect is unresolved`, ok: blockers.length === 0, detail: blockers.length ? blockers.map((d) => `${d.key} (${d.severity}, ${d.status})`).join(', ') : undefined })
+  const toCheck = points.filter((pt) => pointStatus(pt, versionId, checks) === 'to_check')
+  const failed = points.filter((pt) => pointStatus(pt, versionId, checks) === 'fail')
+  const on = args.versionLabel ? ` on version ${args.versionLabel}` : ''
+  items.push({ label: `Every point has been checked${on}`, ok: !!versionId && toCheck.length === 0, detail: !versionId ? 'Choose a version first.' : toCheck.length ? `Not checked yet: ${toCheck.map((pt) => pt.key).join(', ')}` : undefined })
+  items.push({ label: `Every point passed${on}`, ok: !!versionId && failed.length === 0, detail: failed.length ? `Failed: ${failed.map((pt) => pt.key).join(', ')}. Fix them in a new version and check again.` : undefined })
 
   return { ok: items.every((i) => i.ok), items }
 }
 
-/** Known issues listed in the sign-off report: unresolved Medium/Low defects and every Deferred defect. */
-export function knownIssues(stage: TestStage, defects: Defect[], blocking: Severity[]): Defect[] {
-  return defects.filter((d) => d.stage === stage && (d.status === 'Deferred' || (UNRESOLVED.includes(d.status) && !blocking.includes(d.severity))))
+// ─── Stage and people ───────────────────────────────────────────────────
+
+export const signoffType = (stage: TestStage) => (stage === 'SQA' ? 'SQA_SIGNOFF' : 'UAT_SIGNOFF') as 'SQA_SIGNOFF' | 'UAT_SIGNOFF'
+
+/** Testing is open in a stage once the document before it is done, until its sign-off is approved. */
+export function stageOpen(ctx: PipelineCtx, stage: TestStage): boolean {
+  return previousComplete(ctx, signoffType(stage)).ok && !isComplete(ctx, signoffType(stage))
+}
+
+/** The team members who write and check points in a stage (not counting the Owner's master key). */
+export function testersOf(p: Project, stage: TestStage): ID[] {
+  const ids = p.members.filter((m) => (stage === 'SQA' ? m.team === 'TECH' && m.isSqa : (m.team === 'TECH' && !m.isSqa) || m.team === 'STAKEHOLDER' || m.team === 'PM')).map((m) => m.userId)
+  return [...new Set(ids)]
+}
+
+/** The developers (tech team without the SQA tag), who fix failed points. */
+export function developersOf(p: Project): ID[] {
+  return [...new Set(p.members.filter((m) => m.team === 'TECH' && !m.isSqa).map((m) => m.userId))]
+}
+
+/** Versions oldest first; the last one is the newest. */
+export function sortVersions<V extends { addedAt: string }>(versions: V[]): V[] {
+  return [...versions].sort((a, b) => a.addedAt.localeCompare(b.addedAt))
+}
+
+/**
+ * The version to show by default: the newest one while testing is going on; once the stage is
+ * signed off, the version that was signed off (newer versions are not checked in that stage).
+ */
+export function versionToShow<V extends { id: ID; addedAt: string }>(ctx: PipelineCtx, stage: TestStage, versions: V[]): V | undefined {
+  const sorted = sortVersions(versions)
+  if (!isComplete(ctx, signoffType(stage))) return sorted.at(-1)
+  const doc = ctx.docs.find((d) => d.type === signoffType(stage))
+  const report = ctx.versions.find((v) => v.id === doc?.currentVersionId)
+  return sorted.find((v) => v.id === report?.testedVersionId) ?? sorted.at(-1)
 }

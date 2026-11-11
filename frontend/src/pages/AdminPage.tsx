@@ -119,16 +119,11 @@ function SettingsTab({ d }: { d: AdminData }) {
         <Field label="Q/A rounds before the PM decides"><Input type="number" value={s.qaRoundLimit} onChange={(e) => setS({ ...s, qaRoundLimit: Number(e.target.value) })} /></Field>
         <Field label="Similar projects shown (RAG top K)"><Input type="number" value={s.ragTopK} onChange={(e) => setS({ ...s, ragTopK: Number(e.target.value) })} /></Field>
         <Field label="Duplicate warning threshold"><Input type="number" step="0.01" value={s.ragDuplicateThreshold} onChange={(e) => setS({ ...s, ragDuplicateThreshold: Number(e.target.value) })} /></Field>
-        <Field label="Defect duplicate threshold (0–1)"><Input type="number" step="0.01" value={s.defectDuplicateThreshold} onChange={(e) => setS({ ...s, defectDuplicateThreshold: Number(e.target.value) })} /></Field>
         <Field label="Speed of simulated steps (prototype)">
           <Select value={s.aiSpeed} onChange={(e) => setS({ ...s, aiSpeed: e.target.value as Settings['aiSpeed'] })}>
             <option value="normal">normal</option><option value="fast">fast</option><option value="instant">instant</option>
           </Select>
         </Field>
-      </div>
-      <div className="mb-3">
-        <div className="mb-1 flex items-center gap-2 text-xs font-medium">Severities that block sign-off and cannot be deferred <OpenQuestion id="blocking" /></div>
-        <div className="flex gap-3">{(['Critical', 'High', 'Medium', 'Low'] as const).map((sev) => <Checkbox key={sev} label={sev} checked={s.signoffBlocking.includes(sev)} onChange={(c) => setS({ ...s, signoffBlocking: c ? [...s.signoffBlocking, sev] : s.signoffBlocking.filter((x) => x !== sev) })} />)}</div>
       </div>
       <Field label="Holidays (YYYY-MM-DD, one per line)" hint="No reminders on these days (Eid and other public holidays).">
         <Textarea rows={3} value={s.holidays.join('\n')} onChange={(e) => setS({ ...s, holidays: e.target.value.split('\n').map((x) => x.trim()).filter(Boolean) })} />
@@ -157,7 +152,7 @@ function AiModels({ value, onChange }: { value: Settings['ai']; onChange: (v: Se
             {options(value.model, false).map((m) => <option key={m} value={m}>{m}{models.length > 0 && !models.includes(m) ? ' (not in LM Studio)' : ''}</option>)}
           </Select>
         </Field>
-        <Field label="Model that compares (embeddings)" hint="Used for similar projects and possible duplicate defects.">
+        <Field label="Model that compares (embeddings)" hint="Used for similar projects and for matching decisions to facts.">
           <Select value={value.embedModel} onChange={(e) => onChange({ ...value, embedModel: e.target.value })}>
             {options(value.embedModel, true).map((m) => <option key={m} value={m}>{m}{models.length > 0 && !models.includes(m) ? ' (not in LM Studio)' : ''}</option>)}
           </Select>

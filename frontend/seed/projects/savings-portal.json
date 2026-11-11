@@ -85,87 +85,75 @@
     ["SR-08", "SRS", "Pages load within 3 seconds on a 3G connection.", "BR-02"]
   ],
   "testing": {
-    "confirmations": [
-      { "stage": "SQA", "by": "u-tech", "at": "2026-08-28T11:00:00+06:00" },
-      { "stage": "UAT", "by": "u-sh", "at": "2026-09-23T12:00:00+06:00" }
+    "points": [
+      {"key": "SQA-1", "stage": "SQA", "req": ["SR-01"], "text": "A member logs in with a valid one-time code and sees the balance screen."},
+      {"key": "SQA-2", "stage": "SQA", "req": ["SR-01"], "text": "A one-time code older than 5 minutes is refused with a clear message."},
+      {"key": "SQA-3", "stage": "SQA", "req": ["SR-02"], "text": "After 5 wrong codes the account locks for 30 minutes, with the message in Bangla and English."},
+      {"key": "SQA-4", "stage": "SQA", "req": ["SR-03"], "text": "The balance shown equals the core banking balance at the last sync."},
+      {"key": "SQA-5", "stage": "SQA", "req": ["SR-04"], "text": "Transactions show 20 per page, newest first, for the last 12 months only."},
+      {"key": "SQA-6", "stage": "SQA", "req": ["SR-05"], "text": "The PDF statement shows BRAC branding, the branch name and address, and every transaction."},
+      {"key": "SQA-7", "stage": "SQA", "req": ["SR-06"], "text": "Staff can print a statement from the branch screen on A4 pages."},
+      {"key": "SQA-8", "stage": "SQA", "req": ["SR-07"], "text": "The member receives the SMS within 5 minutes."},
+      {"key": "SQA-9", "stage": "SQA", "req": ["SR-08"], "text": "Each page loads within 3 seconds on a 3G connection."},
+      {"key": "SQA-10", "stage": "SQA", "req": ["SR-01"], "text": "One-time codes never appear in any log."},
+      {"key": "UAT-1", "stage": "UAT", "req": ["BR-01"], "text": "A member logs in on her own phone and sees her savings balance."},
+      {"key": "UAT-2", "stage": "UAT", "req": ["BR-02"], "text": "After a deposit at the branch, the new balance includes the deposit."},
+      {"key": "UAT-3", "stage": "UAT", "req": ["BR-02"], "text": "Every deposit and withdrawal of the last 12 months is listed."},
+      {"key": "UAT-4", "stage": "UAT", "req": ["BR-03"], "text": "A member downloads a statement and the PDF opens on the phone."},
+      {"key": "UAT-5", "stage": "UAT", "req": ["BR-04"], "text": "Staff print a complete statement for a member without a phone in under a minute."},
+      {"key": "UAT-6", "stage": "UAT", "req": ["BR-05"], "text": "After a deposit the member gets an SMS with the amount and the new balance."},
+      {"key": "UAT-7", "stage": "UAT", "req": ["BR-05"], "text": "After a withdrawal the member gets an SMS with the amount and the new balance."}
     ],
-    "testCases": [
-      { "key": "SQA-TC-1", "stage": "SQA", "req": ["SR-01"], "priority": "High", "type": "Functional", "title": "Login with a valid one-time code", "pre": "A member account with a registered mobile number.", "steps": ["Open the portal", "Enter the mobile number", "Enter the code received by SMS"], "expected": "The member sees the balance screen." },
-      { "key": "SQA-TC-2", "stage": "SQA", "req": ["SR-01"], "priority": "High", "type": "Functional", "title": "One-time code expires after 5 minutes", "pre": "A code requested more than 5 minutes ago.", "steps": ["Request a code", "Wait 6 minutes", "Enter the code"], "expected": "The code is refused with a clear message." },
-      { "key": "SQA-TC-3", "stage": "SQA", "req": ["SR-02"], "priority": "High", "type": "Security", "title": "Lockout after 5 wrong codes", "pre": "A member account.", "steps": ["Enter a wrong code 5 times"], "expected": "The account is locked for 30 minutes and the message is shown in Bangla and English." },
-      { "key": "SQA-TC-4", "stage": "SQA", "req": ["SR-03"], "priority": "High", "type": "Integration", "title": "Balance matches core banking", "pre": "A deposit recorded in core banking.", "steps": ["Wait for the next sync", "Open the balance screen"], "expected": "The balance equals the core banking balance at the last sync." },
-      { "key": "SQA-TC-5", "stage": "SQA", "req": ["SR-04"], "priority": "Medium", "type": "Functional", "title": "Transaction list paging", "pre": "An account with 60 transactions.", "steps": ["Open transactions", "Page through the list"], "expected": "20 transactions per page, newest first, 12 months only." },
-      { "key": "SQA-TC-6", "stage": "SQA", "req": ["SR-05"], "priority": "Medium", "type": "Functional", "title": "PDF statement content", "pre": "A member account.", "steps": ["Download a statement"], "expected": "The PDF shows BRAC branding, branch name and address, and all transactions." },
-      { "key": "SQA-TC-7", "stage": "SQA", "req": ["SR-06"], "priority": "Medium", "type": "Functional", "title": "Staff print from the branch screen", "pre": "A staff login at a branch.", "steps": ["Search the member", "Click Print statement"], "expected": "The statement prints on one or more A4 pages." },
-      { "key": "SQA-TC-8", "stage": "SQA", "req": ["SR-07"], "priority": "High", "type": "Integration", "title": "SMS within 5 minutes", "pre": "A member with SMS alerts on.", "steps": ["Record a deposit in core banking"], "expected": "The member receives an SMS within 5 minutes." },
-      { "key": "SQA-TC-9", "stage": "SQA", "req": ["SR-08"], "priority": "Medium", "type": "Performance", "title": "Page load on 3G", "pre": "Network throttled to 3G.", "steps": ["Open each page"], "expected": "Each page loads within 3 seconds." },
-      { "key": "SQA-TC-10", "stage": "SQA", "req": ["SR-01"], "priority": "High", "type": "Security", "title": "Codes never written to logs", "pre": "Access to server logs.", "steps": ["Log in", "Search the logs for the code"], "expected": "The code does not appear in any log." },
-
-      { "key": "UAT-TC-1", "stage": "UAT", "req": ["BR-01"], "priority": "High", "type": "Business scenario", "title": "Member logs in on her own phone", "pre": "A member with a basic smartphone.", "steps": ["The member opens the portal link from the SMS", "Enters her mobile number and the code"], "expected": "She sees her savings balance." },
-      { "key": "UAT-TC-2", "stage": "UAT", "req": ["BR-02"], "priority": "High", "type": "Business scenario", "title": "Balance after a deposit at the branch", "pre": "The member deposits BDT 500 at the branch.", "steps": ["Wait 30 minutes", "The member checks her balance"], "expected": "The new balance includes the deposit." },
-      { "key": "UAT-TC-3", "stage": "UAT", "req": ["BR-02"], "priority": "Medium", "type": "Business scenario", "title": "Review the last 12 months", "pre": "A member with a year of savings.", "steps": ["Open the transaction list"], "expected": "Every deposit and withdrawal of the last 12 months is there." },
-      { "key": "UAT-TC-4", "stage": "UAT", "req": ["BR-03"], "priority": "Medium", "type": "Business scenario", "title": "Download a statement", "pre": "A member on an Android phone.", "steps": ["Tap Download statement"], "expected": "A PDF statement opens on the phone." },
-      { "key": "UAT-TC-5", "stage": "UAT", "req": ["BR-04"], "priority": "High", "type": "Business scenario", "title": "Staff print for a member without a phone", "pre": "A member at the branch counter.", "steps": ["Staff search the member", "Print the statement"], "expected": "A complete statement is printed in under a minute." },
-      { "key": "UAT-TC-6", "stage": "UAT", "req": ["BR-05"], "priority": "High", "type": "Business scenario", "title": "SMS after a deposit", "pre": "A member with SMS alerts.", "steps": ["Record a deposit at the branch"], "expected": "The member gets an SMS with the amount and new balance." },
-      { "key": "UAT-TC-7", "stage": "UAT", "req": ["BR-05"], "priority": "High", "type": "Business scenario", "title": "SMS after a withdrawal", "pre": "A member with SMS alerts.", "steps": ["Record a withdrawal at the branch"], "expected": "The member gets an SMS with the amount and new balance." }
+    "versions": [
+      {"id": "b-09", "version": "0.9", "at": "2026-09-01T10:00:00+06:00", "by": "u-dev1", "link": "https://savings-test.brac.example/0.9", "notes": "First build for SQA."},
+      {"id": "b-10", "version": "1.0", "at": "2026-09-15T10:00:00+06:00", "by": "u-dev1", "link": "https://savings-test.brac.example/1.0", "notes": "Fixes from SQA cycle 1."},
+      {"id": "b-101", "version": "1.0.1", "at": "2026-10-01T10:00:00+06:00", "by": "u-dev2", "link": "https://savings-test.brac.example/1.0.1", "notes": "UAT hotfix: download button and statement header."},
+      {"id": "b-11", "version": "1.1", "at": "2026-10-06T10:00:00+06:00", "by": "u-dev1", "link": "https://savings-test.brac.example/1.1", "notes": "Bangla login text on small phones; Bangla lockout message."}
     ],
-    "builds": [
-      { "id": "b-09", "version": "0.9", "at": "2026-09-01T10:00:00+06:00", "by": "u-dev1", "env": "https://savings-test.brac.example/0.9", "notes": "First build for SQA." },
-      { "id": "b-10", "version": "1.0", "at": "2026-09-15T10:00:00+06:00", "by": "u-dev1", "env": "https://savings-test.brac.example/1.0", "notes": "Fixes from SQA cycle 1.", "fixes": ["SQA-1", "SQA-2", "SQA-3"], "releasedAt": "2026-09-24T15:00:00+06:00", "releasedBy": null },
-      { "id": "b-101", "version": "1.0.1", "at": "2026-10-01T10:00:00+06:00", "by": "u-dev2", "env": "https://savings-test.brac.example/1.0.1", "notes": "UAT hotfix: download button and statement header.", "fixes": ["UAT-5", "UAT-6", "UAT-7"], "releasedAt": "2026-10-03T11:00:00+06:00", "releasedBy": "u-sqa1" },
-      { "id": "b-11", "version": "1.1", "at": "2026-10-06T10:00:00+06:00", "by": "u-dev1", "env": "https://savings-test.brac.example/1.1", "notes": "Bangla login text on small phones; Bangla lockout message.", "fixes": ["UAT-4", "SQA-5"] }
-    ],
-    "runs": [
-      { "id": "run-s1", "stage": "SQA", "build": "b-09", "name": "SQA cycle 1", "at": "2026-09-02T10:00:00+06:00", "by": "u-sqa1",
-        "results": [ ["SQA-TC-1", "pass", "u-sqa1"], ["SQA-TC-2", "fail", "u-sqa1", ["SQA-1"]], ["SQA-TC-3", "pass", "u-sqa2"], ["SQA-TC-4", "fail", "u-sqa2", ["SQA-3"]], ["SQA-TC-5", "fail", "u-sqa1", ["SQA-2"]], ["SQA-TC-6", "fail", "u-sqa2", ["SQA-4"]], ["SQA-TC-7", "pass", "u-sqa1"], ["SQA-TC-8", "pass", "u-sqa2"], ["SQA-TC-9", "pass", "u-sqa1"], ["SQA-TC-10", "pass", "u-sqa2"] ] },
-      { "id": "run-s2", "stage": "SQA", "build": "b-10", "name": "SQA cycle 2", "at": "2026-09-16T10:00:00+06:00", "by": "u-sqa1",
-        "results": [ ["SQA-TC-1", "pass", "u-sqa1"], ["SQA-TC-2", "pass", "u-sqa1"], ["SQA-TC-3", "pass", "u-sqa2"], ["SQA-TC-4", "pass", "u-sqa2"], ["SQA-TC-5", "pass", "u-sqa1"], ["SQA-TC-6", "fail", "u-sqa2", ["SQA-4"]], ["SQA-TC-7", "pass", "u-sqa1"], ["SQA-TC-8", "pass", "u-sqa2"], ["SQA-TC-9", "pass", "u-sqa1"], ["SQA-TC-10", "pass", "u-sqa2"] ] },
-      { "id": "run-u1", "stage": "UAT", "build": "b-10", "name": "UAT cycle 1", "at": "2026-09-27T10:00:00+06:00", "by": "u-pm1",
-        "results": [ ["UAT-TC-1", "pass", "u-st1"], ["UAT-TC-2", "fail", "u-st1", ["UAT-2"]], ["UAT-TC-3", "pass", "u-st1"], ["UAT-TC-4", "fail", "u-st2", ["UAT-5"]], ["UAT-TC-5", "fail", "u-st2", ["UAT-7"]], ["UAT-TC-6", "pass", "u-st2"], ["UAT-TC-7", "fail", "u-st1", ["UAT-3"]] ] },
-      { "id": "run-s3", "stage": "SQA", "build": "b-101", "name": "SQA check of build 1.0.1", "at": "2026-10-02T10:00:00+06:00", "by": "u-sqa1",
-        "results": [ ["SQA-TC-1", "pass", "u-sqa1"], ["SQA-TC-6", "fail", "u-sqa1", ["SQA-4"]], ["SQA-TC-7", "pass", "u-sqa2"] ] },
-      { "id": "run-u2", "stage": "UAT", "build": "b-101", "name": "UAT retest on build 1.0.1", "at": "2026-10-04T10:00:00+06:00", "by": "u-pm1",
-        "results": [ ["UAT-TC-1", "pass", "u-st2"], ["UAT-TC-4", "not_run", "u-st2"], ["UAT-TC-5", "fail", "u-st2", ["UAT-7"]] ] },
-      { "id": "run-s4", "stage": "SQA", "build": "b-11", "name": "SQA check of build 1.1", "at": "2026-10-06T14:00:00+06:00", "by": "u-sqa2",
-        "results": [ ["SQA-TC-1", "pass", "u-sqa2"], ["SQA-TC-3", "not_run", "u-sqa2"] ] }
-    ],
-    "defects": [
-      { "key": "SQA-1", "stage": "SQA", "severity": "High", "status": "Closed", "title": "Expired code still accepted", "reporter": "u-sqa1", "assignee": "u-dev1", "test": "SQA-TC-2", "req": "SR-01", "found": "b-09", "fixed": "b-10", "at": "2026-09-02T12:00:00+06:00",
-        "steps": "Request a code, wait 6 minutes, enter it.", "expected": "Code refused.", "actual": "Login succeeds." },
-      { "key": "SQA-2", "stage": "SQA", "severity": "Medium", "status": "Closed", "title": "Transaction list shows 25 rows per page", "reporter": "u-sqa1", "assignee": "u-dev2", "test": "SQA-TC-5", "req": "SR-04", "found": "b-09", "fixed": "b-10", "at": "2026-09-02T15:00:00+06:00",
-        "steps": "Open transactions for an account with 60 entries.", "expected": "20 per page.", "actual": "25 per page." },
-      { "key": "SQA-3", "stage": "SQA", "severity": "Critical", "status": "Closed", "title": "Balance off by one day's interest", "reporter": "u-sqa2", "assignee": "u-dev1", "test": "SQA-TC-4", "req": "SR-03", "found": "b-09", "fixed": "b-10", "at": "2026-09-03T11:00:00+06:00",
-        "steps": "Compare the portal balance with core banking after the nightly interest run.", "expected": "Same balance.", "actual": "Portal shows yesterday's interest twice." },
-      { "key": "SQA-4", "stage": "SQA", "severity": "Low", "status": "Deferred", "title": "PDF footer uses the old logo", "reporter": "u-sqa2", "test": "SQA-TC-6", "req": "SR-05", "found": "b-09", "at": "2026-09-03T16:00:00+06:00", "reason": "Branding will be updated with the official template after go-live.",
-        "steps": "Download any statement.", "expected": "Current logo.", "actual": "Old logo in the footer." },
-      { "key": "SQA-5", "stage": "SQA", "severity": "Medium", "status": "Ready for retest", "title": "Lockout message only in English", "reporter": "u-sqa2", "assignee": "u-dev1", "test": "SQA-TC-3", "req": "SR-02", "found": "b-101", "fixed": "b-11", "at": "2026-10-02T12:00:00+06:00",
-        "steps": "Enter a wrong code 5 times with the phone set to Bangla.", "expected": "Message in Bangla and English.", "actual": "English only." },
-
-      { "key": "UAT-1", "stage": "UAT", "severity": "High", "status": "New", "title": "Statement PDF shows the wrong branch address", "reporter": "u-st2", "found": "b-101", "req": "BR-03", "at": "2026-10-06T16:20:00+06:00",
-        "steps": "Log in as a Gazipur member and download a statement.", "expected": "Gazipur branch address.", "actual": "Shows the head office address." },
-      { "key": "UAT-2", "stage": "UAT", "severity": "Critical", "status": "Open", "title": "Balance not updated after a deposit at the branch", "reporter": "u-st1", "assignee": "u-dev1", "test": "UAT-TC-2", "req": "BR-02", "found": "b-10", "at": "2026-09-28T11:00:00+06:00",
-        "steps": "Deposit BDT 500 at the branch, wait 30 minutes, check the balance.", "expected": "Balance includes the deposit.", "actual": "Balance unchanged after 2 hours." },
-      { "key": "UAT-3", "stage": "UAT", "severity": "High", "status": "In progress", "title": "No SMS for withdrawals", "reporter": "u-st1", "assignee": "u-dev2", "test": "UAT-TC-7", "req": "BR-05", "found": "b-10", "at": "2026-09-29T10:30:00+06:00",
-        "steps": "Record a withdrawal at the branch.", "expected": "SMS with amount and balance.", "actual": "No SMS received." },
-      { "key": "UAT-4", "stage": "UAT", "severity": "Medium", "status": "Fixed", "title": "Bangla login text cut off on small phones", "reporter": "u-st2", "assignee": "u-dev1", "test": "UAT-TC-1", "req": "BR-01", "found": "b-10", "fixed": "b-11", "at": "2026-09-30T14:00:00+06:00",
-        "steps": "Open the login page on a 4-inch phone in Bangla.", "expected": "Full text visible.", "actual": "The second line is cut off." },
-      { "key": "UAT-5", "stage": "UAT", "severity": "Medium", "status": "Ready for retest", "title": "Download button hidden on older Android phones", "reporter": "u-st2", "assignee": "u-dev2", "test": "UAT-TC-4", "req": "BR-03", "found": "b-10", "fixed": "b-101", "sqaVerified": { "build": "b-101", "by": "u-sqa1", "at": "2026-10-02T15:00:00+06:00" }, "at": "2026-09-28T15:00:00+06:00",
-        "steps": "Open the statement page on Android 8.", "expected": "Download button visible.", "actual": "Button is off screen." },
-      { "key": "UAT-6", "stage": "UAT", "severity": "Low", "status": "Closed", "title": "Typo in the Bangla statement header", "reporter": "u-st1", "assignee": "u-dev2", "test": "UAT-TC-4", "req": "BR-03", "found": "b-10", "fixed": "b-101", "sqaVerified": { "build": "b-101", "by": "u-sqa1", "at": "2026-10-02T15:00:00+06:00" }, "at": "2026-09-28T16:00:00+06:00",
-        "steps": "Download a statement in Bangla.", "expected": "Correct spelling of 'সঞ্চয় বিবরণী'.", "actual": "Spelled 'সঞ্চয বিবরনী'." },
-      { "key": "UAT-7", "stage": "UAT", "severity": "Medium", "status": "Reopened", "title": "Staff print cuts the last row", "reporter": "u-st2", "assignee": "u-dev2", "test": "UAT-TC-5", "req": "BR-04", "found": "b-10", "fixed": "b-101", "sqaVerified": { "build": "b-101", "by": "u-sqa2", "at": "2026-10-02T16:00:00+06:00" }, "reopenCount": 1, "at": "2026-09-29T12:00:00+06:00",
-        "steps": "Print a statement with more than 30 transactions.", "expected": "All rows printed.", "actual": "The last row of each page is missing." },
-      { "key": "UAT-8", "stage": "UAT", "severity": "Critical", "status": "Duplicate", "title": "Deposit not showing in the portal", "reporter": "u-st2", "found": "b-10", "duplicateOf": "UAT-2", "reason": "Same problem as UAT-2.", "at": "2026-09-28T12:30:00+06:00",
-        "steps": "Deposit and check.", "expected": "Deposit visible.", "actual": "Not visible." },
-      { "key": "UAT-9", "stage": "UAT", "severity": "Medium", "status": "Rejected", "title": "No option to change savings product", "reporter": "u-st1", "found": "b-10", "reason": "Changing the savings product is out of scope (BRD: information only).", "at": "2026-09-30T10:00:00+06:00",
-        "steps": "Look for a way to change product.", "expected": "An option to change.", "actual": "No option." },
-      { "key": "UAT-10", "stage": "UAT", "severity": "Low", "status": "Deferred", "title": "Statement PDF should include a QR code", "reporter": "u-st2", "found": "b-10", "req": "BR-03", "reason": "Nice to have; planned after go-live.", "at": "2026-09-30T11:00:00+06:00",
-        "steps": "Download a statement.", "expected": "QR code to verify the statement.", "actual": "No QR code." },
-      { "key": "UAT-11", "stage": "UAT", "severity": "Medium", "status": "Change request", "title": "Members want to see their loan balance too", "reporter": "u-st1", "found": "b-10", "reason": "Not a defect: loan balances are out of scope. Raised as a change request.", "changeRequest": "cr-sav-1", "at": "2026-09-30T15:00:00+06:00",
-        "steps": "Log in as a member with a loan.", "expected": "Loan balance visible.", "actual": "Only savings shown." }
+    "checks": [
+      { "stage": "SQA", "version": "b-09", "at": "2026-09-02T10:00:00+06:00", "results": [
+        ["SQA-1", "pass", "u-sqa1"],
+        ["SQA-2", "fail", "u-sqa1", "An expired code is still accepted."],
+        ["SQA-3", "pass", "u-sqa2"],
+        ["SQA-4", "fail", "u-sqa2", "Balance is off by one day's interest."],
+        ["SQA-5", "fail", "u-sqa1", "Shows 25 rows per page."],
+        ["SQA-6", "fail", "u-sqa2", "The footer uses the old logo."],
+        ["SQA-7", "pass", "u-sqa1"],
+        ["SQA-8", "pass", "u-sqa2"],
+        ["SQA-9", "pass", "u-sqa1"],
+        ["SQA-10", "pass", "u-sqa2"]
+      ] },
+      { "stage": "SQA", "version": "b-10", "at": "2026-09-16T10:00:00+06:00", "results": [
+        ["SQA-1", "pass", "u-sqa1"],
+        ["SQA-2", "pass", "u-sqa1"],
+        ["SQA-3", "pass", "u-sqa2"],
+        ["SQA-4", "pass", "u-sqa2"],
+        ["SQA-5", "pass", "u-sqa1"],
+        ["SQA-6", "pass", "u-sqa2", "Content is complete. The footer logo is still the old one; agreed with the PM to change it after go-live."],
+        ["SQA-7", "pass", "u-sqa1"],
+        ["SQA-8", "pass", "u-sqa2"],
+        ["SQA-9", "pass", "u-sqa1"],
+        ["SQA-10", "pass", "u-sqa2"]
+      ] },
+      { "stage": "UAT", "version": "b-10", "at": "2026-09-27T10:00:00+06:00", "results": [
+        ["UAT-1", "pass", "u-st1", "Bangla login text is cut off on my small phone."],
+        ["UAT-2", "fail", "u-st1", "Balance not updated after a deposit at the branch."],
+        ["UAT-3", "pass", "u-st1"],
+        ["UAT-4", "fail", "u-st2", "Download button is hidden on older Android phones."],
+        ["UAT-5", "fail", "u-st2", "The printed statement cuts the last row."],
+        ["UAT-6", "pass", "u-st2"],
+        ["UAT-7", "fail", "u-st1", "No SMS for withdrawals."]
+      ] },
+      { "stage": "UAT", "version": "b-101", "at": "2026-10-04T10:00:00+06:00", "results": [
+        ["UAT-1", "pass", "u-st2"],
+        ["UAT-2", "fail", "u-st1", "Still not updated after a branch deposit."],
+        ["UAT-3", "pass", "u-st1"],
+        ["UAT-4", "pass", "u-st2", "Button shows now on the old Android phone."],
+        ["UAT-5", "fail", "u-st2", "Still cuts the last row."]
+      ] }
     ],
     "signoffs": [
-      { "type": "SQA_SIGNOFF", "build": "b-10", "at": "2026-09-24T11:00:00+06:00", "by": "u-sqa1", "approvedAt": "2026-09-24T15:00:00+06:00" }
+      {"type": "SQA_SIGNOFF", "version": "b-10", "at": "2026-09-24T11:00:00+06:00", "by": "u-sqa1", "approvedAt": "2026-09-24T15:00:00+06:00"}
     ]
   },
   "changeRequests": [

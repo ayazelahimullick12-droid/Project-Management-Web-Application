@@ -8,7 +8,7 @@ import type { DemoState, ID, TestStage } from '../types'
 import { CHAIN_CONFIG, ROLE_LABEL, currentStep } from '../rules/approval'
 import { coverers, headOf, headRecipient } from '../rules/permissions'
 import { DOC_LABEL } from '../rules/pipeline'
-import { UNRESOLVED } from '../rules/testing'
+import { developersOf, latestCheck, sortVersions, stageOpen, testersOf, versionCounts } from '../rules/testing'
 import type { Recipient } from './effects'
 
 export interface WaitingItem {
@@ -90,59 +90,47 @@ export function waitingItems(s: DemoState, now: Date): WaitingItem[] {
       })
     }
 
-    // Testing: assigned tests, untriaged defects, Critical fixes, retests, list confirmations
-    const runsById = new Map(s.testRuns.filter((r) => r.projectId === p.id).map((r) => [r.id, r]))
-    const pendingByRunUser = new Map<string, { runId: ID; userId: ID; count: number }>()
-    for (const e of s.executions.filter((e) => e.projectId === p.id && e.result === 'not_run')) {
-      const k = `${e.runId}:${e.assigneeId}`
-      const cur = pendingByRunUser.get(k) ?? { runId: e.runId, userId: e.assigneeId, count: 0 }
-      cur.count += 1
-      pendingByRunUser.set(k, cur)
-    }
-    for (const { runId, userId, count } of pendingByRunUser.values()) {
-      const run = runsById.get(runId)
-      if (!run) continue
-      items.push({
-        key: `run:${runId}:${userId}`,
-        projectId: p.id,
-        type: 'tests',
-        since: run.createdAt,
-        title: `${count} test case${count > 1 ? 's' : ''} assigned to you`,
-        body: `${p.name}: ${run.name} (${run.stage}).`,
-        link: `/inbox/tests`,
-        ownerLink: `${base}/testing/${run.stage}?tab=runs`,
-        recipients: [{ to: userId }],
-        waitingOn: userId,
-        reminders: true,
-      })
-    }
-    const triagers = [headOf(p, 'PM')?.userId, headOf(p, 'TECH')?.userId].filter(Boolean) as ID[]
-    for (const d of s.defects.filter((d) => d.projectId === p.id)) {
-      const link = `${base}/defects/${d.id}`
-      if (d.status === 'New')
-        items.push({ key: `def-new:${d.id}`, projectId: p.id, type: 'defect', since: d.createdAt, title: `New defect to triage: ${d.key}`, body: `${p.name}: ${d.title} (${d.severity}).`, link, recipients: triagers.map((t) => headRecipient(p, t, now)), waitingOn: triagers[0], reminders: true })
-      if (d.severity === 'Critical' && d.assigneeId && ['Open', 'In progress', 'Reopened'].includes(d.status))
-        items.push({ key: `def-crit:${d.id}`, projectId: p.id, type: 'defect', since: d.updatedAt, title: `Critical defect assigned to you: ${d.key}`, body: `${p.name}: ${d.title}.`, link, recipients: [{ to: d.assigneeId }], waitingOn: d.assigneeId, reminders: true })
-      if (d.status === 'Ready for retest')
-        items.push({ key: `def-retest:${d.id}:${d.fixedInBuildId}`, projectId: p.id, type: 'retest', since: d.updatedAt, title: `Ready for your retest: ${d.key}`, body: `${p.name}: ${d.title}.`, link, recipients: [{ to: d.reporterId }], waitingOn: d.reporterId, reminders: true })
-    }
+    // Testing: points to check on the newest version, and failed points for the developers to fix
+    const mine = <T extends { projectId: ID }>(list: T[]) => list.filter((x) => x.projectId === p.id)
+    const ctx = { project: p, docs: mine(s.docs), versions: mine(s.versions), chains: mine(s.chains), factSheets: mine(s.factSheets), rounds: mine(s.rounds) }
+    const newest = sortVersions(s.productVersions.filter((v) => v.projectId === p.id)).at(-1)
     for (const stage of ['SQA', 'UAT'] as TestStage[]) {
-      const tests = s.testCases.filter((t) => t.projectId === p.id && t.stage === stage)
-      const confirmedList = s.testConfirmations.some((c) => c.projectId === p.id && c.stage === stage)
-      const head = headOf(p, stage === 'SQA' ? 'TECH' : 'STAKEHOLDER')
-      if (tests.length && !confirmedList)
+      if (!newest || !stageOpen(ctx, stage)) continue
+      const points = s.testPoints.filter((x) => x.projectId === p.id && x.stage === stage)
+      const checks = s.pointChecks.filter((c) => c.projectId === p.id && c.stage === stage)
+      const n = versionCounts(points, newest.id, checks)
+      const link = `${base}/testing/${stage}?version=${newest.id}`
+      const testers = testersOf(p, stage)
+      if (n.toCheck && testers.length)
         items.push({
-          key: `confirm:${p.id}:${stage}`,
+          key: `check:${p.id}:${stage}:${newest.id}`,
           projectId: p.id,
-          type: 'test-list',
-          since: tests.map((t) => t.createdAt).sort()[0],
-          title: `Please confirm the ${stage} test case list`,
-          body: `${p.name}: ${tests.length} ${stage} test cases are ready for your confirmation.`,
-          link: `${base}/testing/${stage}?tab=cases`,
-          recipients: head ? [headRecipient(p, head.userId, now)] : coverers(p).map((to) => ({ to })),
-          waitingOn: head?.userId ?? coverers(p).at(-1)!,
+          type: 'tests',
+          since: [newest.addedAt, ...points.map((x) => x.changedAt)].sort().at(-1)!,
+          title: `Check ${n.toCheck} ${stage} point${n.toCheck > 1 ? 's' : ''} on version ${newest.version}`,
+          body: `${p.name}: ${n.toCheck} of ${n.total} ${stage} points still to check on version ${newest.version}.`,
+          link,
+          recipients: testers.map((to) => ({ to })),
+          waitingOn: testers[0],
           reminders: true,
         })
+      const devs = developersOf(p)
+      const fixers = devs.length ? devs : headOf(p, 'TECH') ? [headOf(p, 'TECH')!.userId] : []
+      if (n.fail && fixers.length) {
+        const failedAt = points.map((x) => latestCheck(x, newest.id, checks)).filter((c) => c?.result === 'fail').map((c) => c!.at).sort()
+        items.push({
+          key: `fix:${p.id}:${stage}:${newest.id}`,
+          projectId: p.id,
+          type: 'fix',
+          since: failedAt[0],
+          title: `Fix ${n.fail} failed ${stage} point${n.fail > 1 ? 's' : ''} from version ${newest.version}`,
+          body: `${p.name}: ${n.fail} ${stage} point${n.fail > 1 ? 's' : ''} failed on version ${newest.version}. Fix them and add a new version.`,
+          link,
+          recipients: fixers.map((to) => ({ to })),
+          waitingOn: fixers[0],
+          reminders: true,
+        })
+      }
     }
 
     // Decisions and Fact Sheet updates waiting for the PM (notified once; no reminders in the spec)
@@ -157,6 +145,3 @@ export function waitingItems(s: DemoState, now: Date): WaitingItem[] {
   return items.sort((a, b) => a.since.localeCompare(b.since))
 }
 
-export function isUnresolvedStatus(status: string) {
-  return (UNRESOLVED as string[]).includes(status)
-}

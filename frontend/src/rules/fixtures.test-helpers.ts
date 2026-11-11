@@ -1,5 +1,5 @@
 /** Small fixtures shared by the rule tests. */
-import type { Defect, Project, Settings } from '../types'
+import type { Project, Settings, TestPoint } from '../types'
 
 export const NOW = new Date('2026-10-07T10:00:00+06:00') // a Wednesday morning in Dhaka
 
@@ -44,36 +44,24 @@ export const SETTINGS: Settings = {
   qaRoundLimit: 3,
   ragTopK: 5,
   ragDuplicateThreshold: 0.9,
-  signoffBlocking: ['Critical', 'High'],
-  defectDuplicateThreshold: 0.85,
   aiSpeed: 'instant',
   holidays: [],
   ai: { model: 'test-model', embedModel: 'test-embed' },
 }
 
-export function defect(overrides: Partial<Defect> = {}): Defect {
+export function point(overrides: Partial<TestPoint> = {}): TestPoint {
   return {
-    id: 'd1',
+    id: 'pt1',
     projectId: 'p1',
-    stage: 'UAT',
-    key: 'UAT-1',
-    title: 'Save fails',
-    steps: '',
-    expected: '',
-    actual: '',
-    severity: 'Medium',
-    status: 'New',
-    reporterId: 'st1',
-    reporterTeam: 'STAKEHOLDER',
-    foundInBuildId: 'b1',
-    reopenCount: 0,
-    ai: false,
-    watchers: [],
-    files: [],
-    comments: [],
-    history: [],
+    stage: 'SQA',
+    key: 'SQA-1',
+    text: 'A member logs in with the code sent by SMS.',
+    requirementIds: ['SR-01'],
+    ai: true,
+    changedAt: NOW.toISOString(),
+    createdBy: null,
     createdAt: NOW.toISOString(),
-    updatedAt: NOW.toISOString(),
+    history: [],
     ...overrides,
   }
 }

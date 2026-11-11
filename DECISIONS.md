@@ -158,3 +158,17 @@ The user's rule: the Project Owner can do everything in their project (answer ev
 - **Blur only where something floats over content** (bars, menus, dialogs, the sidebar); cards are translucent with a light blur only from the shared card style — many blurred elements would make scrolling slow on a laptop.
 - **Exports keep their solid colours:** the glass values are separate tokens (`brand.glass`) used only by the web UI; PDF, Word and PowerPoint still use the solid BRAC colours.
 - On phones the Simple view's top bar drops the logo and the small arrows (the To do tab is in the second row), so the bar fits at every text size.
+
+## Simpler SQA and UAT: testing points, versions, PASS / FAIL (11 November 2026)
+
+The user asked for a simpler testing process. It replaces the one in `SPEC_SQA_UAT.md` (test cases, list confirmation, builds, runs, Blocked, defects); the spec file itself is unchanged.
+
+- **Testing points:** the AI writes up to 3 short points per requirement (SRS for SQA, BRD for UAT). Testers add, edit, regenerate (AI) and delete them. No confirmation step: the sign-off approval is the check.
+- **Versions:** the tech team or PM team adds the version being tested (for example 1.2); SQA and UAT share the list. The tester picks the version first; every result is saved under it.
+- **PASS or FAIL only**, each with an optional comment (the user removed the third "Comment" option). No Blocked.
+- **A failed point is fixed in a new version** (the user's choice). A FAIL tells the developers, and "Fix N failed points" waits on them. On a new version **every point is checked again**; older versions keep their results.
+- **Who:** SQA — SQA testers. UAT — developers, stakeholders and the PM team (the user's choice). Versions — tech or PM team. Reports — an SQA tester (SQA), the PM (UAT). The Project Owner can do all of it (master key).
+- **Sign-off:** the report is made for one version and can be sent only when every point was checked and passed on that version. A point that cannot pass is deleted, or the PM marks its requirement Not testable.
+- **Editing a point, or a change to its requirement, means it is checked again** (earlier results stay in its history but no longer count).
+- **Once a stage is signed off**, its page and the project page show the signed-off version, not the newest.
+- **Existing data is converted on load** (`src/demo/migrate.ts`): test case → point (title — expected), build → version, Pass → PASS, Fail/Blocked → FAIL (the tester's notes, the Blocked reason and linked defect titles become the comment), report → same version. Test steps, preconditions, priority, run names, list confirmations and defects are not kept.

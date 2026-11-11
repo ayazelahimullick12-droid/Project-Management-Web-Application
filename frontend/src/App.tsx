@@ -9,7 +9,7 @@
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect, useState, type ReactNode } from 'react'
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { onSaveError, subscribe } from './demo/store'
 import { subscribeSession } from './demo/session'
 import { useSessionUserId } from './api/hooks'
@@ -28,7 +28,6 @@ import { ChangesPage } from './pages/ChangesPage'
 import { DecisionsPage } from './pages/DecisionsPage'
 import { ChatRedirect, MessagesPage } from './pages/chat/ChatPage'
 import { TestingPage } from './pages/testing/TestingPage'
-import { DefectPage } from './pages/testing/DefectPage'
 import { NotificationsPage, MailboxPage } from './pages/NotificationsPage'
 import { AdminPage } from './pages/AdminPage'
 import { AuditPage } from './pages/AuditPage'
@@ -88,6 +87,12 @@ function ByView({ simple, full }: { simple: ReactNode; full: ReactNode }) {
   return <>{view === 'simple' ? simple : full}</>
 }
 
+/** Links to defects in old notifications: defects were replaced by FAIL checks, so open UAT testing. */
+function OldDefectLink() {
+  const { pid } = useParams()
+  return <Navigate to={`/projects/${pid}/testing/UAT`} replace />
+}
+
 function RequireLogin({ children }: { children: ReactNode }) {
   const uid = useSessionUserId()
   const location = useLocation()
@@ -124,7 +129,7 @@ export function App() {
               <Route path="/projects/:pid/chat" element={<ChatRedirect />} />
               <Route path="/projects/:pid/chat/:chatId" element={<ChatRedirect />} />
               <Route path="/projects/:pid/testing/:stage" element={<TestingPage />} />
-              <Route path="/projects/:pid/defects/:defectId" element={<DefectPage />} />
+              <Route path="/projects/:pid/defects/:defectId" element={<OldDefectLink />} />
               <Route path="/projects/:pid/audit" element={<AuditPage />} />
               <Route path="/my-work" element={<MyWorkPage />} />
               <Route path="/inbox/questions" element={<Navigate to="/my-work?tab=questions" replace />} />

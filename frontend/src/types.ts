@@ -279,7 +279,7 @@ export interface DocVersion {
   templateVersion: number
   minorCorrection?: { declaredBy: ID; at: string }
   scopeCheck?: ScopeCheck
-  buildId?: ID // sign-off reports: the build being signed off
+  testedVersionId?: ID // sign-off reports: the product version being signed off
   frozen: boolean
   createdAt: string
 }
@@ -588,20 +588,6 @@ export interface AiJob {
 // ─── SQA and UAT ────────────────────────────────────────────────────────
 
 export type TestStage = 'SQA' | 'UAT'
-export type Severity = 'Critical' | 'High' | 'Medium' | 'Low'
-export type DefectStatus =
-  | 'New'
-  | 'Open'
-  | 'In progress'
-  | 'Fixed'
-  | 'Ready for retest'
-  | 'Closed'
-  | 'Reopened'
-  | 'Rejected'
-  | 'Duplicate'
-  | 'Deferred'
-  | 'Change request'
-export type TestResult = 'not_run' | 'pass' | 'fail' | 'blocked'
 
 export interface Requirement {
   id: string // e.g. OBJ-1, BR-03, SR-07
@@ -612,106 +598,52 @@ export interface Requirement {
   notTestable?: { reason: string; by: ID; at: string }
 }
 
-export interface TestCase {
+/**
+ * One thing to check in SQA or UAT, in one plain sentence (for example "A member can log in with
+ * the one-time code sent by SMS"). The AI writes them from the requirements; testers add, edit,
+ * regenerate and delete them. The same points are checked again on every new version.
+ */
+export interface TestPoint {
   id: ID
   projectId: ID
   stage: TestStage
-  key: string
-  title: string
-  preconditions: string
-  steps: string[]
-  expected: string
+  key: string // SQA-1, UAT-3
+  text: string
   requirementIds: string[]
-  priority: 'High' | 'Medium' | 'Low'
-  type: string
-  needsReview?: boolean
-  ai: boolean
-  acceptedBy?: ID
+  ai: boolean // written by the AI and not edited by a person since
+  /** Checks made before this time no longer count (the point was edited, or its requirement changed). */
+  changedAt: string
+  needsReview?: boolean // a linked requirement changed; cleared when the point is checked or edited
   createdBy: ID | null
   createdAt: string
   history: { by: ID | null; at: string; text: string }[]
 }
 
-export interface TestListConfirmation {
-  projectId: ID
-  stage: TestStage
-  by: ID
-  actingFor?: ID
-  coveredAs?: CoverRole
-  at: string
-}
-
-export interface Build {
+/** A version of the product handed over for testing (for example 1.2). SQA and UAT share the list. */
+export interface ProductVersion {
   id: ID
   projectId: ID
   version: string
-  envUrl: string
   notes: string
-  fixesDefectIds: ID[]
-  registeredBy: ID
-  registeredAt: string
-  releasedToUatAt?: string
-  releasedBy?: ID | null // null = released automatically on SQA sign-off
+  link: string // where testers open it
+  addedBy: ID
+  addedAt: string
 }
 
-export interface TestRun {
+export type CheckResult = 'pass' | 'fail'
+
+/** One PASS or FAIL for one point on one version. The latest check of a point on a version counts. */
+export interface PointCheck {
   id: ID
   projectId: ID
   stage: TestStage
-  buildId: ID
-  name: string
-  createdBy: ID
-  createdAt: string
-}
-
-export interface Execution {
-  id: ID
-  runId: ID
-  projectId: ID
-  stage: TestStage
-  testCaseId: ID
-  buildId: ID
-  assigneeId: ID
-  result: TestResult
-  actual?: string
-  notes?: string
-  blockedReason?: string
-  defectIds: ID[]
-  files: string[]
-  executedBy?: ID
-  executedAt?: string
-}
-
-export interface Defect {
-  id: ID
-  projectId: ID
-  stage: TestStage
-  key: string
-  title: string
-  steps: string
-  expected: string
-  actual: string
-  severity: Severity
-  status: DefectStatus
-  reporterId: ID
-  reporterTeam: Team | 'SQA' // whose team may close or reopen it after retest
-  assigneeId?: ID
-  testCaseId?: ID
-  requirementId?: string
-  foundInBuildId: ID
-  fixedInBuildId?: ID
-  outcomeReason?: string
-  duplicateOfId?: ID
-  changeRequestId?: ID
-  sqaVerified?: { buildId: ID; by: ID; at: string } // SQA checked a UAT fix before release
-  reopenCount: number
-  ai: boolean
-  watchers: ID[]
-  files: string[]
-  comments: { id: ID; authorId: ID; body: string; mentions: ID[]; createdAt: string }[]
-  history: { by: ID | null; actingFor?: ID; at: string; text: string }[]
-  createdAt: string
-  updatedAt: string
+  pointId: ID
+  versionId: ID
+  result: CheckResult
+  comment?: string
+  by: ID
+  coveredAs?: CoverRole // 'OWNER' when the Project Owner checked it with the master key
+  at: string
 }
 
 // ─── Settings and the whole demo state ──────────────────────────────────
@@ -725,8 +657,6 @@ export interface Settings {
   qaRoundLimit: number
   ragTopK: number
   ragDuplicateThreshold: number
-  signoffBlocking: Severity[]
-  defectDuplicateThreshold: number
   aiSpeed: 'normal' | 'fast' | 'instant' // only for the parts that are still simulated
   holidays: string[] // YYYY-MM-DD
   ai: AiSettings
@@ -735,7 +665,7 @@ export interface Settings {
 /** Which LM Studio models the app uses (Admin → Settings). */
 export interface AiSettings {
   model: string // writes text, e.g. "qwen2.5-coder-0.5b-instruct"
-  embedModel: string // compares texts (similar projects, possible duplicate defects)
+  embedModel: string // compares texts (similar projects)
 }
 
 /** The AI summaries of one document version (made on request; see api/documents.ts makeSummaries). */
@@ -794,10 +724,7 @@ export interface DemoState {
   chatReads: Record<string, string> // '<userId>:<chatId>' → when that person last read the chat
   requirements: Requirement[]
   traceLinksDone: Record<ID, boolean> // SRS traceability matrix built, per project
-  testCases: TestCase[]
-  testConfirmations: TestListConfirmation[]
-  builds: Build[]
-  testRuns: TestRun[]
-  executions: Execution[]
-  defects: Defect[]
+  testPoints: TestPoint[]
+  productVersions: ProductVersion[]
+  pointChecks: PointCheck[]
 }
