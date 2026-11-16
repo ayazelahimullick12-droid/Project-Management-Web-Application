@@ -183,3 +183,13 @@ The user asked for the Simple view to look more professional: a calmer look, a c
 - **To do is a work queue:** one list with columns Task, Project, Waiting and the button; the waiting time is a label coloured grey (under a day), amber (1–3 days) or red (over 3 days), the same rule as the Full dashboard. Today's date above the greeting. On phones each task stacks.
 - **Projects is one aligned list:** project and your role, a 7-step progress bar, and the status.
 - **"Your next step" box:** a white card with a magenta left edge instead of a pink panel.
+
+## Documents in the Simple view: paper sheet, contents, one status bar, changes in the text (16 November 2026)
+
+The user chose four of seven proposed improvements (1–4). Code: `src/simple/DocumentParts.tsx`, used by `src/simple/DocumentPage.tsx`.
+
+- **Paper sheet:** the text sits on a white sheet with a BRAC letterhead (logo, "BRAC · Project Management", a status stamp: Draft, In review, Changes requested, Approved, Signed, Needs updating), the formal title (Project Proposal, Project Charter, Business Requirements Document, Software Requirements Specification), project, version, date and "written by the AI" when no person has edited it. Sections are numbered (1., 2., …) so people can refer to them. At the end, an **approval record** table (role, name, decision, date) and the electronic signature with the start of its SHA-256 fingerprint.
+- **Contents:** a numbered list of sections beside the sheet, staying in view, with the section on screen highlighted and small markers: *changed* (since the version people last saw), comment count, *AI*. On narrow screens, and while comments are open, it is a **Contents** button.
+- **One slim bar** replaces the stacked status box, "Your turn" box and the blue "what changed" box: the status sentence, the approval steps as chips (approved ✓, current outlined), and one line saying what to do.
+- **Show changes since version N:** a switch that marks the edits in the text itself (added words green, removed words struck through), compared word by word on whole words so a time like 5:00 → 4:30 reads as one change. Unchanged sections read normally; new and removed sections are labelled. Commenting is done with the switch off.
+- The Full view's document page is unchanged (the shared text reader only gained optional numbering).

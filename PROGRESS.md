@@ -134,3 +134,8 @@ Then follow `frontend/DEMO.md`.
 - Plain neutral background, white cards with thin borders, smaller corners, solid main buttons; glass kept on the top bar, action bar and menus; product name next to the logo; neutral active tab and Demo button. Simple view only.
 - To do as a work queue (task, project, waiting label in grey / amber / red, button); Projects as one list with a progress bar per project; "Your next step" as a white card with a magenta edge.
 - Checked: type-check and tests pass. In the browser on separate test data: To do, Projects, a project page and a document page at desktop width; To do at phone width (no sideways scrolling) and in dark mode; switching to Full removes the calmer look.
+
+## 16 November 2026 — documents in the Simple view
+
+- Paper sheet with letterhead, status stamp, numbered sections and an approval record with the signature; a contents list with changed / comments / AI markers; one slim status bar with the approval steps; "Show changes since version N" marks edits in the text.
+- Checked: type-check and tests pass. In the browser on separate test data: the Branch Cash BRD as the deputy (bar, contents markers, letterhead, approval record, changes switch, contents jump), the signed Loan Repayment Proposal & Charter (Signed stamp, Proposal and Charter titles, signature line), and phone width (no sideways scrolling, Contents opens as a pop-up, comments open). Screenshots were not possible because the browser pane was hidden; the checks read the page itself.
