@@ -128,3 +128,9 @@ Then follow `frontend/DEMO.md`.
 - To do / My work: "Check N points on version X" for testers, "Fix N failed points" for developers. Dashboard: failed testing points.
 - Old data is converted when loaded (`src/demo/migrate.ts`); the demo project's testing data was rewritten in the new shape.
 - Checked: all tests pass (new tests for the rules, the AI point parsing and the conversion), type-check and build pass. In the browser on separate test data: a copy of the real data (converted correctly; PASS with comment, FAIL, a new version resets every point to To check, an older version keeps its results, adding or editing a point, sign-off criteria per version) and the demo projects (stakeholder and developer To do, signed-off SQA shows its signed version, phone width with no sideways scrolling). LM Studio was off, so writing and regenerating points with the AI was checked by unit tests only.
+
+## 16 November 2026 — a calmer, more professional Simple view
+
+- Plain neutral background, white cards with thin borders, smaller corners, solid main buttons; glass kept on the top bar, action bar and menus; product name next to the logo; neutral active tab and Demo button. Simple view only.
+- To do as a work queue (task, project, waiting label in grey / amber / red, button); Projects as one list with a progress bar per project; "Your next step" as a white card with a magenta edge.
+- Checked: type-check and tests pass. In the browser on separate test data: To do, Projects, a project page and a document page at desktop width; To do at phone width (no sideways scrolling) and in dark mode; switching to Full removes the calmer look.

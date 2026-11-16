@@ -212,7 +212,7 @@ export function SimpleDocumentPage() {
       {needPeople && !notice && <MissingPeople pid={pid} missing={data.missing} canAdd={data.canAddPeople} optional="You (the Project Owner or the Project Manager) approve that step in their place. You can add them now if you like." large />}
 
       {notice && (
-        <div className="shadow-soft rounded-3xl p-5">
+        <div className="shadow-soft rounded-2xl p-5">
           <StatusLineInner tone={notice.tone}>{notice.text}</StatusLineInner>
           {notice.actions && <div className="mt-4 flex flex-wrap gap-3">{notice.actions}</div>}
         </div>
@@ -255,7 +255,7 @@ export function SimpleDocumentPage() {
           )}
         </div>
         <div className={clsx('grid gap-6', showComments && 'lg:grid-cols-[minmax(0,1fr)_360px]')}>
-          <article className="min-w-0 rounded-3xl bg-white/90 shadow-[0_1px_2px_rgb(0_0_0/0.04),0_14px_40px_-22px_rgb(40_20_80/0.3)] ring-1 ring-black/5 backdrop-blur-xl dark:bg-[#1c1c21]/90 dark:ring-white/10 px-6 py-8 text-[1.0625rem] md:px-12 [&_.md]:text-[1.0625rem]">
+          <article className="min-w-0 rounded-2xl bg-white/90 shadow-[0_1px_2px_rgb(0_0_0/0.04),0_14px_40px_-22px_rgb(40_20_80/0.3)] ring-1 ring-black/5 backdrop-blur-xl dark:bg-[#1c1c21]/90 dark:ring-white/10 px-6 py-8 text-[1.0625rem] md:px-12 [&_.md]:text-[1.0625rem]">
             <Reader
               sections={shown}
               regenerated={current.regeneratedSectionIds}

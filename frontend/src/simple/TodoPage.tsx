@@ -19,21 +19,51 @@ function greeting(now: Date) {
   return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
 }
 
-function TaskCard({ item, first }: { item: TodoItem; first: boolean }) {
-  const now = useNow()
+/** How long something has waited, as a coloured label: grey under a day, amber up to 3 days, red after. */
+function WaitLabel({ since, now }: { since?: string; now: Date }) {
+  if (!since) return <span className="text-sm text-muted">—</span>
+  const days = (now.getTime() - new Date(since).getTime()) / 86_400_000
+  const tone = days > 3 ? 'bg-red-50 text-red-700 ring-red-200' : days >= 1 ? 'bg-amber-50 text-amber-800 ring-amber-200' : 'bg-ink/[0.04] text-muted ring-line'
+  return <span className={clsx('inline-flex items-center rounded-md px-2 py-0.5 text-sm font-medium whitespace-nowrap ring-1', tone)}>{waited(since, now)}</span>
+}
+
+/** Column layout of the work queue (the header and every row use it, so they line up). */
+const QUEUE_COLS = 'md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,15rem)_7rem_9.5rem] md:items-center md:gap-4'
+
+/** The work queue: one row per task, with its project, how long it has waited and the button. */
+function TaskQueue({ items, now }: { items: TodoItem[]; now: Date }) {
   return (
-    <Link to={item.to} className={clsx('shadow-soft group flex flex-wrap items-center gap-4 rounded-3xl p-5 transition hover:-translate-y-px', first && 'ring-2 ring-brand/35')}>
-      <ProjectIcon id={item.projectId} name={item.projectName} size={44} />
-      <div className="min-w-0 flex-1">
-        <div className="text-lg font-semibold">{item.title}</div>
-        <div className="mt-0.5 text-base text-muted">
-          {item.projectName}
-          {item.since && ` · waiting ${waited(item.since, now)}`}
-          {item.coveringFor && ` · for ${item.coveringFor} (away)`}
-        </div>
+    <div className="shadow-soft overflow-hidden rounded-2xl">
+      <div className={clsx('hidden border-b border-line px-5 py-2.5 text-xs font-semibold tracking-[0.06em] text-muted uppercase', QUEUE_COLS)}>
+        <span>Task</span>
+        <span>Project</span>
+        <span>Waiting</span>
+        <span className="sr-only">Action</span>
       </div>
-      <span className={clsx('inline-flex h-11 items-center rounded-full px-5 text-base font-medium transition', first ? 'glass-tint text-white group-hover:brightness-110' : 'glass-control')}>{item.button}</span>
-    </Link>
+      <ul className="divide-y divide-line">
+        {items.map((it, i) => (
+          <li key={it.key}>
+            <Link to={it.to} className={clsx('group flex flex-col gap-2 px-5 py-4 transition hover:bg-ink/[0.025] dark:hover:bg-white/[0.03]', QUEUE_COLS)}>
+              <span className="min-w-0">
+                <span className="block text-lg leading-snug font-medium">{it.title}</span>
+                {it.coveringFor && <span className="mt-0.5 block text-sm text-muted">For {it.coveringFor}, who is away</span>}
+              </span>
+              <span className="flex min-w-0 items-center gap-2 text-base leading-snug text-muted">
+                <ProjectIcon id={it.projectId} name={it.projectName} size={24} />
+                <span className="min-w-0">{it.projectName}</span>
+              </span>
+              <span className="flex items-center gap-2 md:block">
+                <span className="text-sm text-muted md:hidden">Waiting</span>
+                <WaitLabel since={it.since} now={now} />
+              </span>
+              <span className="md:text-right">
+                <span className={clsx('inline-flex h-10 items-center justify-center rounded-full px-5 text-base font-medium transition', i === 0 ? 'glass-tint text-white group-hover:brightness-110' : 'glass-control group-hover:brightness-[0.98]')}>{it.button}</span>
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
 
@@ -53,16 +83,16 @@ export function TodoPage() {
 
   return (
     <SimplePage
+      wide
+      eyebrow={now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Dhaka' })}
       title={`${greeting(now)}, ${me?.name.split(' ')[0] ?? ''}`}
       subtitle={items.length ? `You have ${items.length} thing${items.length > 1 ? 's' : ''} to do.` : undefined}
     >
       {items.length ? (
         <div className="space-y-3">
-          {shown.map((it, i) => (
-            <TaskCard key={it.key} item={it} first={i === 0} />
-          ))}
+          <TaskQueue items={shown} now={now} />
           {items.length > 5 && (
-            <button className="w-full rounded-2xl py-3 text-base font-medium text-brand hover:bg-brand-soft/40" onClick={() => setAll(!all)}>
+            <button className="w-full rounded-xl py-3 text-base font-medium text-brand hover:bg-ink/[0.04]" onClick={() => setAll(!all)}>
               {all ? 'Show fewer' : `Show ${items.length - 5} more`}
             </button>
           )}

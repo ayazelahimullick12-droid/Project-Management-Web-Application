@@ -2,6 +2,7 @@
  * The frame of the Simple view: one top bar with four places (To do, Projects, Messages, Help),
  * the Simple / Full switch, a Demo button (prototype only) and your profile.
  * Nothing floats over the page: AI progress shows as a strip under the top bar.
+ * While it is on screen, <html> has the "simple-view" class: the calmer look in index.css.
  */
 import { clsx } from 'clsx'
 import { BarChart3, ChevronDown, CircleCheck, CircleHelp, FolderKanban, ListTodo, LogOut, MessageCircle, Settings, Sparkles, TriangleAlert, X } from 'lucide-react'
@@ -30,8 +31,8 @@ function NavTab({ to, icon, label, count, end, mobile }: { to: string; icon: Rea
       className={({ isActive }) =>
         clsx(
           'relative flex items-center font-medium whitespace-nowrap transition [&_svg]:h-5 [&_svg]:w-5',
-          mobile ? 'flex-col justify-center gap-0.5 rounded-2xl py-2 text-sm' : 'gap-2 rounded-full px-4 py-2 text-base',
-          isActive ? 'bg-brand-soft text-brand' : 'text-ink/75 hover:bg-canvas hover:text-ink',
+          mobile ? 'flex-col justify-center gap-0.5 rounded-xl py-2 text-sm' : 'gap-2 rounded-lg px-3.5 py-2 text-base',
+          isActive ? 'bg-ink/[0.06] text-ink [&_svg]:text-brand dark:bg-white/10' : 'text-ink/70 hover:bg-ink/[0.04] hover:text-ink dark:hover:bg-white/5',
         )
       }
     >
@@ -50,7 +51,7 @@ function JobStrip() {
   const visible = (jobs ?? []).filter((j) => !hidden.includes(j.id) && (j.status === 'running' || Date.now() - (j.startedReal ?? 0) < 45_000)).slice(0, 2)
   if (!visible.length) return null
   return (
-    <div className="glass-strong mx-auto mt-2 w-[calc(100%-1rem)] max-w-6xl rounded-3xl bg-violet-50 no-print sm:w-[calc(100%-1.5rem)]">
+    <div className="glass-strong mx-auto mt-2 w-[calc(100%-1rem)] max-w-6xl rounded-2xl bg-violet-50 no-print sm:w-[calc(100%-1.5rem)]">
       {visible.map((j) => (
         <div key={j.id} className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2.5 text-base md:px-8">
           {j.status === 'running' ? <Sparkles className="h-5 w-5 shrink-0 animate-pulse text-violet-700" /> : j.status === 'done' ? <CircleCheck className="h-5 w-5 shrink-0 text-leaf" /> : <TriangleAlert className="h-5 w-5 shrink-0 text-red-600" />}
@@ -93,8 +94,8 @@ function DemoButton() {
       width="w-80"
       label="Demo controls"
       button={() => (
-        <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1.5 text-sm font-medium sm:gap-1.5 sm:px-3 text-amber-900 ring-1 ring-amber-200 hover:bg-amber-100" title={`Prototype demo controls · demo clock ${fmtDateTime(now.toISOString())}`}>
-          Demo <ChevronDown className="hidden h-3.5 w-3.5 sm:block" />
+        <span className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-muted ring-1 ring-line hover:bg-ink/[0.04] hover:text-ink sm:px-3" title={`Prototype demo controls · demo clock ${fmtDateTime(now.toISOString())}`}>
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden /> Demo <ChevronDown className="hidden h-3.5 w-3.5 sm:block" />
         </span>
       )}
     >
@@ -181,6 +182,10 @@ export function SimpleShell() {
   const nav = NAV_LAYOUT[usePrefs().textSize]
   const location = useLocation()
   const [palette, setPalette] = useState(false)
+  useEffect(() => {
+    document.documentElement.classList.add('simple-view')
+    return () => document.documentElement.classList.remove('simple-view')
+  }, [])
   const { items, dash } = useTodo()
   const { data: chats } = useApi(['conversations', uid], api.chat.conversations, !!uid)
   useEffect(() => {
@@ -207,13 +212,17 @@ export function SimpleShell() {
   return (
     <div className="flex min-h-full flex-col">
       <header className="sticky top-0 z-30 px-1.5 pt-1.5 sm:px-3 sm:pt-2 no-print">
-        <div className="glass-strong mx-auto max-w-6xl rounded-[30px]">
+        <div className="glass-strong mx-auto max-w-6xl rounded-2xl">
           <div className="flex h-16 items-center gap-2 px-2 sm:px-4 md:px-5">
-            <Link to="/" className="hidden shrink-0 items-center gap-2.5 rounded-full p-1 sm:flex">
-              <img src="/favicon.svg" alt="" className="h-9 w-9 rounded-[30%] shadow-sm" />
-              <span className="hidden text-base leading-tight font-semibold 2xl:block">{brand.appName}</span>
+            <Link to="/" className="hidden shrink-0 items-center gap-2.5 rounded-lg p-1 pr-2 sm:flex">
+              <img src="/favicon.svg" alt="" className="h-8 w-8 rounded-lg" />
+              <span className="hidden leading-tight md:block">
+                <span className="block text-[11px] font-semibold tracking-[0.08em] text-brand uppercase">BRAC</span>
+                <span className="block text-[15px] font-semibold">{brand.appName}</span>
+              </span>
             </Link>
-            <nav className={clsx('ml-3 hidden items-center gap-1', nav.top)} aria-label="Main">
+            <span className={clsx('mx-1 hidden h-7 w-px bg-line', nav.top)} aria-hidden />
+            <nav className={clsx('hidden items-center gap-1', nav.top)} aria-label="Main">
               {tabs.map((t) => (
                 <NavTab key={t.to} {...t} />
               ))}
@@ -238,7 +247,7 @@ export function SimpleShell() {
       </header>
       <JobStrip />
       {full ? (
-        <main className={clsx('shadow-soft mx-auto mt-2 flex h-[calc(100dvh-9.5rem)] w-[calc(100%-1rem)] max-w-6xl flex-col overflow-hidden rounded-[28px] sm:w-[calc(100%-1.5rem)]', nav.height)}>
+        <main className={clsx('shadow-soft mx-auto mt-2 flex h-[calc(100dvh-9.5rem)] w-[calc(100%-1rem)] max-w-6xl flex-col overflow-hidden rounded-2xl sm:w-[calc(100%-1.5rem)]', nav.height)}>
           <Outlet />
         </main>
       ) : (

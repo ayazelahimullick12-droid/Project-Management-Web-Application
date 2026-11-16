@@ -17,7 +17,7 @@ import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import type { Tone } from './words'
 
-export function SimplePage({ back, title, subtitle, children, wide }: { back?: { to: string; label: string }; title: ReactNode; subtitle?: ReactNode; children: ReactNode; wide?: boolean }) {
+export function SimplePage({ back, eyebrow, title, subtitle, children, wide }: { back?: { to: string; label: string }; eyebrow?: ReactNode; title: ReactNode; subtitle?: ReactNode; children: ReactNode; wide?: boolean }) {
   return (
     <div className={clsx('mx-auto', wide ? 'max-w-5xl' : 'max-w-3xl')}>
       {back && (
@@ -25,6 +25,7 @@ export function SimplePage({ back, title, subtitle, children, wide }: { back?: {
           <ArrowLeft className="h-5 w-5" /> {back.label}
         </Link>
       )}
+      {eyebrow && <div className="mb-1.5 text-sm font-medium text-muted">{eyebrow}</div>}
       <h1 className="page-title text-3xl leading-tight">{title}</h1>
       {subtitle && <p className="mt-2 text-lg text-muted">{subtitle}</p>}
       <div className="mt-7 space-y-8">{children}</div>
@@ -47,7 +48,7 @@ export function ToneIcon({ tone }: { tone: Tone }) {
 /** Where things stand, in one sentence. */
 export function StatusLine({ tone, children }: { tone: Tone; children: ReactNode }) {
   return (
-    <div className="shadow-soft flex items-start gap-3 rounded-3xl px-5 py-4 text-lg">
+    <div className="shadow-soft flex items-start gap-3 rounded-2xl px-5 py-4 text-lg">
       <ToneIcon tone={tone} />
       <div className="min-w-0 flex-1">{children}</div>
     </div>
@@ -57,8 +58,8 @@ export function StatusLine({ tone, children }: { tone: Tone; children: ReactNode
 /** The one thing this person should do here. Shown only when there is something to do. */
 export function NextStep({ title = 'Your next step', children, actions }: { title?: string; children: ReactNode; actions?: ReactNode }) {
   return (
-    <section className="rounded-3xl border border-brand/30 bg-brand-soft p-5 shadow-[inset_0_1px_0_rgb(255_255_255/0.6),0_10px_30px_-16px_var(--brand-primary)] backdrop-blur-xl md:p-6 dark:shadow-none">
-      <div className="text-base font-semibold text-brand">{title}</div>
+    <section className="shadow-soft rounded-2xl !border-l-4 !border-l-brand p-5 md:p-6">
+      <div className="text-sm font-semibold tracking-[0.06em] text-brand uppercase">{title}</div>
       <div className="mt-1 text-lg">{children}</div>
       {actions && <div className="mt-4 flex flex-wrap items-center gap-3">{actions}</div>}
     </section>
@@ -88,16 +89,16 @@ export function Row({ to, onClick, icon, title, subtitle, right, muted }: { to?:
       {(to || onClick) && <ChevronRight className="h-5 w-5 shrink-0 text-muted" />}
     </>
   )
-  const cls = 'shadow-soft flex w-full items-center gap-4 rounded-3xl px-5 py-4 text-left transition'
+  const cls = 'shadow-soft flex w-full items-center gap-4 rounded-2xl px-5 py-4 text-left transition'
   if (to)
     return (
-      <Link to={to} className={clsx(cls, 'hover:-translate-y-px hover:brightness-[1.02]')}>
+      <Link to={to} className={clsx(cls, 'hover:!border-ink/20 dark:hover:!border-white/20')}>
         {inner}
       </Link>
     )
   if (onClick)
     return (
-      <button type="button" onClick={onClick} className={clsx(cls, 'hover:-translate-y-px hover:brightness-[1.02]')}>
+      <button type="button" onClick={onClick} className={clsx(cls, 'hover:!border-ink/20 dark:hover:!border-white/20')}>
         {inner}
       </button>
     )
@@ -126,7 +127,7 @@ export function More({ label = 'More', children, defaultOpen = false }: { label?
 export function ActionBar({ children, more }: { children?: ReactNode; more?: ReactNode }) {
   return (
     <div className="sticky bottom-3 z-20">
-      <div className="glass-strong mx-auto flex max-w-5xl flex-wrap items-center gap-3 rounded-[30px] px-4 py-3">
+      <div className="glass-strong mx-auto flex max-w-5xl flex-wrap items-center gap-3 rounded-2xl px-4 py-3">
         {children}
         {more && <div className="ml-auto">{more}</div>}
       </div>
@@ -136,7 +137,7 @@ export function ActionBar({ children, more }: { children?: ReactNode; more?: Rea
 
 export function Empty({ icon, title, children }: { icon: ReactNode; title: ReactNode; children?: ReactNode }) {
   return (
-    <div className="shadow-soft flex flex-col items-center rounded-3xl px-6 py-12 text-center">
+    <div className="shadow-soft flex flex-col items-center rounded-2xl px-6 py-12 text-center">
       <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-leaf-soft text-leaf [&>svg]:h-7 [&>svg]:w-7">{icon}</span>
       <div className="text-xl font-semibold">{title}</div>
       {children && <div className="mt-2 max-w-md text-base text-muted">{children}</div>}
