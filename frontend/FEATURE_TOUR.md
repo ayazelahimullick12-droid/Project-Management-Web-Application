@@ -44,11 +44,11 @@ The three active projects have the same team, so each person has the same role e
 | **Nusrat Jahan** | Project Manager (PM head) | Running intake, generating documents, approvals, decisions, change requests, UAT testing and sign-off |
 | **Sadia Islam** | Deputy PM | Acting for the PM when Nusrat is Away |
 | **Rafiq Hasan**, **Mehnaz Akter** | PM team members | Editing documents, accepting suggestions, the edit lock |
-| **Arif Rahman** | Tech head | Approving documents, confirming the SQA test list, approving the SQA sign-off, answering technical questions |
+| **Arif Rahman** | Tech head | Approving documents, approving the SQA sign-off, answering technical questions |
 | **Kamrul Hossain** | Deputy tech head | Acting for the tech head |
 | **Shuvo Das**, **Nabila Sultana** | Developers | Adding versions, fixing failed points, UAT testing; seeing what developers are not allowed to do |
 | **Tania Ferdous**, **Mahmud Karim** | SQA testers (tech team, SQA tag) | SQA testing points, PASS / FAIL on each version, the SQA sign-off report |
-| **Rokeya Begum** | Stakeholder head (**Away** in Branch Cash) | Confirming the Fact Sheet, approving documents, confirming the UAT test list |
+| **Rokeya Begum** | Stakeholder head (**Away** in Branch Cash) | Confirming the Fact Sheet, approving documents and the UAT sign-off |
 | **Jahid Hasan** | Deputy stakeholder head | Approving **as deputy** while Rokeya is Away |
 | **Shirin Akhter**, **Habib Ullah** | Stakeholders (UAT testers) | Writing the description, answering questions, commenting, UAT testing (PASS / FAIL) |
 | **Selim Reza** | Sponsor head | Answering budget questions, **signing** the Proposal & Charter, BRD and SRS |
@@ -105,8 +105,8 @@ The view most people will use. Show it first, then flip to **Full** to show the 
 ## Part 2 — Home dashboard and project overview (6 min)
 
 1. Be **Imran Chowdhury** (Owner). **Home** shows:
-   - **Number tiles:** waiting on you, documents in review, open Q/A questions, failed testing points (with
-     critical ones), decisions to confirm. Some tiles open the list behind them.
+   - **Number tiles:** waiting on you, documents in review, open Q/A questions, failed testing points, decisions
+     to confirm. Some tiles open the list behind them.
    - **Waiting on you:** each item with how long it has waited (grey under a day, amber up to 3
      days, red after that).
    - **Conversations:** recent and unread chats. Click one to open it in a chat window.
@@ -388,7 +388,7 @@ Be **Farhana Kabir**. Sidebar → **Admin**:
 2. **Users:** **Add user** (with “Outside BRAC (signs with an email one-time code)”),
    **Deactivate** and **Reactivate**. Email and password login; BRAC sign-in can be added later.
 3. **Settings:** working days and hours, holidays, reminder interval, Q/A round limit, edit-lock
-   timeout, severities that block sign-off, duplicate warning thresholds, how many similar projects
+   timeout, the duplicate warning threshold, how many similar projects
    are shown, and the **AI models**: which LM Studio model writes and which compares meaning (the
    lists come from LM Studio; **Check again** if you just loaded one) → **Save**.
 4. **Import past projects:** name, year, department, members, documents (**Add a document**) →
@@ -397,8 +397,8 @@ Be **Farhana Kabir**. Sidebar → **Admin**:
    error if it failed).
 6. To show what happens when the AI is off: stop LM Studio's server and click any AI button. The
    action stops with “LM Studio is not reachable…” and nothing is changed.
-6. **Audit log:** everything across all projects.
-7. Farhana's **Home** also has the portfolio view (pipeline and stalled items).
+7. **Audit log:** everything across all projects.
+8. Farhana's **Home** also has the portfolio view (pipeline and stalled items).
 
 ## Part 12 — Permissions: what people cannot do (5 min)
 
