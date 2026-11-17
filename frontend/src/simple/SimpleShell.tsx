@@ -1,5 +1,5 @@
 /**
- * The frame of the Simple view: one top bar with four places (To do, Projects, Messages, Help),
+ * The frame of the Simple view: one flush top bar with four places (To do, Projects, Messages, Help),
  * the Simple / Full switch, a Demo button (prototype only) and your profile.
  * Nothing floats over the page: AI progress shows as a strip under the top bar.
  * While it is on screen, <html> has the "simple-view" class: the calmer look in index.css.
@@ -32,8 +32,11 @@ function NavTab({ to, icon, label, count, end, mobile }: { to: string; icon: Rea
       className={({ isActive }) =>
         clsx(
           'relative flex items-center font-medium whitespace-nowrap transition [&_svg]:h-5 [&_svg]:w-5',
-          mobile ? 'flex-col justify-center gap-0.5 rounded-xl py-2 text-sm' : 'gap-2 rounded-lg px-3.5 py-2 text-base',
-          isActive ? 'bg-ink/[0.06] text-ink [&_svg]:text-brand dark:bg-white/10' : 'text-ink/70 hover:bg-ink/[0.04] hover:text-ink dark:hover:bg-white/5',
+          // Underline tabs (as in GitHub and Atlassian): the current place is marked by a magenta line.
+          mobile ? 'flex-col justify-center gap-0.5 py-2.5 text-sm' : 'gap-2 px-3 text-[15px]',
+          'after:absolute after:bottom-0 after:h-0.5 after:rounded-full',
+          mobile ? 'after:inset-x-6' : 'after:inset-x-3',
+          isActive ? 'text-ink after:bg-brand [&_svg]:text-brand' : 'text-muted hover:text-ink after:bg-transparent',
         )
       }
     >
@@ -213,44 +216,44 @@ export function SimpleShell() {
 
   return (
     <div className="flex min-h-full flex-col">
-      <header className="sticky top-0 z-30 px-1.5 pt-1.5 sm:px-3 sm:pt-2 no-print">
-        <div className="glass-strong mx-auto max-w-6xl rounded-2xl">
-          <div className="flex h-16 items-center gap-2 px-2 sm:px-4 md:px-5">
-            <Link to="/" className="hidden shrink-0 items-center gap-2.5 rounded-lg p-1 pr-2 sm:flex">
-              <img src="/favicon.svg" alt="" className="h-8 w-8 rounded-lg" />
-              <span className="hidden leading-tight md:block">
-                <span className="block text-[11px] font-semibold tracking-[0.08em] text-brand uppercase">BRAC</span>
-                <span className="block text-[15px] font-semibold">{brand.appName}</span>
-              </span>
-            </Link>
-            <span className={clsx('mx-1 hidden h-7 w-px bg-line', nav.top)} aria-hidden />
-            <nav className={clsx('hidden items-center gap-1', nav.top)} aria-label="Main">
-              {tabs.map((t) => (
-                <NavTab key={t.to} {...t} />
-              ))}
-            </nav>
-            <div className="ml-auto flex min-w-0 items-center gap-1.5 sm:gap-2">
-              <span className="hidden sm:block">
-                <ViewSwitch />
-              </span>
-              <span className="sm:hidden">
-                <ViewSwitch compact />
-              </span>
-              <DemoButton />
-              <ProfileMenu portfolio={!!dash?.portfolio} />
-            </div>
-          </div>
-          <nav className={clsx('grid grid-cols-4 gap-1 border-t border-line p-1.5', nav.row)} aria-label="Main">
+      {/* App-wide header (logo, the four places, view, demo, profile): flush and full width, its
+          content lined up with the page. Project navigation is a separate band below it. */}
+      <header className="sticky top-0 z-30 border-b border-line bg-paper/85 backdrop-blur-xl no-print">
+        <div className="mx-auto flex h-16 max-w-6xl items-center gap-2 px-4 md:px-8">
+          <Link to="/" className="flex shrink-0 items-center gap-2.5 rounded-lg py-1 pr-2">
+            <img src="/favicon.svg" alt="" className="h-8 w-8 rounded-lg" />
+            <span className="hidden leading-tight md:block">
+              <span className="block text-[11px] font-semibold tracking-[0.08em] text-brand uppercase">BRAC</span>
+              <span className="block text-[15px] font-semibold">{brand.appName}</span>
+            </span>
+          </Link>
+          <span className={clsx('mx-3 hidden h-6 w-px bg-line', nav.top)} aria-hidden />
+          <nav className={clsx('hidden h-16 items-stretch gap-1', nav.top)} aria-label="Main">
             {tabs.map((t) => (
-              <NavTab key={t.to} {...t} mobile />
+              <NavTab key={t.to} {...t} />
             ))}
           </nav>
-          {pid && <ProjectNav pid={pid} />}
+          <div className="ml-auto flex min-w-0 items-center gap-1.5 sm:gap-2">
+            <span className="hidden sm:block">
+              <ViewSwitch />
+            </span>
+            <span className="sm:hidden">
+              <ViewSwitch compact />
+            </span>
+            <DemoButton />
+            <ProfileMenu portfolio={!!dash?.portfolio} />
+          </div>
         </div>
+        <nav className={clsx('grid grid-cols-4 border-t border-line', nav.row)} aria-label="Main">
+          {tabs.map((t) => (
+            <NavTab key={t.to} {...t} mobile />
+          ))}
+        </nav>
       </header>
+      {pid && !full && <ProjectNav pid={pid} />}
       <JobStrip />
       {full ? (
-        <main className={clsx('shadow-soft mx-auto mt-2 flex h-[calc(100dvh-9.5rem)] w-[calc(100%-1rem)] max-w-6xl flex-col overflow-hidden rounded-2xl sm:w-[calc(100%-1.5rem)]', nav.height)}>
+        <main className={clsx('shadow-soft mx-auto mt-3 flex h-[calc(100dvh-9.5rem)] w-[calc(100%-1rem)] max-w-6xl flex-col overflow-hidden rounded-2xl sm:w-[calc(100%-1.5rem)]', nav.height)}>
           <Outlet />
         </main>
       ) : (

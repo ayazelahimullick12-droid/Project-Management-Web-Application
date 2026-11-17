@@ -19,7 +19,7 @@ import type { Tone } from './words'
 
 export function SimplePage({ back, eyebrow, title, subtitle, children, wide }: { back?: { to: string; label: string }; eyebrow?: ReactNode; title: ReactNode; subtitle?: ReactNode; children: ReactNode; wide?: boolean }) {
   return (
-    <div className={clsx('mx-auto', wide ? 'max-w-5xl' : 'max-w-3xl')}>
+    <div className={clsx(wide ? 'max-w-5xl' : 'max-w-3xl')}>
       {back && (
         <Link to={back.to} className="mb-5 inline-flex items-center gap-2 rounded-lg py-1 text-base text-muted hover:text-brand">
           <ArrowLeft className="h-5 w-5" /> {back.label}

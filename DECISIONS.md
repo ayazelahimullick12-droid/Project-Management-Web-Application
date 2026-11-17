@@ -203,3 +203,13 @@ The user asked for easier navigation between projects, documents and the other p
 - **Team chat sits under More** so the tabs fit on one row on a laptop; the top bar's Messages already shows unread chats, and More gets a dot when the project chat has new messages.
 - **Phones:** the switcher and More on one row, the tabs under them, scrolling sideways with the current tab centred.
 - The "← All projects" and "← project name" back links on the project and document pages were removed: the switcher and the Overview tab replace them.
+
+## Simple view: a work-app header and project header (17 November 2026)
+
+The user found the first project bar not professional enough and asked to look at other products. The patterns used: GitHub's Primer UnderlineNav (left-aligned underline tabs right above the content, neutral counters), Atlassian's navigation (the top bar holds only app-wide items; project navigation as horizontal tabs below it), and the GOV.UK header / service navigation split.
+
+- **Top bar:** flush and full width (no floating rounded card), lightly frosted, thin bottom border, its content lined up with the page. The four places are underline tabs; the current one has a magenta line.
+- **Project header** (a band under the top bar, scrolls with the page): breadcrumb "Projects / [icon] Project name ▾" (the name is the project switcher), the step and a small progress bar on the right, and underline tabs with icons: Overview, Proposal & Charter, BRD, SRS, Questions & facts, Testing, More. A finished document's icon is a green check; a magenta counter means something there waits for you. The coloured status dots were removed.
+- **Pages are left-aligned** with the header instead of centred.
+- **Overview:** headed "Overview" (the name is in the header), with an **About** panel on the right like GitHub's: description, Project Owner, the four heads (with "away"), start date and a link to the whole team. "Also in this project" became "Also needs attention" and lists only what does; the "More" section was removed (the More tab covers it). The step bar shows only on phones, where the header hides it.
+- **Phones:** the tab strip fades at its edge to show it scrolls.

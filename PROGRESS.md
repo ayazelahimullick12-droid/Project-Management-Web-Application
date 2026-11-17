@@ -144,3 +144,8 @@ Then follow `frontend/DEMO.md`.
 
 - A project bar under the top bar on every project page: a project switcher that keeps your place, and tabs for Overview, the three documents, Questions & facts, Testing and More, each with a status dot and a count of what waits for you.
 - Checked: type-check and tests pass. In the browser on separate test data: the bar on a document, the overview, Questions & facts and Team (More highlighted), not on To do or Projects; switching from Branch Cash's BRD to Member Savings opened Member Savings' BRD; Testing opened UAT; the More menu; laptop width (all tabs on one row) and phone width (no sideways page scroll, current tab in view).
+
+## 17 November 2026 — Simple view: work-app header and project header
+
+- Flush full-width top bar with underline tabs; a project header with breadcrumb switcher, step progress and underline tabs with icons and counters; left-aligned pages; an About panel on the overview.
+- Checked: type-check and tests pass. In the browser on separate test data: overview and BRD at laptop width, overview at phone width (no sideways page scroll, faded tab edge).
