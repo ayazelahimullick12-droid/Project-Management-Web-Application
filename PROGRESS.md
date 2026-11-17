@@ -149,3 +149,8 @@ Then follow `frontend/DEMO.md`.
 
 - Flush full-width top bar with underline tabs; a project header with breadcrumb switcher, step progress and underline tabs with icons and counters; left-aligned pages; an About panel on the overview.
 - Checked: type-check and tests pass. In the browser on separate test data: overview and BRD at laptop width, overview at phone width (no sideways page scroll, faded tab edge).
+
+## 17 November 2026 — Simple view: simpler top bar
+
+- Logo and name, the four places, a Demo icon and the avatar; Simple / Full is in the avatar menu.
+- Checked: type-check and tests pass; on separate test data the menu's View switch goes to Full and back; no sideways scrolling at phone width.

@@ -1,11 +1,12 @@
 /**
- * The frame of the Simple view: one flush top bar with four places (To do, Projects, Messages, Help),
- * the Simple / Full switch, a Demo button (prototype only) and your profile.
+ * The frame of the Simple view: one flush top bar with the logo, four places (To do, Projects,
+ * Messages, Help), a small Demo button (prototype only) and your avatar. The Simple / Full switch,
+ * text size and colours are in the avatar's menu.
  * Nothing floats over the page: AI progress shows as a strip under the top bar.
  * While it is on screen, <html> has the "simple-view" class: the calmer look in index.css.
  */
 import { clsx } from 'clsx'
-import { BarChart3, ChevronDown, CircleCheck, CircleHelp, FolderKanban, ListTodo, LogOut, MessageCircle, Settings, Sparkles, TriangleAlert, X } from 'lucide-react'
+import { BarChart3, CircleCheck, CircleHelp, FolderKanban, ListTodo, LogOut, MessageCircle, Settings, SlidersHorizontal, Sparkles, TriangleAlert, X } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../api'
@@ -98,8 +99,9 @@ function DemoButton() {
       width="w-80"
       label="Demo controls"
       button={() => (
-        <span className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-muted ring-1 ring-line hover:bg-ink/[0.04] hover:text-ink sm:px-3" title={`Prototype demo controls · demo clock ${fmtDateTime(now.toISOString())}`}>
-          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden /> Demo <ChevronDown className="hidden h-3.5 w-3.5 sm:block" />
+        <span className="relative flex h-9 w-9 items-center justify-center rounded-full text-muted hover:bg-ink/[0.05] hover:text-ink dark:hover:bg-white/10" title={`Demo controls (prototype only) · demo clock ${fmtDateTime(now.toISOString())}`}>
+          <SlidersHorizontal className="h-5 w-5" />
+          <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden />
         </span>
       )}
     >
@@ -127,12 +129,8 @@ function ProfileMenu({ portfolio }: { portfolio: boolean }) {
       width="w-80"
       label="Your profile and settings"
       button={(open) => (
-        <span className="flex items-center gap-2 rounded-full py-1 pr-2 pl-1 hover:bg-canvas">
-          <Avatar name={me.name} id={me.id} size={36} />
-          <span className="hidden text-left leading-tight xl:block">
-            <span className="block text-base font-medium">{me.name.split(' ')[0]}</span>
-          </span>
-          <ChevronDown className={clsx('hidden h-4 w-4 text-muted transition sm:block', open && 'rotate-180')} />
+        <span className={clsx('flex rounded-full p-0.5 ring-2 transition', open ? 'ring-brand/40' : 'ring-transparent hover:ring-line')}>
+          <Avatar name={me.name} id={me.id} size={34} />
         </span>
       )}
     >
@@ -141,6 +139,10 @@ function ProfileMenu({ portfolio }: { portfolio: boolean }) {
           <div className="border-b border-line px-4 py-3">
             <div className="text-base font-semibold">{me.name}</div>
             <div className="text-sm text-muted">{me.title}</div>
+          </div>
+          <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
+            <span className="text-sm font-medium">View</span>
+            <ViewSwitch />
           </div>
           <AppearanceSettings />
           <div className="border-t border-line p-1.5">
@@ -222,10 +224,7 @@ export function SimpleShell() {
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-2 px-4 md:px-8">
           <Link to="/" className="flex shrink-0 items-center gap-2.5 rounded-lg py-1 pr-2">
             <img src="/favicon.svg" alt="" className="h-8 w-8 rounded-lg" />
-            <span className="hidden leading-tight md:block">
-              <span className="block text-[11px] font-semibold tracking-[0.08em] text-brand uppercase">BRAC</span>
-              <span className="block text-[15px] font-semibold">{brand.appName}</span>
-            </span>
+            <span className="hidden text-base font-semibold md:block">{brand.appName}</span>
           </Link>
           <span className={clsx('mx-3 hidden h-6 w-px bg-line', nav.top)} aria-hidden />
           <nav className={clsx('hidden h-16 items-stretch gap-1', nav.top)} aria-label="Main">
@@ -233,13 +232,7 @@ export function SimpleShell() {
               <NavTab key={t.to} {...t} />
             ))}
           </nav>
-          <div className="ml-auto flex min-w-0 items-center gap-1.5 sm:gap-2">
-            <span className="hidden sm:block">
-              <ViewSwitch />
-            </span>
-            <span className="sm:hidden">
-              <ViewSwitch compact />
-            </span>
+          <div className="ml-auto flex min-w-0 items-center gap-1.5">
             <DemoButton />
             <ProfileMenu portfolio={!!dash?.portfolio} />
           </div>

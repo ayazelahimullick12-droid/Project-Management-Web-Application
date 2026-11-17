@@ -213,3 +213,7 @@ The user found the first project bar not professional enough and asked to look a
 - **Pages are left-aligned** with the header instead of centred.
 - **Overview:** headed "Overview" (the name is in the header), with an **About** panel on the right like GitHub's: description, Project Owner, the four heads (with "away"), start date and a link to the whole team. "Also in this project" became "Also needs attention" and lists only what does; the "More" section was removed (the More tab covers it). The step bar shows only on phones, where the header hides it.
 - **Phones:** the tab strip fades at its edge to show it scrolls.
+
+## Simple view: a simpler top bar (17 November 2026)
+
+The user asked to simplify the top bar. It now has only: the logo with "Project Management" on one line, To do · Projects · Messages · Help, a small Demo icon (prototype only, amber dot) and the avatar. The Simple / Full switch moved into the avatar menu (as "View"), next to text size, colours and look; the first name next to the avatar and the "BRAC" line above the name were removed.
