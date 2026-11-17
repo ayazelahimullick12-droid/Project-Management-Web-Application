@@ -139,3 +139,8 @@ Then follow `frontend/DEMO.md`.
 
 - Paper sheet with letterhead, status stamp, numbered sections and an approval record with the signature; a contents list with changed / comments / AI markers; one slim status bar with the approval steps; "Show changes since version N" marks edits in the text.
 - Checked: type-check and tests pass. In the browser on separate test data: the Branch Cash BRD as the deputy (bar, contents markers, letterhead, approval record, changes switch, contents jump), the signed Loan Repayment Proposal & Charter (Signed stamp, Proposal and Charter titles, signature line), and phone width (no sideways scrolling, Contents opens as a pop-up, comments open). Screenshots were not possible because the browser pane was hidden; the checks read the page itself.
+
+## 17 November 2026 — Simple view: project bar
+
+- A project bar under the top bar on every project page: a project switcher that keeps your place, and tabs for Overview, the three documents, Questions & facts, Testing and More, each with a status dot and a count of what waits for you.
+- Checked: type-check and tests pass. In the browser on separate test data: the bar on a document, the overview, Questions & facts and Team (More highlighted), not on To do or Projects; switching from Branch Cash's BRD to Member Savings opened Member Savings' BRD; Testing opened UAT; the More menu; laptop width (all tabs on one row) and phone width (no sideways page scroll, current tab in view).

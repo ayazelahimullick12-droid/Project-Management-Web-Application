@@ -193,3 +193,13 @@ The user chose four of seven proposed improvements (1–4). Code: `src/simple/Do
 - **One slim bar** replaces the stacked status box, "Your turn" box and the blue "what changed" box: the status sentence, the approval steps as chips (approved ✓, current outlined), and one line saying what to do.
 - **Show changes since version N:** a switch that marks the edits in the text itself (added words green, removed words struck through), compared word by word on whole words so a time like 5:00 → 4:30 reads as one change. Unchanged sections read normally; new and removed sections are labelled. Commenting is done with the switch off.
 - The Full view's document page is unchanged (the shared text reader only gained optional numbering).
+
+## Simple view: a project bar for moving between projects, documents and steps (17 November 2026)
+
+The user asked for easier navigation between projects, documents and the other processes. Code: `src/simple/ProjectNav.tsx`, shown by `SimpleShell` on every `/projects/<id>/…` page.
+
+- **Project switcher** (left of the bar): your projects with their step and how many things wait for you. Picking one keeps you in the same place where it exists (the BRD of one project → the BRD of the other; also questions, testing, team, changes), otherwise its overview. "All projects" and "New project" are at the bottom.
+- **Tabs:** Overview · Proposal & Charter · BRD · SRS · Questions & facts · Testing, and **More** (team chat, team, changes and decisions, activity log). Each tab has a status dot (green done, blue in review, magenta in progress, amber needs attention, grey not started) and a magenta count when something there waits for you. Testing opens SQA or UAT, whichever stage the project is in.
+- **Team chat sits under More** so the tabs fit on one row on a laptop; the top bar's Messages already shows unread chats, and More gets a dot when the project chat has new messages.
+- **Phones:** the switcher and More on one row, the tabs under them, scrolling sideways with the current tab centred.
+- The "← All projects" and "← project name" back links on the project and document pages were removed: the switcher and the Overview tab replace them.

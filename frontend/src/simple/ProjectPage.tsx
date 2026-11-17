@@ -73,7 +73,7 @@ export function SimpleProjectPage() {
   )
 
   return (
-    <SimplePage back={{ to: '/projects', label: 'All projects' }} title={p.name} subtitle={`Your role: ${summary.myRole}`}>
+    <SimplePage title={p.name} subtitle={`Your role: ${summary.myRole}`}>
       <StepBar stage={summary.stage} />
 
       {p.status === 'archived' ? (

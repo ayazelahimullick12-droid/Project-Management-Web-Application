@@ -22,6 +22,7 @@ import { Avatar } from '../components/ui'
 import { ViewSwitch } from '../components/ViewSwitch'
 import { Count } from './parts'
 import { useTodo } from './todo'
+import { ProjectNav, projectIdFrom } from './ProjectNav'
 
 function NavTab({ to, icon, label, count, end, mobile }: { to: string; icon: ReactNode; label: string; count?: number; end?: boolean; mobile?: boolean }) {
   return (
@@ -201,6 +202,7 @@ export function SimpleShell() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
+  const pid = projectIdFrom(location.pathname) // inside a project: the project bar is shown
   const full = location.pathname.startsWith('/messages') // the Messages page fills the screen
   const tabs = [
     { to: '/', icon: <ListTodo />, label: 'To do', count: items.length, end: true },
@@ -243,6 +245,7 @@ export function SimpleShell() {
               <NavTab key={t.to} {...t} mobile />
             ))}
           </nav>
+          {pid && <ProjectNav pid={pid} />}
         </div>
       </header>
       <JobStrip />

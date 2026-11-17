@@ -105,13 +105,12 @@ export function SimpleDocumentPage() {
 
   const name = DOC_NAME[type as DocType]
   const tools = `/projects/${pid}/docs/${type}/tools`
-  const back = { to: `/projects/${pid}`, label: data.project.name }
   const nameOf = (id?: string) => data.members.find((m) => m.userId === id)?.name ?? 'someone'
   const { doc, current, draft } = data
 
   if (!doc || !current)
     return (
-      <SimplePage back={back} title={name} subtitle="Not written yet.">
+      <SimplePage title={name} subtitle="Not written yet.">
         {data.perms.pmTeam && data.perms.generate.ok ? (
           <NextStep
             actions={
@@ -220,7 +219,7 @@ export function SimpleDocumentPage() {
   }
 
   return (
-    <SimplePage back={back} title={name} wide>
+    <SimplePage title={name} wide>
       <ApprovalBar
         tone={myTurn ? 'action' : docTone(data.status)}
         status={statusText}
