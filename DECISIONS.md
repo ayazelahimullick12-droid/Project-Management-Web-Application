@@ -217,3 +217,12 @@ The user found the first project bar not professional enough and asked to look a
 ## Simple view: a simpler top bar (17 November 2026)
 
 The user asked to simplify the top bar. It now has only: the logo with "Project Management" on one line, To do · Projects · Messages · Help, a small Demo icon (prototype only, amber dot) and the avatar. The Simple / Full switch moved into the avatar menu (as "View"), next to text size, colours and look; the first name next to the avatar and the "BRAC" line above the name were removed.
+
+## Simple view: an overview without the document list (17 November 2026)
+
+The user pointed out that the overview listed the documents a second time (they are tabs in the project header). The overview now shows what the tabs do not:
+
+- **Your tasks here:** every task waiting for you in this project, with how long it has waited and its button (or where things stand when there is nothing).
+- **Progress:** the six steps as a timeline: done (green check, "Signed", "Approved"), **Now** (what is happening: who it waits for and since when, or the testing numbers on the version), later (grey).
+- **Recent activity:** the last six actions in the project (logins and the technical signature record left out; the full log stays under More → Activity log, for the Owner and the PM). The project data now includes these six entries for every member, as the home dashboard already shows recent activity.
+- The **About** panel stays on the right. "Also needs attention" was removed: questions, testing and chat are tabs, and anything that waits for you is in "Your tasks here".

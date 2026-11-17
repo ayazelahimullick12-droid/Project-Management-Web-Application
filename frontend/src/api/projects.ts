@@ -291,6 +291,8 @@ export interface ProjectView {
   factSheetConfirmed: boolean
   testing: Record<TestStage, { points: number; passed: number; failed: number; toCheck: number; version?: string; status: string }>
   openItems: { label: string; count: number; link: string }[]
+  /** The latest things that happened in the project (for the overview; the full log is the audit page). */
+  recent: { id: ID; actorName: string; action: string; details: string; createdAt: string }[]
 }
 
 export async function getProject(pid: ID): Promise<ProjectView> {
@@ -330,6 +332,16 @@ export async function getProject(pid: ID): Promise<ProjectView> {
       warnings: teamWarnings(p.members).map((w) => ({ ...w, name: nameOf(s, w.userId) })),
       factSheetConfirmed: factSheetConfirmed(pipelineCtx(s, pid)),
       testing,
+      recent: s.audit
+        // Leave out logins and the technical signature record (its fingerprints are on the document).
+        .filter((a) => a.projectId === pid && a.action !== 'Login' && a.action !== 'Signature recorded' && a.createdAt <= t.toISOString())
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        .slice(0, 6)
+        .map((a) => {
+          const actorName = a.actorId ? nameOf(s, a.actorId) : 'AI'
+          // "SRS (Selim Reza)" → "SRS": the name is already shown as who did it.
+          return { id: a.id, actorName, action: a.action, details: a.details.replace(` (${actorName})`, ''), createdAt: a.createdAt }
+        }),
       openItems: [
         { label: 'Unanswered Q/A questions', count: summary.unansweredQuestions, link: `/projects/${pid}/intake?tab=questions` },
         { label: 'Open comments', count: summary.docs.reduce((n, d) => n + d.openComments, 0), link: `/projects/${pid}` },

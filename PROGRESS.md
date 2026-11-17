@@ -154,3 +154,8 @@ Then follow `frontend/DEMO.md`.
 
 - Logo and name, the four places, a Demo icon and the avatar; Simple / Full is in the avatar menu.
 - Checked: type-check and tests pass; on separate test data the menu's View switch goes to Full and back; no sideways scrolling at phone width.
+
+## 17 November 2026 — Simple view: overview without the document list
+
+- Your tasks here, a progress timeline of the six steps and recent activity, with the About panel; no repeated document list.
+- Checked: type-check and tests pass; on separate test data the Member Savings overview (testing step "Now") and Branch Cash (BRD in review) at laptop width, and Branch Cash at phone width.

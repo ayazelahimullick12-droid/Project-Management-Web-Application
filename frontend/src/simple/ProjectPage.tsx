@@ -1,36 +1,24 @@
 /**
- * Simple view · one project's overview: your next step, the documents so far and the other areas
- * that matter at this stage, with an "About" panel on the right (people and dates), as in GitHub's
- * repository page. The project name, the step and the tabs are in the project header above
- * (ProjectNav.tsx); team, changes and the activity log are under its More tab.
+ * Simple view · one project's overview. The documents and other areas are the tabs in the project
+ * header above (ProjectNav.tsx), so the overview shows what the tabs do not:
+ * - your tasks in this project, each with its button;
+ * - progress as a timeline of the six steps (done, now with what is happening, later);
+ * - recent activity (the full log is under More → Activity log);
+ * - an "About" panel on the right (description, people, start date), as on GitHub.
  */
 import { clsx } from 'clsx'
-import { ClipboardList, FlaskConical, Gavel, MessageCircle, Users } from 'lucide-react'
+import { Check, Users } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '../api'
-import { useApi, useNow, useSessionUserId } from '../api/hooks'
+import { useApi, useNow } from '../api/hooks'
 import type { DocType, Team } from '../types'
 import { STAGES } from '../rules/pipeline'
-import { fmtDate } from '../components/format'
-import { Avatar, ErrorBox, LinkButton, Loading } from '../components/ui'
-import { NextStep, Row, Rows, Section, SimplePage, StatusLine, ToneIcon } from './parts'
-import { projectStatus, stepText } from './ProjectsPage'
+import { ago, fmtDate } from '../components/format'
+import { Avatar, ErrorBox, Loading } from '../components/ui'
+import { Section, SimplePage, StatusLine } from './parts'
+import { projectStatus } from './ProjectsPage'
 import { useTodo } from './todo'
-import { DOC_NAME, docStatusText, docTone, waited } from './words'
-
-function StepBar({ stage }: { stage: (typeof STAGES)[number] }) {
-  const at = STAGES.indexOf(stage)
-  return (
-    <div>
-      <div className="text-lg font-medium">{stepText(stage)}</div>
-      <div className="mt-2 flex gap-1" aria-hidden>
-        {STAGES.map((s, i) => (
-          <span key={s} className={clsx('h-2 flex-1 rounded-full', stage === 'COMPLETE' || i < at ? 'bg-leaf' : i === at ? 'bg-brand' : 'bg-ink/10')} />
-        ))}
-      </div>
-    </div>
-  )
-}
+import { docStatusText, STEP_NAME, waited } from './words'
 
 /** The head of each team, in the order they approve. */
 const HEADS: [Team, string][] = [
@@ -40,13 +28,14 @@ const HEADS: [Team, string][] = [
   ['SPONSOR', 'Sponsor head (signs)'],
 ]
 
+/** The document each step produces. */
+const STEP_DOC: Partial<Record<(typeof STAGES)[number], DocType>> = { PROPOSAL: 'PROPOSAL', BRD: 'BRD', SRS: 'SRS', SQA: 'SQA_SIGNOFF', UAT: 'UAT_SIGNOFF' }
+
 export function SimpleProjectPage() {
   const { pid = '' } = useParams()
   const now = useNow()
-  const uid = useSessionUserId()
   const { data, isLoading, error } = useApi(['project', pid], () => api.projects.getProject(pid))
   const { items } = useTodo()
-  const { data: chats } = useApi(['conversations', uid], api.chat.conversations, !!uid)
   if (isLoading) return <Loading />
   if (error || !data) return <ErrorBox error={error} />
 
@@ -55,80 +44,99 @@ export function SimpleProjectPage() {
   const mine = items.filter((i) => i.projectId === pid)
   const status = projectStatus(summary, mine, now)
   const nameOf = (id?: string) => data.members.find((m) => m.member.userId === id)?.name ?? 'someone'
-  const myTeam = data.members.find((m) => m.member.userId === uid)?.member.team
-  const stageDoc: Record<string, DocType> = { PROPOSAL: 'PROPOSAL', BRD: 'BRD', SRS: 'SRS', SQA: 'SQA_SIGNOFF', UAT: 'UAT_SIGNOFF' }
-  const docs = summary.docs.filter((d) => d.status.key !== 'not_started' || stageDoc[summary.stage] === d.type)
-  const later = summary.docs.filter((d) => !docs.includes(d))
-  const docLink = (type: DocType) => (type.endsWith('SIGNOFF') ? `/projects/${pid}/testing/${type === 'SQA_SIGNOFF' ? 'SQA' : 'UAT'}?tab=signoff` : `/projects/${pid}/docs/${type}`)
-  const testingStage = summary.stage === 'SQA' || summary.stage === 'UAT' ? summary.stage : summary.stage === 'COMPLETE' ? 'UAT' : undefined
-  const showIntake = summary.stage === 'INTAKE' || summary.unansweredQuestions > 0
-  const chatUnread = chats?.channels.find((c) => c.id === `${pid}-chat`)?.unread ?? 0
-  const decisions = summary.pendingDecisions + summary.openChangeRequests
   const people = new Set(data.members.map((m) => m.member.userId)).size
+  const testingLine = (t: (typeof data.testing)['SQA']) =>
+    t.points && t.version ? `Version ${t.version}: ${t.passed} of ${t.points} points passed${t.failed ? `, ${t.failed} failed` : ''}${t.toCheck ? `, ${t.toCheck} to check` : ''}` : t.status
 
-  const testingLine = (t: (typeof data.testing)['SQA']) => `${t.status}${t.points && t.version ? ` · version ${t.version}: ${t.passed} of ${t.points} points passed${t.failed ? `, ${t.failed} failed` : ''}` : ''}`
+  // The six steps for the timeline: done, now (with what is happening) or later.
+  const at = summary.stage === 'COMPLETE' ? STAGES.length : STAGES.indexOf(summary.stage)
+  const steps = STAGES.filter((st) => st !== 'COMPLETE').map((st, i) => {
+    const state: 'done' | 'now' | 'later' = i < at ? 'done' : i === at ? 'now' : 'later'
+    const type = STEP_DOC[st]
+    const doc = type ? summary.docs.find((d) => d.type === type) : undefined
+    let text = ''
+    if (state === 'done') text = st === 'INTAKE' ? 'Project facts confirmed' : doc ? doc.status.label.replace(' (frozen)', '') : 'Done'
+    else if (state === 'now') {
+      if ((st === 'SQA' || st === 'UAT') && (!doc || doc.status.key === 'not_started')) text = testingLine(data.testing[st])
+      else if (doc && doc.status.key !== 'not_started') text = `${docStatusText(doc.status, nameOf)}${doc.status.key === 'in_review' && doc.status.since ? ` · ${waited(doc.status.since, now)}` : ''}`
+      else text = status.text
+    }
+    return { key: st, name: STEP_NAME[st], state, text }
+  })
 
   return (
     <SimplePage title="Overview" subtitle={`Your role: ${summary.myRole}`} wide>
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_17rem]">
-        <div className="min-w-0 space-y-8">
-          <div className="md:hidden">
-            <StepBar stage={summary.stage} />
-          </div>
+        <div className="min-w-0 space-y-9">
+          {p.status === 'archived' && <StatusLine tone="done">This project is archived. You can read everything, but nothing can be changed.</StatusLine>}
 
-          {p.status === 'archived' ? (
-            <StatusLine tone="done">This project is archived. You can read everything, but nothing can be changed.</StatusLine>
-          ) : mine.length ? (
-            <NextStep
-              title="Your turn"
-              actions={
-                <LinkButton to={mine[0].to} variant="primary" size="lg">
-                  {mine[0].button}
-                </LinkButton>
-              }
-            >
-              {mine[0].title}
-              {mine.length > 1 && <div className="mt-1 text-base text-muted">and {mine.length - 1} more thing{mine.length > 2 ? 's' : ''} in your To do list</div>}
-            </NextStep>
-          ) : (
-            <StatusLine tone={status.tone}>
-              <div>{status.tone === 'done' ? status.text : 'Nothing for you to do right now.'}</div>
-              {status.tone !== 'done' && <div className="text-base text-muted">{status.text}</div>}
-            </StatusLine>
+          {/* Everything waiting for you in this project, each with its button */}
+          {p.status !== 'archived' && (
+            <Section title={mine.length ? `Your tasks here (${mine.length})` : 'Your tasks here'}>
+              {mine.length ? (
+                <ul className="shadow-soft divide-y divide-line overflow-hidden rounded-2xl">
+                  {mine.map((it, i) => (
+                    <li key={it.key}>
+                      <Link to={it.to} className="group flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-4 transition hover:bg-ink/[0.025] dark:hover:bg-white/[0.03]">
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-lg leading-snug font-medium">{it.title}</span>
+                          {it.since && <span className="mt-0.5 block text-sm text-muted">Waiting {waited(it.since, now)}{it.coveringFor ? ` · for ${it.coveringFor}, who is away` : ''}</span>}
+                        </span>
+                        <span className={clsx('inline-flex h-10 items-center rounded-full px-5 text-base font-medium transition', i === 0 ? 'glass-tint text-white group-hover:brightness-110' : 'glass-control')}>{it.button}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <StatusLine tone={status.tone}>
+                  <div>{status.tone === 'done' ? status.text : 'Nothing for you to do right now.'}</div>
+                  {status.tone !== 'done' && <div className="text-base text-muted">{status.text}</div>}
+                </StatusLine>
+              )}
+            </Section>
           )}
 
-          <Section title="Documents">
-            <Rows>
-              {docs.map((d) => (
-                <Row
-                  key={d.type}
-                  to={docLink(d.type)}
-                  icon={<ToneIcon tone={docTone(d.status)} />}
-                  title={DOC_NAME[d.type]}
-                  subtitle={`${docStatusText(d.status, nameOf)}${d.status.key === 'in_review' && d.status.since ? ` · ${waited(d.status.since, now)}` : ''}`}
-                />
+          {/* The six steps as a timeline: done, now (with what is happening), later */}
+          <Section title="Progress">
+            <ol className="relative">
+              {steps.map((st, i) => (
+                <li key={st.key} className="relative flex gap-4 pb-6 last:pb-0">
+                  {i < steps.length - 1 && <span className={clsx('absolute top-7 bottom-0 left-[13px] w-0.5', st.state === 'done' ? 'bg-leaf/50' : 'bg-line')} aria-hidden />}
+                  <span
+                    className={clsx(
+                      'relative z-10 mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold tabular-nums',
+                      st.state === 'done' ? 'bg-leaf text-white' : st.state === 'now' ? 'bg-brand text-white ring-4 ring-brand/15' : 'bg-paper text-muted ring-1 ring-line',
+                    )}
+                  >
+                    {st.state === 'done' ? <Check className="h-4 w-4" /> : i + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className={clsx('text-lg leading-snug', st.state === 'later' ? 'text-muted' : 'font-medium')}>
+                      {st.name}
+                      {st.state === 'now' && <span className="ml-2 rounded-md bg-brand-soft px-2 py-0.5 align-middle text-xs font-semibold tracking-[0.04em] text-brand uppercase">Now</span>}
+                    </div>
+                    {st.text && <div className={clsx('mt-0.5 text-base', st.state === 'now' ? 'text-ink' : 'text-muted')}>{st.text}</div>}
+                  </div>
+                </li>
               ))}
-            </Rows>
-            {later.length > 0 && <p className="mt-3 text-base text-muted">Later: {later.map((d) => DOC_NAME[d.type]).join(', ')}.</p>}
+            </ol>
           </Section>
 
-          {(showIntake || testingStage || decisions > 0 || chatUnread > 0) && (
-            <Section title="Also needs attention">
-              <Rows>
-                {showIntake && (
-                  <Row
-                    to={`/projects/${pid}/intake`}
-                    icon={<ClipboardList className="h-6 w-6 text-muted" />}
-                    title={summary.stage === 'INTAKE' && myTeam === 'STAKEHOLDER' ? 'Describe what you need' : 'Questions and project facts'}
-                    subtitle={summary.unansweredQuestions ? `${summary.unansweredQuestions} question${summary.unansweredQuestions > 1 ? 's' : ''} waiting for answers` : 'What the project needs to know, and the answers so far'}
-                  />
-                )}
-                {testingStage && (
-                  <Row to={`/projects/${pid}/testing/${testingStage}`} icon={<FlaskConical className="h-6 w-6 text-muted" />} title={testingStage === 'SQA' ? 'Technical testing' : 'User testing'} subtitle={testingLine(data.testing[testingStage])} />
-                )}
-                {decisions > 0 && <Row to={`/projects/${pid}/changes`} icon={<Gavel className="h-6 w-6 text-muted" />} title="Changes and decisions" subtitle={`${decisions} waiting`} />}
-                {chatUnread > 0 && <Row to={`/messages/${pid}-chat`} icon={<MessageCircle className="h-6 w-6 text-muted" />} title="Team chat" subtitle={`${chatUnread} new message${chatUnread > 1 ? 's' : ''}`} right="Read" />}
-              </Rows>
+          {/* What happened lately (the full log is under More → Activity log) */}
+          {data.recent.length > 0 && (
+            <Section title="Recent activity">
+              <ul className="space-y-3">
+                {data.recent.map((a) => (
+                  <li key={a.id} className="flex items-start gap-3">
+                    <Avatar name={a.actorName} id={a.actorName} size={28} />
+                    <div className="min-w-0 flex-1 text-base leading-snug">
+                      <span className="font-medium">{a.actorName}</span> <span className="text-muted">· {a.action.toLowerCase()}</span>
+                      {a.details && <div className="truncate text-sm text-muted">{a.details}</div>}
+                    </div>
+                    <span className="shrink-0 text-sm whitespace-nowrap text-muted">{ago(a.createdAt, now)}</span>
+                  </li>
+                ))}
+              </ul>
             </Section>
           )}
         </div>
