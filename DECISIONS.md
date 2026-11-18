@@ -258,3 +258,7 @@ The user asked for research on what makes an interface easier for people over 35
 ## Simple view: the top bar and the project bar merged into one (18 November 2026)
 
 The user asked to merge the two bars. As in GitHub's header, inside a project there is one bar: the top line has the project (the switcher, with its step under the name) next to To do, Projects, Messages, Help, Demo and the avatar; the line under it has the project tabs, More and Hide. Hide folds the tabs line away and the top line then shows "/ BRD", the number of things waiting for you and a Menu button. Outside a project the bar is unchanged. On phones the logo is left out inside a project (To do goes home) so the project name has room, and Hide / Menu is an arrow-only button. The document page's sticky contents and comments sit lower, under the taller bar.
+
+## Simple view: To do and Help taken out of the bar (18 November 2026)
+
+The user pointed out that the logo ("Project Management") and To do did the same thing, and asked to remove To do and Help. The bar now has two places, Projects and Messages. The logo is home (your To do) and carries the To do count; it stays visible on phones inside a project, since it is now the only way home. Help moved into the avatar menu.

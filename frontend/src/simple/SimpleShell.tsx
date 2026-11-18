@@ -1,12 +1,13 @@
 /**
- * The frame of the Simple view: one flush top bar with the logo, four places (To do, Projects,
- * Messages, Help), a small Demo button (prototype only) and your avatar. The Simple / Full switch,
+ * The frame of the Simple view: one flush top bar with the logo (home: your To do, with its count),
+ * two places (Projects, Messages), a small Demo button (prototype only) and your avatar. Help is in
+ * the avatar's menu. The Simple / Full switch,
  * text size and colours are in the avatar's menu.
  * Nothing floats over the page: AI progress shows as a strip under the top bar.
  * While it is on screen, <html> has the "simple-view" class: the calmer look in index.css.
  */
 import { clsx } from 'clsx'
-import { BarChart3, ChevronDown, CircleCheck, CircleHelp, FolderKanban, ListTodo, LogOut, MessageCircle, Settings, SlidersHorizontal, Sparkles, TriangleAlert, X } from 'lucide-react'
+import { BarChart3, ChevronDown, CircleCheck, CircleHelp, FolderKanban, LogOut, MessageCircle, Settings, SlidersHorizontal, Sparkles, TriangleAlert, X } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../api'
@@ -153,6 +154,9 @@ function ProfileMenu({ portfolio }: { portfolio: boolean }) {
                 <BarChart3 className="h-5 w-5 text-muted" /> Reports
               </button>
             )}
+            <button className={item} onClick={() => { close(); navigate('/help') }}>
+              <CircleHelp className="h-5 w-5 text-muted" /> Help
+            </button>
             {me.isAdmin && (
               <button className={item} onClick={() => { close(); navigate('/admin') }}>
                 <Settings className="h-5 w-5 text-muted" /> Admin settings
@@ -211,11 +215,10 @@ export function SimpleShell() {
   }, [])
   const pid = projectIdFrom(location.pathname) // inside a project: the project bar is shown
   const full = location.pathname.startsWith('/messages') // the Messages page fills the screen
+  // The logo is "home" (your To do, with its count), so the bar has two places; Help is in the avatar menu.
   const tabs = [
-    { to: '/', icon: <ListTodo />, label: 'To do', count: items.length, end: true },
     { to: '/projects', icon: <FolderKanban />, label: 'Projects' },
     { to: '/messages', icon: <MessageCircle />, label: 'Messages', count: chats?.unread },
-    { to: '/help', icon: <CircleHelp />, label: 'Help' },
   ]
 
   return (
@@ -224,8 +227,9 @@ export function SimpleShell() {
           content lined up with the page. Project navigation is a separate band below it. */}
       <header className="sticky top-0 z-30 border-b border-line bg-paper/85 backdrop-blur-xl no-print">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-2 px-4 md:px-8">
-          <Link to="/" className={clsx('shrink-0 items-center gap-2.5 rounded-lg py-1 pr-2', pid ? 'hidden sm:flex' : 'flex')}>
+          <Link to="/" className="relative flex shrink-0 items-center gap-2.5 rounded-lg py-1 pr-2" title={items.length ? `Your To do: ${items.length} waiting for you` : 'Your To do'} aria-label={items.length ? `Your To do, ${items.length} waiting for you` : 'Your To do'}>
             <img src="/favicon.svg" alt="" className="h-8 w-8 rounded-lg" />
+            {items.length > 0 && <Count n={items.length} className="absolute -top-1 left-5 min-w-5 px-1 text-xs leading-5 ring-2 ring-paper" />}
             {/* Inside a project the project takes the name's place */}
             {!pid && <span className="hidden text-base font-semibold md:block">{brand.appName}</span>}
           </Link>
@@ -247,7 +251,7 @@ export function SimpleShell() {
             <ProfileMenu portfolio={!!dash?.portfolio} />
           </div>
         </div>
-        <nav className={clsx('grid grid-cols-4 border-t border-line', nav.row)} aria-label="Main">
+        <nav className={clsx('grid grid-cols-2 border-t border-line', nav.row)} aria-label="Main">
           {tabs.map((t) => (
             <NavTab key={t.to} {...t} mobile />
           ))}
