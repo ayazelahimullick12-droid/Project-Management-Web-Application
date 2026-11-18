@@ -230,3 +230,7 @@ The user pointed out that the overview listed the documents a second time (they 
 ## Simple view: separate SQA and UAT tabs (18 November 2026)
 
 The user could not find UAT: one "Testing" tab opened SQA or UAT depending on the stage. The project header now has an **SQA** and a **UAT** tab, in step order after the SRS. Each shows a green check once its sign-off is approved, a magenta count when something there waits for you, and its full name ("Technical testing (SQA)", "User testing (UAT)") on hover.
+
+## Simple view: the project menu can be hidden (18 November 2026)
+
+The user asked for the project bar to come and go with a click. **Hide** (top right of the bar) folds it into one slim line: the project name (still the switcher), where you are ("/ BRD"), how many things wait for you in the project ("2 for you") and **Show menu**. The choice is remembered in this browser (localStorage); the bar is open unless hidden.

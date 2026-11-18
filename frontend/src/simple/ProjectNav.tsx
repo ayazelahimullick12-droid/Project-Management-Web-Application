@@ -8,12 +8,14 @@
  *
  * - The project name is a switcher: your projects with their step and how many things wait for
  *   you. Picking one keeps you in the same place (the BRD of project A → the BRD of project B).
+ * - "Hide" folds the bar into one slim line (project, where you are, "Show menu"); the choice is
+ *   remembered in this browser.
  * - Each tab has an icon; a finished document shows a green check; a magenta count means
  *   something there is waiting for you. More holds team chat, team, changes and the activity log.
  */
 import { clsx } from 'clsx'
-import { Check, ChevronDown, CircleCheck, ClipboardList, FileCheck2, FileText, FlaskConical, FolderKanban, LayoutDashboard, MoreHorizontal, Plus, UserCheck } from 'lucide-react'
-import { useEffect, useRef, type ReactNode } from 'react'
+import { Check, ChevronDown, ChevronUp, CircleCheck, ClipboardList, FileCheck2, FileText, FlaskConical, FolderKanban, LayoutDashboard, MoreHorizontal, Plus, UserCheck } from 'lucide-react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import type { DocType } from '../types'
 import type { ProjectSummary } from '../api/projects'
@@ -25,6 +27,44 @@ import { STAGES } from '../rules/pipeline'
 import { stepText } from './ProjectsPage'
 import { useTodo, type TodoItem } from './todo'
 import { DOC_NAME } from './words'
+
+const OPEN_KEY = 'brac-pm-prototype:project-bar'
+
+/** Whether the project bar is open. Remembered in this browser; open unless the person hid it. */
+function useBarOpen(): [boolean, (open: boolean) => void] {
+  const [open, setOpen] = useState(() => {
+    try {
+      return localStorage.getItem(OPEN_KEY) !== 'hidden'
+    } catch {
+      return true
+    }
+  })
+  const set = (o: boolean) => {
+    setOpen(o)
+    try {
+      localStorage.setItem(OPEN_KEY, o ? 'open' : 'hidden')
+    } catch {
+      /* storage blocked: remembered until the page is reloaded */
+    }
+  }
+  return [open, set]
+}
+
+/** The name of the place in the project you are on, for the hidden bar. */
+function placeName(path: string, base: string): string {
+  const rest = path.slice(base.length)
+  if (!rest) return 'Overview'
+  if (rest.startsWith('/intake')) return 'Questions & facts'
+  if (rest.startsWith('/docs/PROPOSAL')) return 'Proposal & Charter'
+  if (rest.startsWith('/docs/BRD')) return 'BRD'
+  if (rest.startsWith('/docs/SRS')) return 'SRS'
+  if (rest.startsWith('/testing/SQA')) return 'SQA'
+  if (rest.startsWith('/testing/UAT')) return 'UAT'
+  if (rest.startsWith('/team')) return 'Team'
+  if (rest.startsWith('/changes') || rest.startsWith('/decisions')) return 'Changes and decisions'
+  if (rest.startsWith('/audit')) return 'Activity log'
+  return ''
+}
 
 /** The project id in the address, if this is a project page. */
 export function projectIdFrom(path: string): string | undefined {
@@ -189,11 +229,12 @@ export function ProjectNav({ pid }: { pid: string }): ReactNode {
   const { items, dash } = useTodo()
   const { data: chats } = useApi(['conversations', uid], api.chat.conversations, !!uid)
   const strip = useRef<HTMLDivElement>(null)
+  const [open, setOpen] = useBarOpen()
 
   // Keep the current tab in view on narrow screens, where the tabs scroll sideways.
   useEffect(() => {
     strip.current?.querySelector<HTMLElement>('a[aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'center' })
-  }, [pathname, !!dash]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pathname, !!dash, open]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!dash) return null
   const all = [...dash.active, ...dash.finished, ...dash.archived]
@@ -239,6 +280,41 @@ export function ProjectNav({ pid }: { pid: string }): ReactNode {
     )
   }
 
+  const toggle = (
+    <button
+      type="button"
+      onClick={() => setOpen(!open)}
+      aria-expanded={open}
+      title={open ? 'Hide the project menu' : 'Show the project menu'}
+      className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-sm font-medium text-muted ring-1 ring-line transition hover:bg-ink/[0.04] hover:text-ink dark:hover:bg-white/5"
+    >
+      {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+      <span className="hidden sm:inline">{open ? 'Hide' : 'Show menu'}</span>
+    </button>
+  )
+
+  // Hidden: one slim line with the project (still a switcher), where you are, and "Show menu".
+  if (!open) {
+    const place = placeName(pathname, base)
+    return (
+      <div className="border-b border-line bg-paper/60 no-print">
+        <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-1.5 md:px-8">
+          <span className="min-w-0">
+            <Switcher current={current} all={all} items={items} />
+          </span>
+          {place && <span className="truncate text-[15px] text-muted">/ {place}</span>}
+          {mine.length > 0 && (
+            <span className="shrink-0 rounded-full bg-brand px-2 text-xs leading-5 font-semibold text-white" title={`${mine.length} waiting for you in this project`}>
+              {mine.length} for you
+            </span>
+          )}
+          <span className="ml-auto" />
+          {toggle}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="border-b border-line bg-paper/60 no-print">
       <div className="mx-auto max-w-6xl px-4 md:px-8">
@@ -255,6 +331,7 @@ export function ProjectNav({ pid }: { pid: string }): ReactNode {
             </span>
           </nav>
           <StepProgress stage={current.stage} />
+          {toggle}
         </div>
         <div className="flex items-end gap-1">
           <div ref={strip} className="-ml-2 flex min-w-0 flex-1 overflow-x-auto max-md:[mask-image:linear-gradient(to_right,#000_82%,transparent)]" role="navigation" aria-label="Project" style={{ scrollbarWidth: 'none' }}>
