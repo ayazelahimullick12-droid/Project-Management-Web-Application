@@ -80,7 +80,7 @@ function samePlace(path: string, from: string, to: string): string {
 
 const tabClass = (active: boolean) =>
   clsx(
-    'relative inline-flex shrink-0 items-center gap-2 px-3 pt-2 pb-3 text-[15px] font-medium whitespace-nowrap transition [&_svg]:h-[18px] [&_svg]:w-[18px]',
+    'relative inline-flex min-h-12 shrink-0 items-center gap-2 px-3 pt-1 pb-2 text-[0.9375rem] font-medium whitespace-nowrap transition [&_svg]:h-[18px] [&_svg]:w-[18px]',
     'after:absolute after:inset-x-2 after:-bottom-px after:h-0.5 after:rounded-full',
     active ? 'text-ink after:bg-brand' : 'text-muted after:bg-transparent hover:text-ink hover:after:bg-line',
   )
@@ -120,7 +120,7 @@ function Switcher({ current, all, items }: { current: ProjectSummary; all: Proje
     >
       {(close) => (
         <div className="p-1.5">
-          <div className="px-3 pt-2 pb-1 text-xs font-semibold tracking-[0.06em] text-muted uppercase">Switch project</div>
+          <div className="px-3 pt-2 pb-1 text-xs font-semibold text-muted">Switch project</div>
           <ul className="max-h-[60vh] overflow-y-auto">
             {all.map((s) => {
               const n = mine(s.project.id)
@@ -286,10 +286,10 @@ export function ProjectNav({ pid }: { pid: string }): ReactNode {
       onClick={() => setOpen(!open)}
       aria-expanded={open}
       title={open ? 'Hide the project menu' : 'Show the project menu'}
-      className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-sm font-medium text-muted ring-1 ring-line transition hover:bg-ink/[0.04] hover:text-ink dark:hover:bg-white/5"
+      className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full px-4 text-[0.9375rem] font-medium text-muted ring-1 ring-line transition hover:bg-ink/[0.04] hover:text-ink dark:hover:bg-white/5"
     >
       {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-      <span className="hidden sm:inline">{open ? 'Hide' : 'Show menu'}</span>
+      <span>{open ? 'Hide' : 'Menu'}</span>
     </button>
   )
 
@@ -302,7 +302,7 @@ export function ProjectNav({ pid }: { pid: string }): ReactNode {
           <span className="min-w-0">
             <Switcher current={current} all={all} items={items} />
           </span>
-          {place && <span className="truncate text-[15px] text-muted">/ {place}</span>}
+          {place && <span className="truncate text-[0.9375rem] text-muted">/ {place}</span>}
           {mine.length > 0 && (
             <span className="shrink-0 rounded-full bg-brand px-2 text-xs leading-5 font-semibold text-white" title={`${mine.length} waiting for you in this project`}>
               {mine.length} for you
@@ -320,7 +320,7 @@ export function ProjectNav({ pid }: { pid: string }): ReactNode {
       <div className="mx-auto max-w-6xl px-4 md:px-8">
         <div className="flex items-center gap-3 pt-4 pb-2">
           <nav aria-label="Breadcrumb" className="flex min-w-0 flex-1 items-center gap-1.5">
-            <Link to="/projects" className="hidden shrink-0 text-[15px] text-muted hover:text-ink hover:underline sm:inline">
+            <Link to="/projects" className="hidden shrink-0 text-[0.9375rem] text-muted hover:text-ink hover:underline sm:inline">
               Projects
             </Link>
             <span className="hidden text-muted/60 sm:inline" aria-hidden>

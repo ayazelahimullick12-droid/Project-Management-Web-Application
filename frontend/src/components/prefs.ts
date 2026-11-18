@@ -90,13 +90,15 @@ export function useTransparencyClass(forceSolid = false) {
 }
 
 const TEXT_SIZE: Record<TextSize, string> = { normal: '100%', large: '112.5%', larger: '125%' }
+/** The Simple view starts one step larger (17px), because small text gets hard to read from about 40. */
+const TEXT_SIZE_SIMPLE: Record<TextSize, string> = { normal: '106.25%', large: '118.75%', larger: '131.25%' }
 
 /** Applies the text size to the whole page (the print view always uses the normal size). */
 export function useTextSize(forceNormal = false) {
-  const { textSize } = usePrefs()
+  const { textSize, view } = usePrefs()
   useEffect(() => {
-    document.documentElement.style.fontSize = forceNormal ? '' : TEXT_SIZE[textSize]
-  }, [textSize, forceNormal])
+    document.documentElement.style.fontSize = forceNormal ? '' : (view === 'simple' ? TEXT_SIZE_SIMPLE : TEXT_SIZE)[textSize]
+  }, [textSize, view, forceNormal])
 }
 
 function subscribeSystemTheme(fn: () => void) {

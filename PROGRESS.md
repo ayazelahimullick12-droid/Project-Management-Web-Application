@@ -159,3 +159,8 @@ Then follow `frontend/DEMO.md`.
 
 - Your tasks here, a progress timeline of the six steps and recent activity, with the About panel; no repeated document list.
 - Checked: type-check and tests pass; on separate test data the Member Savings overview (testing step "Now") and Branch Cash (BRD in review) at laptop width, and Branch Cash at phone width.
+
+## 18 November 2026 — Simple view for people over 35
+
+- Larger default text (17px), 14px minimum, darker secondary text (7:1+), 44px targets, words next to icons, messages that stay until read, visible keyboard focus, underlined links, reduced motion.
+- Checked: type-check and all tests pass. Not yet checked in the browser: the laptop had only 0.3–0.4 GB of memory free, so the preview could not load the app.

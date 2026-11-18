@@ -109,9 +109,9 @@ function PointRow({ d, pt, onEdit }: { d: TData; pt: Point; onEdit: (pt: Point) 
         <div className="flex shrink-0 items-center">
           {d.perms.test.ok && (
             <>
-              <button className="rounded-full p-1.5 text-muted hover:bg-canvas hover:text-brand" title="Edit" aria-label={`Edit ${pt.key}`} onClick={() => onEdit(pt)}><Pencil className="h-3.5 w-3.5" /></button>
-              <button className="rounded-full p-1.5 text-muted hover:bg-canvas hover:text-brand disabled:opacity-40" title="Regenerate with AI" aria-label={`Regenerate ${pt.key}`} disabled={regenerate.pending} onClick={() => regenerate.run(pt.id)}><Sparkles className="h-3.5 w-3.5" /></button>
-              <button className="rounded-full p-1.5 text-muted hover:bg-canvas hover:text-red-600" title="Delete" aria-label={`Delete ${pt.key}`} onClick={() => confirm(`Delete ${pt.key}? Its results are deleted too.`) && remove.run(pt.id)}><Trash2 className="h-3.5 w-3.5" /></button>
+              <Button size="sm" variant="ghost" aria-label={`Edit ${pt.key}`} onClick={() => onEdit(pt)}><Pencil className="h-4 w-4" /> Edit</Button>
+              <Button size="sm" variant="ghost" aria-label={`Rewrite ${pt.key} with AI`} disabled={regenerate.pending} onClick={() => regenerate.run(pt.id)}><Sparkles className="h-4 w-4" /> Rewrite</Button>
+              <Button size="sm" variant="ghost" className="hover:!text-red-600" aria-label={`Delete ${pt.key}`} onClick={() => confirm(`Delete ${pt.key}? Its results are deleted too.`) && remove.run(pt.id)}><Trash2 className="h-4 w-4" /> Delete</Button>
             </>
           )}
         </div>
@@ -135,7 +135,7 @@ function PointRow({ d, pt, onEdit }: { d: TData; pt: Point; onEdit: (pt: Point) 
             {pt.last.coveredAs === 'OWNER' && ' (Project Owner)'} · {fmtDateTime(pt.last.at)}
           </span>
           {pt.last.comment && <span className="w-full rounded-xl bg-canvas px-3 py-1.5 text-sm text-ink">“{pt.last.comment}”</span>}
-          {canCheck && <button className="inline-flex items-center gap-1 text-brand" onClick={() => setChecking(true)}><RotateCcw className="h-3 w-3" /> Check again</button>}
+          {canCheck && <Button size="sm" variant="ghost" className="!text-brand" onClick={() => setChecking(true)}><RotateCcw className="h-4 w-4" /> Check again</Button>}
         </div>
       )}
 

@@ -84,6 +84,26 @@ html.simple-view.dark {
 }
 
 /*
+ * Easier for people over 35 (presbyopia from about 40, weaker contrast sensitivity, less precise
+ * pointing); see DECISIONS.md "Simple view for people over 35". Simple view only:
+ * - secondary grey text darker: 7:1 or more on the page and on cards (the advice for older eyes);
+ * - nothing smaller than 14px (Tailwind's 12px text-xs and 10-11px labels become 14px);
+ * - a thick, clearly visible keyboard focus ring;
+ * - text links underlined, so they look like links;
+ * - no animation when the computer asks for reduced motion.
+ */
+html.simple-view { --brand-muted: #4F5049; }
+html.simple-view.dark { --brand-muted: #B3B4AB; }
+html.simple-view .text-xs,
+html.simple-view .text-\[10px\],
+html.simple-view .text-\[11px\] { font-size: 0.875rem; line-height: 1.25rem; }
+html.simple-view :focus-visible { outline: 3px solid var(--brand-primary); outline-offset: 2px; }
+html.simple-view main a.text-brand:not(.rounded-full):not(.rounded-lg):not(.rounded-xl) { text-decoration: underline; text-underline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  html.simple-view *, html.simple-view *::before, html.simple-view *::after { transition-duration: 0s !important; animation: none !important; scroll-behavior: auto !important; }
+}
+
+/*
  * "Reduce transparency" (Look: Solid in the profile menu, or the computer's own setting): solid
  * panels on a plain grey page, no blur. Easier to read for some people. The "html" in the
  * selectors makes these win over the colours written at startup (src/theme/brand.ts).

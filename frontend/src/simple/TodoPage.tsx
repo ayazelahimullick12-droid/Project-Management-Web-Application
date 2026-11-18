@@ -34,7 +34,7 @@ const QUEUE_COLS = 'md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,15rem)_7rem_9.5
 function TaskQueue({ items, now }: { items: TodoItem[]; now: Date }) {
   return (
     <div className="shadow-soft overflow-hidden rounded-2xl">
-      <div className={clsx('hidden border-b border-line px-5 py-2.5 text-xs font-semibold tracking-[0.06em] text-muted uppercase', QUEUE_COLS)}>
+      <div className={clsx('hidden border-b border-line px-5 py-2.5 text-xs font-semibold text-muted', QUEUE_COLS)}>
         <span>Task</span>
         <span>Project</span>
         <span>Waiting</span>

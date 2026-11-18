@@ -10,6 +10,7 @@ import { useEffect, useRef, useState, type ButtonHTMLAttributes, type InputHTMLA
 import { createPortal } from 'react-dom'
 import { Link, useSearchParams } from 'react-router-dom'
 import { initials } from './format'
+import { usePrefs } from './prefs'
 
 // ─── Buttons ────────────────────────────────────────────────────────────
 
@@ -24,15 +25,19 @@ const VARIANT: Record<Variant, string> = {
 }
 
 const SIZE = { sm: 'h-7 px-3 text-xs', md: 'h-9 px-4 text-sm', lg: 'h-12 px-6 text-base' } as const
+/** The Simple view (used by people of all ages, many over 40): every button at least 44px tall (WCAG 2.5.5). */
+const SIZE_SIMPLE = { sm: 'h-11 px-4 text-[0.9375rem]', md: 'h-11 px-5 text-base', lg: 'h-12 px-6 text-base' } as const
+const useSize = () => (usePrefs().view === 'simple' ? SIZE_SIMPLE : SIZE)
 
 export function Button({ variant = 'secondary', size = 'md', className, why, children, ...rest }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: keyof typeof SIZE; why?: string }) {
+  const sizes = useSize()
   return (
     <button
       type="button"
       title={rest.disabled && why ? why : rest.title}
       className={clsx(
         'inline-flex items-center justify-center gap-1.5 rounded-full font-medium transition active:scale-[0.97] disabled:cursor-not-allowed disabled:active:scale-100',
-        SIZE[size],
+        sizes[size],
         VARIANT[variant],
         className,
       )}
@@ -57,8 +62,9 @@ export function Guarded({ check, children, ...rest }: Omit<Parameters<typeof But
 }
 
 export function LinkButton({ to, children, variant = 'secondary', size = 'md', className }: { to: string; children: ReactNode; variant?: Variant; size?: keyof typeof SIZE; className?: string }) {
+  const sizes = useSize()
   return (
-    <Link to={to} className={clsx('inline-flex items-center justify-center gap-1.5 rounded-full font-medium transition active:scale-[0.97]', SIZE[size], VARIANT[variant], className)}>
+    <Link to={to} className={clsx('inline-flex items-center justify-center gap-1.5 rounded-full font-medium transition active:scale-[0.97]', sizes[size], VARIANT[variant], className)}>
       {children}
     </Link>
   )
@@ -374,12 +380,13 @@ export function Td({ children, className }: { children?: ReactNode; className?: 
 
 /** A compact switch between views (like a segmented control). */
 export function Segmented({ options, value, onChange }: { options: { id: string; label: ReactNode; hidden?: boolean }[]; value: string; onChange: (id: string) => void }) {
+  const simple = usePrefs().view === 'simple'
   return (
     <div className="inline-flex rounded-full bg-canvas p-1">
       {options
         .filter((o) => !o.hidden)
         .map((o) => (
-          <button key={o.id} type="button" onClick={() => onChange(o.id)} className={clsx('rounded-full px-3.5 py-1 text-sm transition', value === o.id ? 'bg-paper font-medium shadow-sm dark:bg-white/15' : 'text-muted hover:text-ink')}>
+          <button key={o.id} type="button" onClick={() => onChange(o.id)} className={clsx('rounded-full transition', simple ? 'min-h-11 px-4 text-base' : 'px-3.5 py-1 text-sm', value === o.id ? 'bg-paper font-medium shadow-sm dark:bg-white/15' : 'text-muted hover:text-ink')}>
             {o.label}
           </button>
         ))}

@@ -234,3 +234,23 @@ The user could not find UAT: one "Testing" tab opened SQA or UAT depending on th
 ## Simple view: the project menu can be hidden (18 November 2026)
 
 The user asked for the project bar to come and go with a click. **Hide** (top right of the bar) folds it into one slim line: the project name (still the switcher), where you are ("/ BRD"), how many things wait for you in the project ("2 for you") and **Show menu**. The choice is remembered in this browser (localStorage); the bar is open unless hidden.
+
+## Simple view for people over 35 (18 November 2026)
+
+The user asked for research on what makes an interface easier for people over 35, then to apply it to the Simple view.
+
+**What the research says**
+- Vision changes start around 40: presbyopia (near focus) affects almost everyone over 40, contrast sensitivity drops and colour perception shifts (W3C WAI-AGE literature review). A CDC/NIOSH lab study found up to 30% higher productivity for presbyopic computer users with a larger font. Common advice: at least 16px text, user-adjustable size, high contrast (7:1 suggested for older eyes, above the 4.5:1 minimum), no small all-caps text.
+- Pointing gets less precise: WCAG 2.2 sets 24px as the floor (2.5.8) and 44×44px as the enhanced size (2.5.5, also Apple's 44pt and Material's 48dp), recommended for older users.
+- Thinking and memory: older users are slower and less successful on websites (Nielsen Norman Group) and try fewer ways out when stuck. Advice: label icons with words, avoid hover-only menus and information, let messages stay until read (or let users close them), confirm destructive actions, show where you are and how to go back, keep navigation consistent, show a clear keyboard focus.
+
+**Already in place:** adjustable text size, plain words, one main action per page, click (not hover) menus, breadcrumb and "you are here" tabs, confirmation before deleting, no time limits.
+
+**Changed in the Simple view** (the Full view keeps its sizes)
+- **Text:** starts at 17px instead of 16 (Text size: 17, 19, 21px); nothing smaller than 14px (12px and smaller labels become 14px); Simple view sizes in rem so the Text size setting enlarges everything; no small all-caps labels (sentence case instead).
+- **Contrast:** secondary grey text darkened to #4F5049 (about 7.5:1 on the page, 8:1 on cards; dark mode #B3B4AB).
+- **Targets:** every button at least 44px tall (small buttons 44px instead of 28px), segmented controls 44px, project tabs 48px, the Demo button, avatar and project-menu toggle 44px, contents items 44px.
+- **Words with icons:** "Demo" next to its icon; "Hide" / "Menu" on the project-menu toggle (also on phones); the testing page's pencil, sparkle and bin are now "Edit", "Rewrite" and "Delete" (both views); "Check again" is a real button; the avatar shows a small arrow to say it opens a menu.
+- **Messages:** success messages stay 10 seconds (was 3.5), errors stay until closed (was 7 seconds), in larger text with a labelled **Close** button.
+- **Focus and links:** a thick magenta keyboard focus ring; text links underlined.
+- **Motion:** no animation when the computer asks for reduced motion.

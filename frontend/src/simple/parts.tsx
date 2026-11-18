@@ -59,7 +59,7 @@ export function StatusLine({ tone, children }: { tone: Tone; children: ReactNode
 export function NextStep({ title = 'Your next step', children, actions }: { title?: string; children: ReactNode; actions?: ReactNode }) {
   return (
     <section className="shadow-soft rounded-2xl !border-l-4 !border-l-brand p-5 md:p-6">
-      <div className="text-sm font-semibold tracking-[0.06em] text-brand uppercase">{title}</div>
+      <div className="text-sm font-semibold text-brand">{title}</div>
       <div className="mt-1 text-lg">{children}</div>
       {actions && <div className="mt-4 flex flex-wrap items-center gap-3">{actions}</div>}
     </section>

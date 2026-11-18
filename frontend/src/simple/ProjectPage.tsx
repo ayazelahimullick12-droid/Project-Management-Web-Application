@@ -113,7 +113,7 @@ export function SimpleProjectPage() {
                   <div className="min-w-0 flex-1">
                     <div className={clsx('text-lg leading-snug', st.state === 'later' ? 'text-muted' : 'font-medium')}>
                       {st.name}
-                      {st.state === 'now' && <span className="ml-2 rounded-md bg-brand-soft px-2 py-0.5 align-middle text-xs font-semibold tracking-[0.04em] text-brand uppercase">Now</span>}
+                      {st.state === 'now' && <span className="ml-2 rounded-md bg-brand-soft px-2 py-0.5 align-middle text-xs font-semibold text-brand">Now</span>}
                     </div>
                     {st.text && <div className={clsx('mt-0.5 text-base', st.state === 'now' ? 'text-ink' : 'text-muted')}>{st.text}</div>}
                   </div>
@@ -147,7 +147,7 @@ export function SimpleProjectPage() {
             <h2 className="text-base font-semibold">About</h2>
             <p className="mt-2 text-base leading-relaxed text-muted">{p.description || p.intake.description?.slice(0, 220) || 'No description yet.'}</p>
           </section>
-          <dl className="space-y-3 text-[15px]">
+          <dl className="space-y-3 text-[0.9375rem]">
             <div>
               <dt className="text-sm text-muted">Project Owner</dt>
               <dd className="mt-1 flex items-center gap-2 font-medium">
@@ -177,7 +177,7 @@ export function SimpleProjectPage() {
               <dd className="mt-1 font-medium">{fmtDate(p.createdAt)}</dd>
             </div>
           </dl>
-          <Link to={`/projects/${pid}/team`} className="inline-flex items-center gap-2 text-[15px] font-medium text-brand hover:underline">
+          <Link to={`/projects/${pid}/team`} className="inline-flex items-center gap-2 text-[0.9375rem] font-medium text-brand hover:underline">
             <Users className="h-4 w-4" /> Whole team ({people} people)
           </Link>
         </aside>

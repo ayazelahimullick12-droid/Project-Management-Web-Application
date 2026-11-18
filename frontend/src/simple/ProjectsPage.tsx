@@ -49,7 +49,7 @@ export function ProjectsPage() {
     <SimplePage wide title="Projects" subtitle="The projects you are part of.">
       {dash.active.length ? (
         <div className="shadow-soft overflow-hidden rounded-2xl">
-          <div className={clsx('hidden border-b border-line px-5 py-2.5 text-xs font-semibold tracking-[0.06em] text-muted uppercase', COLS)}>
+          <div className={clsx('hidden border-b border-line px-5 py-2.5 text-xs font-semibold text-muted', COLS)}>
             <span>Project</span>
             <span>Progress</span>
             <span>Status</span>

@@ -6,7 +6,7 @@
  * While it is on screen, <html> has the "simple-view" class: the calmer look in index.css.
  */
 import { clsx } from 'clsx'
-import { BarChart3, CircleCheck, CircleHelp, FolderKanban, ListTodo, LogOut, MessageCircle, Settings, SlidersHorizontal, Sparkles, TriangleAlert, X } from 'lucide-react'
+import { BarChart3, ChevronDown, CircleCheck, CircleHelp, FolderKanban, ListTodo, LogOut, MessageCircle, Settings, SlidersHorizontal, Sparkles, TriangleAlert, X } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../api'
@@ -34,7 +34,7 @@ function NavTab({ to, icon, label, count, end, mobile }: { to: string; icon: Rea
         clsx(
           'relative flex items-center font-medium whitespace-nowrap transition [&_svg]:h-5 [&_svg]:w-5',
           // Underline tabs (as in GitHub and Atlassian): the current place is marked by a magenta line.
-          mobile ? 'flex-col justify-center gap-0.5 py-2.5 text-sm' : 'gap-2 px-3 text-[15px]',
+          mobile ? 'flex-col justify-center gap-0.5 py-2.5 text-sm' : 'gap-2 px-3 text-[0.9375rem]',
           'after:absolute after:bottom-0 after:h-0.5 after:rounded-full',
           mobile ? 'after:inset-x-6' : 'after:inset-x-3',
           isActive ? 'text-ink after:bg-brand [&_svg]:text-brand' : 'text-muted hover:text-ink after:bg-transparent',
@@ -99,9 +99,10 @@ function DemoButton() {
       width="w-80"
       label="Demo controls"
       button={() => (
-        <span className="relative flex h-9 w-9 items-center justify-center rounded-full text-muted hover:bg-ink/[0.05] hover:text-ink dark:hover:bg-white/10" title={`Demo controls (prototype only) · demo clock ${fmtDateTime(now.toISOString())}`}>
+        <span className="relative flex h-11 items-center gap-1.5 rounded-full px-3 text-[0.9375rem] font-medium text-muted hover:bg-ink/[0.05] hover:text-ink dark:hover:bg-white/10" title={`Demo controls (prototype only) · demo clock ${fmtDateTime(now.toISOString())}`}>
           <SlidersHorizontal className="h-5 w-5" />
-          <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden />
+          <span className="hidden sm:inline">Demo</span>
+          <span className="absolute top-2 left-7 h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden />
         </span>
       )}
     >
@@ -129,8 +130,9 @@ function ProfileMenu({ portfolio }: { portfolio: boolean }) {
       width="w-80"
       label="Your profile and settings"
       button={(open) => (
-        <span className={clsx('flex rounded-full p-0.5 ring-2 transition', open ? 'ring-brand/40' : 'ring-transparent hover:ring-line')}>
-          <Avatar name={me.name} id={me.id} size={34} />
+        <span className={clsx('flex h-11 items-center gap-1 rounded-full p-0.5 pr-1.5 ring-2 transition', open ? 'ring-brand/40' : 'ring-transparent hover:ring-line')}>
+          <Avatar name={me.name} id={me.id} size={38} />
+          <ChevronDown className={clsx('h-4 w-4 text-muted transition', open && 'rotate-180')} />
         </span>
       )}
     >

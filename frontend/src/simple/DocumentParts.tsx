@@ -98,7 +98,7 @@ export function jumpTo(id: string) {
 export function Contents({ items, active, onPick }: { items: ContentsItem[]; active?: string; onPick?: () => void }) {
   return (
     <nav aria-label="Contents">
-      <div className="mb-2 px-2 text-xs font-semibold tracking-[0.06em] text-muted uppercase">Contents</div>
+      <div className="mb-2 px-2 text-xs font-semibold text-muted">Contents</div>
       <ol className="space-y-0.5">
         {items.map((it, i) => (
           <li key={it.id}>
@@ -108,7 +108,7 @@ export function Contents({ items, active, onPick }: { items: ContentsItem[]; act
                 jumpTo(it.id)
                 onPick?.()
               }}
-              className={clsx('flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left text-[15px] leading-snug transition', active === it.id ? 'bg-ink/[0.06] font-medium text-ink dark:bg-white/10' : 'text-muted hover:bg-ink/[0.04] hover:text-ink')}
+              className={clsx('flex min-h-11 w-full items-start gap-2 rounded-lg px-2 py-2.5 text-left text-[0.9375rem] leading-snug transition', active === it.id ? 'bg-ink/[0.06] font-medium text-ink dark:bg-white/10' : 'text-muted hover:bg-ink/[0.04] hover:text-ink')}
             >
               <span className="w-5 shrink-0 tabular-nums">{i + 1}.</span>
               <span className="min-w-0 flex-1">
@@ -178,11 +178,11 @@ export function Paper({ docTitle, projectName, version, date, aiWritten, status,
           <div className="flex items-center gap-2.5">
             <img src="/favicon.svg" alt="" className="h-9 w-9 rounded-lg" />
             <div className="leading-tight">
-              <div className="text-[11px] font-semibold tracking-[0.08em] text-brand uppercase">BRAC</div>
+              <div className="text-xs font-semibold text-brand">BRAC</div>
               <div className="text-sm font-medium text-muted">{brand.appName}</div>
             </div>
           </div>
-          <span className={clsx('rounded-md px-3 py-1 text-sm font-semibold tracking-[0.08em] uppercase ring-2', cls)}>{label}</span>
+          <span className={clsx('rounded-md px-3 py-1 text-sm font-semibold ring-2', cls)}>{label}</span>
         </header>
         <div className="mt-6">
           <h2 className="page-title text-[1.75rem] leading-tight">{docTitle}</h2>
@@ -211,7 +211,7 @@ export function Paper({ docTitle, projectName, version, date, aiWritten, status,
             <div className="mt-3 overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-xs tracking-[0.06em] text-muted uppercase">
+                  <tr className="text-left text-xs text-muted">
                     <th className="py-1.5 pr-4 font-semibold">Role</th>
                     <th className="py-1.5 pr-4 font-semibold">Name</th>
                     <th className="py-1.5 pr-4 font-semibold">Decision</th>
