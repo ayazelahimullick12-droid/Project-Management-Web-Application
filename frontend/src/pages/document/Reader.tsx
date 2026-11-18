@@ -66,7 +66,7 @@ export function Reader({ sections, highlights, canAnnotate, onAnnotate, activeId
         </div>
       )}
       {sections.map((s, i) => (
-        <section key={s.id} id={numbered ? `sec-${s.id}` : undefined} className={numbered ? 'mb-8 scroll-mt-28' : 'mb-6'} data-section={s.id}>
+        <section key={s.id} id={numbered ? `sec-${s.id}` : undefined} className={numbered ? 'mb-8 scroll-mt-40' : 'mb-6'} data-section={s.id}>
           {bothParts && (i === 0 || sectionPart(sections[i - 1].key) !== sectionPart(s.key)) && (
             <div className={i === 0 ? 'mb-5' : 'mt-10 mb-5 border-t-2 border-line pt-8'}>
               <div className="text-xs font-semibold tracking-wide text-muted uppercase">Part {sectionPart(s.key) === 'proposal' ? 1 : 2}</div>

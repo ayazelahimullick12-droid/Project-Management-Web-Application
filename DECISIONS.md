@@ -254,3 +254,7 @@ The user asked for research on what makes an interface easier for people over 35
 - **Messages:** success messages stay 10 seconds (was 3.5), errors stay until closed (was 7 seconds), in larger text with a labelled **Close** button.
 - **Focus and links:** a thick magenta keyboard focus ring; text links underlined.
 - **Motion:** no animation when the computer asks for reduced motion.
+
+## Simple view: the top bar and the project bar merged into one (18 November 2026)
+
+The user asked to merge the two bars. As in GitHub's header, inside a project there is one bar: the top line has the project (the switcher, with its step under the name) next to To do, Projects, Messages, Help, Demo and the avatar; the line under it has the project tabs, More and Hide. Hide folds the tabs line away and the top line then shows "/ BRD", the number of things waiting for you and a Menu button. Outside a project the bar is unchanged. On phones the logo is left out inside a project (To do goes home) so the project name has room, and Hide / Menu is an arrow-only button. The document page's sticky contents and comments sit lower, under the taller bar.

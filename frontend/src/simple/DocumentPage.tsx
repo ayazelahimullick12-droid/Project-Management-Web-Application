@@ -294,7 +294,7 @@ export function SimpleDocumentPage() {
           <div className={clsx('grid gap-6', showComments ? 'lg:grid-cols-[minmax(0,1fr)_340px]' : 'lg:grid-cols-[13rem_minmax(0,1fr)]')}>
             {!showComments && (
               <aside className="hidden lg:block">
-                <div className="sticky top-28 max-h-[calc(100vh-9rem)] overflow-y-auto pb-4">
+                <div className="sticky top-36 max-h-[calc(100vh-11rem)] overflow-y-auto pb-4">
                   <Contents items={contentsItems} active={activeSection} />
                 </div>
               </aside>
@@ -336,7 +336,7 @@ export function SimpleDocumentPage() {
               )}
             </Paper>
             {showComments && (
-              <aside className="lg:sticky lg:top-24 lg:max-h-[calc(100vh-12rem)] lg:overflow-y-auto">
+              <aside className="lg:sticky lg:top-36 lg:max-h-[calc(100vh-14rem)] lg:overflow-y-auto">
                 <CommentsPanel data={data} activeId={active} onActivate={setActive} onGeneral={() => setAnnotating({ kind: 'comment', sel: null })} />
               </aside>
             )}

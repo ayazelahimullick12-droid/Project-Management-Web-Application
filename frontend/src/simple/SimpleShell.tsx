@@ -23,7 +23,7 @@ import { Avatar } from '../components/ui'
 import { ViewSwitch } from '../components/ViewSwitch'
 import { Count } from './parts'
 import { useTodo } from './todo'
-import { ProjectNav, projectIdFrom } from './ProjectNav'
+import { ProjectCrumb, ProjectTabs, projectIdFrom } from './ProjectNav'
 
 function NavTab({ to, icon, label, count, end, mobile }: { to: string; icon: ReactNode; label: string; count?: number; end?: boolean; mobile?: boolean }) {
   return (
@@ -224,17 +224,25 @@ export function SimpleShell() {
           content lined up with the page. Project navigation is a separate band below it. */}
       <header className="sticky top-0 z-30 border-b border-line bg-paper/85 backdrop-blur-xl no-print">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-2 px-4 md:px-8">
-          <Link to="/" className="flex shrink-0 items-center gap-2.5 rounded-lg py-1 pr-2">
+          <Link to="/" className={clsx('shrink-0 items-center gap-2.5 rounded-lg py-1 pr-2', pid ? 'hidden sm:flex' : 'flex')}>
             <img src="/favicon.svg" alt="" className="h-8 w-8 rounded-lg" />
-            <span className="hidden text-base font-semibold md:block">{brand.appName}</span>
+            {/* Inside a project the project takes the name's place */}
+            {!pid && <span className="hidden text-base font-semibold md:block">{brand.appName}</span>}
           </Link>
-          <span className={clsx('mx-3 hidden h-6 w-px bg-line', nav.top)} aria-hidden />
-          <nav className={clsx('hidden h-16 items-stretch gap-1', nav.top)} aria-label="Main">
+          {pid ? (
+            <>
+              <span className="mx-1 hidden h-6 w-px bg-line sm:block" aria-hidden />
+              <ProjectCrumb pid={pid} />
+            </>
+          ) : (
+            <span className={clsx('mx-3 hidden h-6 w-px bg-line', nav.top)} aria-hidden />
+          )}
+          <nav className={clsx('hidden h-16 items-stretch gap-1', nav.top, pid && 'ml-auto')} aria-label="Main">
             {tabs.map((t) => (
               <NavTab key={t.to} {...t} />
             ))}
           </nav>
-          <div className="ml-auto flex min-w-0 items-center gap-1.5">
+          <div className={clsx('flex shrink-0 items-center gap-1.5', !pid && 'ml-auto')}>
             <DemoButton />
             <ProfileMenu portfolio={!!dash?.portfolio} />
           </div>
@@ -244,8 +252,13 @@ export function SimpleShell() {
             <NavTab key={t.to} {...t} mobile />
           ))}
         </nav>
+        {/* The project's tabs: the second line of the same bar */}
+        {pid && !full && (
+          <div className="border-t border-line">
+            <ProjectTabs pid={pid} />
+          </div>
+        )}
       </header>
-      {pid && !full && <ProjectNav pid={pid} />}
       <JobStrip />
       {full ? (
         <main className={clsx('shadow-soft mx-auto mt-3 flex h-[calc(100dvh-9.5rem)] w-[calc(100%-1rem)] max-w-6xl flex-col overflow-hidden rounded-2xl sm:w-[calc(100%-1.5rem)]', nav.height)}>

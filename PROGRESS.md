@@ -164,3 +164,8 @@ Then follow `frontend/DEMO.md`.
 
 - Larger default text (17px), 14px minimum, darker secondary text (7:1+), 44px targets, words next to icons, messages that stay until read, visible keyboard focus, underlined links, reduced motion.
 - Checked: type-check and all tests pass. Not yet checked in the browser: the laptop had only 0.3–0.4 GB of memory free, so the preview could not load the app.
+
+## 18 November 2026 — one bar inside a project
+
+- The project and its tabs are part of the top bar (two lines, one bar).
+- Checked in the browser on separate test data (memory allowed it this time): the merged bar on the BRD at laptop width, Hide / Menu, the testing page's Edit / Rewrite / Delete buttons (47px tall), 17px text; at phone width no sideways scrolling, the project name shortened with "…".

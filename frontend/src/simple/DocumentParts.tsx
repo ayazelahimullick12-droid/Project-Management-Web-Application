@@ -270,7 +270,7 @@ export function ChangesBody({ sections, previous, headingClass }: { sections: Se
         const before = previous.find((p) => p.key === s.key)
         const same = before && readable(before.content) === readable(s.content)
         return (
-          <section key={s.id} id={`sec-${s.id}`} className="mb-8 scroll-mt-28" data-section={s.id}>
+          <section key={s.id} id={`sec-${s.id}`} className="mb-8 scroll-mt-40" data-section={s.id}>
             <h2 className={headingClass}>
               <span className="tabular-nums text-muted">{i + 1}.</span>
               {s.title}
