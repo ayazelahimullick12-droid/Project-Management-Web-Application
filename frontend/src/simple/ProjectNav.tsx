@@ -3,7 +3,7 @@
  * Modelled on common work-app patterns (GitHub's repository header, Jira's project tabs):
  *
  *   Projects / [icon] Branch Cash Reconciliation ▾                Step 3 of 7 · Business requirements ▬▬▬▭▭▭▭
- *   Overview   Questions & facts   Proposal & Charter ✓   BRD (1)   SRS   Testing   More ▾
+ *   Overview   Questions & facts   Proposal & Charter ✓   BRD (1)   SRS   SQA   UAT   More ▾
  *   ───────    (the current tab is underlined in magenta)
  *
  * - The project name is a switcher: your projects with their step and how many things wait for
@@ -12,7 +12,7 @@
  *   something there is waiting for you. More holds team chat, team, changes and the activity log.
  */
 import { clsx } from 'clsx'
-import { Check, ChevronDown, ClipboardList, FileCheck2, FileText, FlaskConical, FolderKanban, LayoutDashboard, MoreHorizontal, Plus } from 'lucide-react'
+import { Check, ChevronDown, CircleCheck, ClipboardList, FileCheck2, FileText, FlaskConical, FolderKanban, LayoutDashboard, MoreHorizontal, Plus, UserCheck } from 'lucide-react'
 import { useEffect, useRef, type ReactNode } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import type { DocType } from '../types'
@@ -203,7 +203,6 @@ export function ProjectNav({ pid }: { pid: string }): ReactNode {
   const base = `/projects/${pid}`
   const mine = items.filter((i) => i.projectId === pid)
   const count = (test: (to: string) => boolean) => mine.filter((i) => test(i.to)).length
-  const testingStage = current.stage === 'UAT' || current.stage === 'COMPLETE' ? 'UAT' : 'SQA'
   const unread = chats?.channels.find((c) => c.id === `${pid}-chat`)?.unread ?? 0
   const moreActive = /\/(team|changes|decisions|audit)$/.test(pathname)
 
@@ -218,6 +217,24 @@ export function ProjectNav({ pid }: { pid: string }): ReactNode {
         label={label}
         title={`${DOC_NAME[t]}: ${d && d.status.key !== 'not_started' ? d.status.label : 'not written yet'}`}
         count={count((to) => to.startsWith(`${base}/docs/${t}`))}
+      />
+    )
+  }
+
+  /** SQA (technical testing) and UAT (user testing), each with its own tab; a check once signed off. */
+  const testTab = (stage: 'SQA' | 'UAT') => {
+    const d = current.docs.find((x) => x.type === (stage === 'SQA' ? 'SQA_SIGNOFF' : 'UAT_SIGNOFF'))
+    const finished = d?.status.key === 'signed' || d?.status.key === 'approved'
+    const to = `${base}/testing/${stage}`
+    return (
+      <Tab
+        key={stage}
+        to={to}
+        icon={finished ? <CircleCheck className="text-leaf" /> : stage === 'SQA' ? <FlaskConical /> : <UserCheck />}
+        label={stage}
+        title={`${stage === 'SQA' ? 'Technical testing (SQA)' : 'User testing (UAT)'}: ${finished ? 'signed off' : d && d.status.key !== 'not_started' ? d.status.label : 'not signed off yet'}`}
+        count={count((x) => x.startsWith(to))}
+        active={pathname.startsWith(to)}
       />
     )
   }
@@ -247,7 +264,8 @@ export function ProjectNav({ pid }: { pid: string }): ReactNode {
             {docTab('PROPOSAL', 'Proposal & Charter')}
             {docTab('BRD', 'BRD')}
             {docTab('SRS', 'SRS')}
-            <Tab to={`${base}/testing/${testingStage}`} icon={<FlaskConical />} label="Testing" count={count((to) => to.startsWith(`${base}/testing`))} active={pathname.startsWith(`${base}/testing`)} />
+            {testTab('SQA')}
+            {testTab('UAT')}
           </div>
           {/* Outside the scrolling strip, so its menu is not cut off */}
           <MoreTab pid={pid} active={moreActive} unread={unread} />

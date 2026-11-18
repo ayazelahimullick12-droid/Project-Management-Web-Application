@@ -226,3 +226,7 @@ The user pointed out that the overview listed the documents a second time (they 
 - **Progress:** the six steps as a timeline: done (green check, "Signed", "Approved"), **Now** (what is happening: who it waits for and since when, or the testing numbers on the version), later (grey).
 - **Recent activity:** the last six actions in the project (logins and the technical signature record left out; the full log stays under More → Activity log, for the Owner and the PM). The project data now includes these six entries for every member, as the home dashboard already shows recent activity.
 - The **About** panel stays on the right. "Also needs attention" was removed: questions, testing and chat are tabs, and anything that waits for you is in "Your tasks here".
+
+## Simple view: separate SQA and UAT tabs (18 November 2026)
+
+The user could not find UAT: one "Testing" tab opened SQA or UAT depending on the stage. The project header now has an **SQA** and a **UAT** tab, in step order after the SRS. Each shows a green check once its sign-off is approved, a magenta count when something there waits for you, and its full name ("Technical testing (SQA)", "User testing (UAT)") on hover.
