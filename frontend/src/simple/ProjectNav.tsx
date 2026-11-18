@@ -3,7 +3,7 @@
  * Modelled on common work-app patterns (GitHub's repository header, Jira's project tabs):
  *
  *   Projects / [icon] Branch Cash Reconciliation ▾                Step 3 of 7 · Business requirements ▬▬▬▭▭▭▭
- *   Overview   Proposal & Charter ✓   BRD (1)   SRS   Questions & facts   Testing   More ▾
+ *   Overview   Questions & facts   Proposal & Charter ✓   BRD (1)   SRS   Testing   More ▾
  *   ───────    (the current tab is underlined in magenta)
  *
  * - The project name is a switcher: your projects with their step and how many things wait for
@@ -241,11 +241,12 @@ export function ProjectNav({ pid }: { pid: string }): ReactNode {
         </div>
         <div className="flex items-end gap-1">
           <div ref={strip} className="-ml-2 flex min-w-0 flex-1 overflow-x-auto max-md:[mask-image:linear-gradient(to_right,#000_82%,transparent)]" role="navigation" aria-label="Project" style={{ scrollbarWidth: 'none' }}>
+            {/* In the order of the steps: questions and facts come before the documents */}
             <Tab to={base} end icon={<LayoutDashboard />} label="Overview" />
+            <Tab to={`${base}/intake`} icon={<ClipboardList />} label="Questions & facts" count={count((to) => to.startsWith(`${base}/intake`) || to === '/questions')} />
             {docTab('PROPOSAL', 'Proposal & Charter')}
             {docTab('BRD', 'BRD')}
             {docTab('SRS', 'SRS')}
-            <Tab to={`${base}/intake`} icon={<ClipboardList />} label="Questions & facts" count={count((to) => to.startsWith(`${base}/intake`) || to === '/questions')} />
             <Tab to={`${base}/testing/${testingStage}`} icon={<FlaskConical />} label="Testing" count={count((to) => to.startsWith(`${base}/testing`))} active={pathname.startsWith(`${base}/testing`)} />
           </div>
           {/* Outside the scrolling strip, so its menu is not cut off */}
