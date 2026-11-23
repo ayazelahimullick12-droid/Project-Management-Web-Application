@@ -16,7 +16,7 @@ import { missingPeople } from '../rules/people'
 import { approve as approveRule, canAct, chainNeeds, CHAIN_CONFIG, cancel, currentStep, minorCorrectionChain, newChain, requestChanges as requestChangesRule, pmChoosesApprovers, ROLE_LABEL, sendCheck, sign as signRule, stepTeam } from '../rules/approval'
 import { blockingCounts, canCheckPending, canComment, canTick, carryForward, commentTeam } from '../rules/comments'
 import { actAsHead, can, COVER_LABEL, headOf, headRecipient, inTeam, isOwner, isSqa, memberOf, onBehalfText, roleLabel, TEAM_LABEL, type Check } from '../rules/permissions'
-import { activeChain, canGenerate, chainsOf, DOC_LABEL, docStatus, isComplete, laterTypes, PART_LABEL, PIPELINE, previousComplete, sectionPart } from '../rules/pipeline'
+import { activeChain, canGenerate, chainsOf, DOC_LABEL, docStatus, factSheetConfirmed, isComplete, roundClosed, laterTypes, PART_LABEL, PIPELINE, previousComplete, sectionPart } from '../rules/pipeline'
 import { exitCriteria } from '../rules/testing'
 import { markdownToPlain, normalize } from '../rules/text'
 import { act, ApiError, ensure, fail, me, nameOf, pipelineCtx, projectOf, read } from './core'
@@ -168,6 +168,9 @@ export async function getDocument(pid: ID, type: DocType) {
         summarize: can.memberOrOwner(p, user.id).ok && !summarizing,
       },
       complete: isComplete(ctx, type),
+      // The document's own steps (Simple view step bar): its questions are done when the facts are
+      // confirmed (Proposal & Charter) or its question round is closed (BRD, SRS).
+      questionsDone: type === 'PROPOSAL' ? factSheetConfirmed(ctx) : type === 'BRD' ? roundClosed(ctx, 'brd_business') : type === 'SRS' ? roundClosed(ctx, 'srs_technical') : true,
       // Heads of the approval chain not added yet (shown with "Add"; the Owner or PM approves in their place).
       missing: pmChoosesApprovers(type) ? [] : missingPeople(p, chainNeeds(type)),
       canAddPeople: can.addPeople(p, user.id, t).ok,

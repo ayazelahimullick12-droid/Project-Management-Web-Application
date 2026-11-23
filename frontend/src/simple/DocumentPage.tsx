@@ -30,6 +30,8 @@ import { ActionBar, NextStep, SimplePage, StatusLine, ToneIcon } from './parts'
 import { ApprovalBar, ChangesBody, Contents, Paper, useActiveSection, type RecordRow } from './DocumentParts'
 import { GrillMeButton } from '../components/GrillMe'
 import { SummaryView } from './SummaryView'
+import { DocSteps } from './DocSteps'
+import { DocQuestions } from './IntakeChat'
 
 /** The document's formal name on its letterhead. */
 const FORMAL_NAME: Partial<Record<DocType, string>> = {
@@ -111,10 +113,26 @@ export function SimpleDocumentPage() {
   const tools = `/projects/${pid}/docs/${type}/tools`
   const nameOf = (id?: string) => data.members.find((m) => m.userId === id)?.name ?? 'someone'
   const { doc, current, draft } = data
+  // The document's own steps: questions → AI writes it → summary & slides → approvers → signed
+  const main = type === 'PROPOSAL' || type === 'BRD' || type === 'SRS'
+  const steps = main && (
+    <DocSteps
+      pid={pid}
+      type={type}
+      questionsDone={data.questionsDone}
+      written={!!current}
+      summarised={!!data.derived}
+      sent={!!data.activeChain && data.activeChain.status !== 'changes_requested'}
+      signed={data.complete}
+    />
+  )
 
   if (!doc || !current)
     return (
       <SimplePage title={name} subtitle="Not written yet.">
+        {steps}
+        {/* Step 1 for the BRD and the SRS: their own questions, here in the document's tab */}
+        {(type === 'BRD' || type === 'SRS') && <DocQuestions pid={pid} stage={type === 'BRD' ? 'brd_business' : 'srs_technical'} />}
         {data.perms.pmTeam && data.perms.generate.ok ? (
           <NextStep
             actions={
@@ -227,6 +245,7 @@ export function SimpleDocumentPage() {
 
   return (
     <SimplePage title={name} wide>
+      {steps}
       <ApprovalBar
         tone={myTurn ? 'action' : docTone(data.status)}
         status={statusText}

@@ -341,16 +341,20 @@ const badChatReply = (t: string) => t.length < 8 || /\b(sorry|apologi[sz]e|can'?
  * If the small model refuses or leaves a placeholder, it is asked again with the plain one-question
  * prompt used by the regular Q/A, and the app adds a short "Thank you."
  */
-export async function chatQuestion(p: Project, field: FactDef, team: string, previous?: { q: string; a: string }): Promise<string> {
+export async function chatQuestion(p: Project, field: FactDef, team: string, previous?: { q: string; a: string }, asked: string[] = []): Promise<string> {
+  // The small model sometimes repeats an earlier question word for word: that counts as unusable too
+  const core = (t: string) => t.toLowerCase().replace(/^thank you[^.!?]*[.!?]\s*/, '').replace(/[^a-z0-9 ]/g, '').trim()
+  const repeats = (t: string) => asked.some((a) => core(a) === core(t) || (core(t).length > 12 && core(a).includes(core(t))))
   const tidyQ = (raw: string) => {
     const t = clean(markdownToPlain(linesOf(raw).join(' ').replace(/^(question|q)\s*:\s*/i, '')))
     return /[?]$/.test(t) ? t : `${t.replace(/[.!]$/, '')}?`
   }
   const first = tidyQ(await ask({ agent: 'qa_questions', title: `Chat question about ${field.label.toLowerCase()}`, projectId: p.id, prompt: prompts.chatQuestion(p, field, team, previous), maxTokens: LIMITS.chatQuestion, temperature: 0.5 }))
-  if (!badChatReply(first)) return first
+  if (!badChatReply(first) && !repeats(first)) return first
   const plain = tidyQ(linesOf(await ask({ agent: 'qa_questions', title: `Question about ${field.label.toLowerCase()} (asked again)`, projectId: p.id, prompt: prompts.question(p, { ...field, team }), maxTokens: LIMITS.question }))[0] ?? '')
-  if (badChatReply(plain)) throw unusable()
-  return previous ? `Thank you. ${plain}` : plain
+  // Last resort: a plain question naming the fact, so the chat never stalls or repeats itself
+  const safe = badChatReply(plain) || repeats(plain) ? `Could you tell me about this: ${field.label.toLowerCase()}?` : plain
+  return previous ? `Thank you. ${safe}` : safe
 }
 
 // ─── Grill me ───────────────────────────────────────────────────────────

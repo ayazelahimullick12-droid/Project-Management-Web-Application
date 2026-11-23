@@ -467,7 +467,7 @@ export async function askNextChatQuestion(pid: ID) {
   const team = routeTeam(def)
   const teamName: Record<string, string> = { STAKEHOLDER: 'stakeholders', SPONSOR: 'sponsors', TECH: 'technical team' }
   const last = [...asked].reverse().find((q) => q.answeredAt)
-  const text = await chatQuestion(p, def, teamName[team] ?? 'project team', last ? { q: last.text, a: last.answer ?? '' } : undefined)
+  const text = await chatQuestion(p, def, teamName[team] ?? 'project team', last ? { q: last.text, a: last.answer ?? '' } : undefined, asked.map((q) => q.text))
   return act((s, _t, at) => {
     const proj = projectOf(s, pid)
     let round = s.rounds.find((x) => x.projectId === pid && x.purpose === purpose && x.status === 'open' && x.chat)

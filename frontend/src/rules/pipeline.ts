@@ -116,8 +116,8 @@ export function previousComplete(ctx: PipelineCtx, type: DocType): Check {
 export function canGenerate(ctx: PipelineCtx, type: DocType): Check {
   const before = previousComplete(ctx, type)
   if (!before.ok) return before
-  if (type === 'BRD' && !roundClosed(ctx, 'brd_business')) return no('Run and close the business processes Q/A round first.')
-  if (type === 'SRS' && !roundClosed(ctx, 'srs_technical')) return no('Run and close the technical Q/A round (answered by the tech team) first.')
+  if (type === 'BRD' && !roundClosed(ctx, 'brd_business')) return no('Answer the BRD questions first (above).')
+  if (type === 'SRS' && !roundClosed(ctx, 'srs_technical')) return no('Answer the SRS questions first (above; the tech team answers them).')
   return yes
 }
 

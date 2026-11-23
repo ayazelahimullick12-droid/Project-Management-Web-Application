@@ -226,3 +226,14 @@ describe('chatQuestion', () => {
     expect(await chatQuestion(p, field, 'stakeholders', { q: 'Who uses it?', a: 'Field officers' })).toBe('Thank you. Which branches will use the app first?')
   })
 })
+
+describe('chatQuestion does not repeat itself', () => {
+  const field = { key: 'approvals', label: 'Approval steps', category: 'process', round: 'brd_business' } as FactDef
+  it('asks again when the model repeats an earlier question, and names the fact when it repeats again', async () => {
+    const ask = (await import('./client')).ask as unknown as ReturnType<typeof vi.fn>
+    ask.mockResolvedValueOnce('Thank you for your prompt response! How can I get started?')
+    ask.mockResolvedValueOnce('How can I get started?')
+    const q = await chatQuestion(p, field, 'stakeholders', { q: 'x', a: 'y' }, ['Thank you for your prompt response! How can I get started?'])
+    expect(q).toBe('Thank you. Could you tell me about this: approval steps?')
+  })
+})

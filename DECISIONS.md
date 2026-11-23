@@ -293,3 +293,10 @@ The user asked to bring the "grill me" idea (a Claude Code skill by Matt Pocock:
 - **SQA sign-off** keeps its fixed step (the tech head), sent by SQA.
 - Approvals started before this change keep their fixed steps (PM → tech head → stakeholder head → sponsor head signs). Nothing in the saved data was converted: a chosen step is a new step kind (`role: 'PERSON'`, with the person's `team`).
 - Code: `newChain(… approvers)`, `sign` (hands over to the next person), `actForPerson` in `src/rules/permissions.ts`, `approverChoicesFor` and `sendForApproval(docId, approvers)` in `src/api/documents.ts`, `src/components/ChooseApprovers.tsx`.
+
+## Each document runs its own steps in its own tab (23 November 2026)
+
+- Every main document (Proposal & Charter, BRD, SRS) shows the same five steps at the top: **Questions → Written → Summary & slides → Approvers → Signed**.
+- **Questions & facts** holds only the first stage: the request, update or new, up to 3 questions, the Fact Sheet. Its questions are the Proposal & Charter's step 1.
+- The **BRD's and the SRS's questions** (up to 3 each) are asked in that document's own tab, before it is written; then "Write it with AI" opens. The summary and slides are made with every new version (as before).
+- The small model sometimes repeated an earlier question word for word; such a question is asked again, and as a last resort the question names the fact ("Could you tell me about this: approval steps?").
