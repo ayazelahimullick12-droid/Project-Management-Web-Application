@@ -19,6 +19,7 @@ export const LIMITS = {
   list: 150, // 3 numbered objectives or requirements
   facts: 300, // facts pulled from a text, one line each
   question: 40, // one question for one missing fact
+  grill: 70, // "Grill me": one pointed question and the fact it is about
   rewrite: 120,
   scope: 50,
   summary: 100,
@@ -66,6 +67,21 @@ Fields: ${fields.map((f) => `${f.key} (${f.label})`).join(', ')}
 
 Text:
 ${text}`,
+
+  /**
+   * "Grill me": one pointed question about the weakest part of the plan, like a strict reviewer.
+   * One question per request (a small model mixes up several), never one already asked.
+   */
+  grill: (projectName: string, facts: Fact[], docText: string, asked: { q: string; a: string }[], keys: { key: string; label: string }[]) =>
+    `You are a strict senior manager reviewing the plan for the project "${projectName}".
+What the team has said so far:
+${factLines(facts)}
+${docText ? `\nThe document says:\n${docText}\n` : ''}${asked.length ? `\nAlready asked (do not ask these again):\n${asked.map((x) => `- ${x.q} → ${x.a || 'no answer'}`).join('\n')}\n` : ''}
+Ask ONE short, pointed question about the weakest, vaguest or riskiest part of this plan: something missing, unrealistic or unclear. Under 25 words.
+Then say which of these facts it is about, or none: ${keys.map((k) => k.key).join(', ')}
+Use exactly this layout:
+Question: <the question>
+Fact: <one key from the list, or none>`,
 
   // One question per request: a small model mixes up several at once.
   question: (p: Project, field: { label: string; question?: string; team: string }) =>

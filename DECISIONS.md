@@ -262,3 +262,16 @@ The user asked to merge the two bars. As in GitHub's header, inside a project th
 ## Simple view: To do and Help taken out of the bar (18 November 2026)
 
 The user pointed out that the logo ("Project Management") and To do did the same thing, and asked to remove To do and Help. The bar now has two places, Projects and Messages. The logo is home (your To do) and carries the To do count; it stays visible on phones inside a project, since it is now the only way home. Help moved into the avatar menu.
+
+## "Grill me": the AI questions the plan (23 November 2026)
+
+The user asked to bring the "grill me" idea (a Claude Code skill by Matt Pocock: interview the user relentlessly about a plan, one question at a time) into the app.
+
+- **Where:** a **Grill me** button on the Fact Sheet (next to Send for confirmation) and on the Proposal & Charter, BRD and SRS (both views). PM team and Project Owner only, like other Fact Sheet work.
+- **How it works:** the AI reads the facts (and, on a document, its text, shortened to about 1,800 characters for the small model) and the questions already asked, and asks **one** pointed question about the weakest, vaguest or riskiest part of the plan, naming the fact it is about. One question per AI request; up to **8** per round, then a summary. Answer, **I don't know** (kept as an open question) or **Skip**.
+- **Where answers go:** every question and answer goes into the activity log ("Grill me"). An answer about a fact can also go further:
+  - Fact Sheet not confirmed yet → the fact is updated at once (source "Grill me, answered by …").
+  - On a document → a proposed Fact Sheet update on that document, which the PM accepts or rejects on Changes & decisions (scope, budget or timeline → a change request, as for edits).
+  - Fact Sheet already confirmed, grilling the Fact Sheet → recorded only (a confirmed Fact Sheet changes through a document edit or a change request).
+- **Not stored as a session:** the round lives on the screen; closing the panel ends it. This needed no change to the saved data.
+- Code: `src/ai/prompts.ts` (grill), `src/ai/agents.ts` (grillQuestion), `src/api/grill.ts`, `src/components/GrillMe.tsx`.

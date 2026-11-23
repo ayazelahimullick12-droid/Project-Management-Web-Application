@@ -8,10 +8,11 @@ import * as admin from './admin'
 import * as changes from './changes'
 import * as chat from './chat'
 import * as documents from './documents'
+import * as grill from './grill'
 import * as intake from './intake'
 import * as notifications from './notifications'
 import * as projects from './projects'
 import * as testing from './testing'
 
-export const api = { admin, changes, chat, documents, intake, notifications, projects, testing }
+export const api = { admin, changes, chat, documents, grill, intake, notifications, projects, testing }
 export { ApiError } from './core'

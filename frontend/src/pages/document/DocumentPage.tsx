@@ -12,6 +12,7 @@ import { useAction, useApi, useNow, useSessionUserId } from '../../api/hooks'
 import { ApprovalActions, ApprovalTimeline } from '../../components/ApprovalPanel'
 import { AiBadge, AiNote } from '../../components/ai'
 import { DiscussButton } from '../../components/chat/ChatThread'
+import { GrillMeButton } from '../../components/GrillMe'
 import { openChat } from '../../components/chat/dock'
 import { DocStatusChip } from '../../components/status'
 import { downloadItems } from '../../components/exports'
@@ -249,6 +250,7 @@ export function DocumentPage() {
               <ApprovalActions {...approvalProps} layout="row" />
             </>
           )}
+          {(data.type === 'PROPOSAL' || data.type === 'BRD' || data.type === 'SRS') && current && <GrillMeButton pid={pid} target={data.type} size="sm" />}
           {data.chatId && <DiscussButton onClick={() => openChat(data.chatId!, navigate)} />}
           <MenuButton
             label={<MoreHorizontal className="h-4 w-4" />}

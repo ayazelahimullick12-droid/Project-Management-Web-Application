@@ -14,7 +14,7 @@ vi.mock('./client', () => ({
   cosine: vi.fn(() => 0.9),
 }))
 
-const { draftSection, draftTestPoints, extractFacts, findSimilarProjects, rewriteTestPoint, scopeVerdict, summarize, tidy, updateForFacts, writeQuestions } = await import('./agents')
+const { draftSection, draftTestPoints, grillQuestion, extractFacts, findSimilarProjects, rewriteTestPoint, scopeVerdict, summarize, tidy, updateForFacts, writeQuestions } = await import('./agents')
 
 const def = (key: string, label: string): FactDef => ({ key, label, category: 'scope', round: 'intake' }) as FactDef
 const p = project({ name: 'Branch Loan Approval App', intake: { description: 'Loan officers approve loans on paper.', analysed: false } })
@@ -171,5 +171,29 @@ describe('writeQuestions', () => {
     answer.text = 'Which branches and regions will use the app'
     const q = await writeQuestions(p, [{ ...def('coverage', 'Branches and regions covered'), team: 'stakeholders' }])
     expect(q.get('coverage')).toBe('Which branches and regions will use the app?')
+  })
+})
+
+describe('grillQuestion', () => {
+  const keys = [
+    { key: 'budget_total', label: 'Total budget' },
+    { key: 'timeline', label: 'Overall timeline' },
+  ]
+
+  it('reads the question and the fact it is about', async () => {
+    answer.text = 'Question: Who pays the SMS charges after go-live?\nFact: budget_total'
+    expect(await grillQuestion(p, '', [], keys)).toEqual({ question: 'Who pays the SMS charges after go-live?', factKey: 'budget_total' })
+  })
+
+  it('ignores a fact the list does not have, and adds a missing question mark', async () => {
+    answer.text = '**Question:** What happens if the gateway approval takes longer than 4 months\nFact: gateway_approval'
+    expect(await grillQuestion(p, '', [], keys)).toEqual({ question: 'What happens if the gateway approval takes longer than 4 months?', factKey: undefined })
+  })
+
+  it('takes a question even without the layout, and refuses an answer without one', async () => {
+    answer.text = 'Sure. Which 25 branches go first?'
+    expect((await grillQuestion(p, '', [], keys)).question).toBe('Sure. Which 25 branches go first?')
+    answer.text = 'OK'
+    await expect(grillQuestion(p, '', [], keys)).rejects.toThrow()
   })
 })

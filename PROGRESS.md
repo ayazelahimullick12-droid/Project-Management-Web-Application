@@ -169,3 +169,8 @@ Then follow `frontend/DEMO.md`.
 
 - The project and its tabs are part of the top bar (two lines, one bar).
 - Checked in the browser on separate test data (memory allowed it this time): the merged bar on the BRD at laptop width, Hide / Menu, the testing page's Edit / Rewrite / Delete buttons (47px tall), 17px text; at phone width no sideways scrolling, the project name shortened with "…".
+
+## 23 November 2026 — "Grill me"
+
+- Grill me on the Fact Sheet and on the Proposal & Charter, BRD and SRS: one AI question at a time, up to 8, answers saved to the Fact Sheet or proposed as updates, all in the activity log, a summary at the end.
+- Checked: type-check and all tests pass (3 new tests for reading the AI's question). In the browser on separate test data: the button on the BRD (Simple view) and on Field Loan's Fact Sheet for the PM, hidden for a stakeholder; the start screen; with LM Studio off, a clear "not reachable" message and Try again. Not checked: real questions from the model (LM Studio was not running).

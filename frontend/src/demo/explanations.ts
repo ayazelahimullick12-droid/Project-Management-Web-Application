@@ -70,6 +70,11 @@ export const AI_AGENTS: Record<string, { name: string; realApp: string; prototyp
     realApp: 'The LLM pulls candidate decisions out of the corrected transcript. The PM confirms each one (into the Fact Sheet, or as a scope change) or dismisses it.',
     prototype: 'Live: “Suggest with AI” proposes which fact a decision sets and its value. Candidate decisions from calls are still simulated.',
   },
+  grill: {
+    name: 'Grill me',
+    realApp: 'The LLM reads the facts (and the document) and asks one pointed question at a time about the weakest, vaguest or riskiest part of the plan, never repeating one already asked. Answers can update the Fact Sheet.',
+    prototype: 'Live: one short request per question (a few seconds each).',
+  },
   testpoints: {
     name: 'Testing points',
     realApp: 'The LLM writes up to 3 short testing points per requirement (SRS for SQA, BRD for UAT), one requirement per call so prompts stay small. Testers add, edit, regenerate or delete them.',

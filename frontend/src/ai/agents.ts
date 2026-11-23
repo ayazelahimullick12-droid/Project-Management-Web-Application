@@ -311,6 +311,20 @@ export async function findSimilarProjects(p: Project, past: PastProject[], topK:
   return { matches, suggestions: suggestions.slice(0, 6) }
 }
 
+// ─── Grill me ───────────────────────────────────────────────────────────
+
+/** One "Grill me" question, and the fact it is about (when the model names a real one). */
+export async function grillQuestion(p: Project, docText: string, asked: { q: string; a: string }[], keys: { key: string; label: string }[]): Promise<{ question: string; factKey?: string }> {
+  const text = await ask({ agent: 'grill', title: `Grill me: question ${asked.length + 1}`, projectId: p.id, prompt: prompts.grill(p.name, p.facts, docText, asked, keys), maxTokens: LIMITS.grill, temperature: 0.6 })
+  const lines = linesOf(text)
+  const qLine = lines.find((l) => /^question\s*:/i.test(l)) ?? lines.find((l) => l.includes('?'))
+  const question = clean(markdownToPlain((qLine ?? '').replace(/^question\s*:\s*/i, '')))
+  if (question.length < 8) throw unusable()
+  const factRaw = (lines.find((l) => /^fact\s*:/i.test(l)) ?? '').replace(/^fact\s*:\s*/i, '').trim().replace(/[.`'"]/g, '')
+  const factKey = keys.find((k) => k.key.toLowerCase() === factRaw.toLowerCase())?.key
+  return { question: question.endsWith('?') ? question : `${question}?`, factKey }
+}
+
 // ─── Testing ────────────────────────────────────────────────────────────
 
 /** Up to 3 testing points for one requirement (each one thing to mark PASS or FAIL). */

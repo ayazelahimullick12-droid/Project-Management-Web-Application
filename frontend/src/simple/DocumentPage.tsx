@@ -28,6 +28,7 @@ import { Reader, type Selection } from '../pages/document/Reader'
 import { AnnotateModal, CommentsPanel } from '../pages/document/CommentsPanel'
 import { ActionBar, NextStep, SimplePage, StatusLine, ToneIcon } from './parts'
 import { ApprovalBar, ChangesBody, Contents, Paper, useActiveSection, type RecordRow } from './DocumentParts'
+import { GrillMeButton } from '../components/GrillMe'
 
 /** The document's formal name on its letterhead. */
 const FORMAL_NAME: Partial<Record<DocType, string>> = {
@@ -279,6 +280,7 @@ export function SimpleDocumentPage() {
               )}
               <span className="ml-auto" />
               {data.perms.comment.ok && !showChanges && <span className="hidden text-sm text-muted md:inline">To comment, select some text</span>}
+              {(data.type === 'PROPOSAL' || data.type === 'BRD' || data.type === 'SRS') && <GrillMeButton pid={pid} target={data.type} size="lg" />}
               {data.type !== 'SQA_SIGNOFF' && data.type !== 'UAT_SIGNOFF' && (
                 <Button size="lg" variant="ghost" onClick={() => setShowComments(!showComments)} aria-expanded={showComments}>
                   <MessageSquare className="h-5 w-5" /> {showComments ? 'Hide comments' : `Comments${openComments ? ` (${openComments})` : ''}`}
