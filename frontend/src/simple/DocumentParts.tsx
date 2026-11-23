@@ -17,6 +17,7 @@ import { brand } from '../theme/brand'
 import type { StatusKey } from '../rules/pipeline'
 import { ToneIcon } from './parts'
 import type { Tone } from './words'
+import type { BracCover } from '../rules/formats'
 
 // ─── The slim bar above the document ────────────────────────────────────
 
@@ -95,7 +96,7 @@ export function jumpTo(id: string) {
   document.getElementById(`sec-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-export function Contents({ items, active, onPick }: { items: ContentsItem[]; active?: string; onPick?: () => void }) {
+export function Contents({ items, active, onPick, ownNumbers }: { items: ContentsItem[]; active?: string; onPick?: () => void; ownNumbers?: boolean }) {
   return (
     <nav aria-label="Contents">
       <div className="mb-2 px-2 text-xs font-semibold text-muted">Contents</div>
@@ -110,7 +111,7 @@ export function Contents({ items, active, onPick }: { items: ContentsItem[]; act
               }}
               className={clsx('flex min-h-11 w-full items-start gap-2 rounded-lg px-2 py-2.5 text-left text-[0.9375rem] leading-snug transition', active === it.id ? 'bg-ink/[0.06] font-medium text-ink dark:bg-white/10' : 'text-muted hover:bg-ink/[0.04] hover:text-ink')}
             >
-              <span className="w-5 shrink-0 tabular-nums">{i + 1}.</span>
+              {!ownNumbers && <span className="w-5 shrink-0 tabular-nums">{i + 1}.</span>}
               <span className="min-w-0 flex-1">
                 {it.title}
                 {(it.changed || !!it.comments || it.ai) && (
@@ -157,7 +158,8 @@ export interface RecordRow {
   note?: string
 }
 
-export function Paper({ docTitle, projectName, version, date, aiWritten, status, record, signatures, children }: {
+export function Paper({ docTitle, projectName, version, date, aiWritten, status, record, signatures, children, cover }: {
+  cover?: BracCover // BRAC format: BRAC's cover instead of the app's letterhead
   docTitle: string
   projectName: string
   version: number
@@ -173,6 +175,30 @@ export function Paper({ docTitle, projectName, version, date, aiWritten, status,
     <article className="min-w-0 overflow-hidden rounded-md bg-paper shadow-[0_1px_2px_rgb(0_0_0/0.05),0_12px_32px_-18px_rgb(16_16_32/0.28)] ring-1 ring-line">
       <div className="h-1.5 bg-brand" aria-hidden />
       <div className="px-6 pt-7 pb-10 md:px-14 md:pt-9">
+        {cover ? (
+          // BRAC cover: the magenta BRAC logo, the title and the document control table
+          <header className="border-b border-line pb-8 text-center">
+            <div className="flex justify-end">
+              <span className={clsx('rounded-md px-3 py-1 text-sm font-semibold ring-2', cls)}>{label}</span>
+            </div>
+            <img src="/brac-logo.webp" alt="BRAC" className="mx-auto mt-2 h-20 w-auto" />
+            {cover.org && <div className="mt-2 text-lg font-bold">{cover.org}</div>}
+            <h2 className="mt-6 text-[1.6rem] leading-tight font-bold">{cover.title}</h2>
+            {cover.subtitle && <div className="mt-1 text-lg text-[#595959]">{cover.subtitle}</div>}
+            <table className="mx-auto mt-6 w-full max-w-xl border-y border-ink/60 text-left text-sm">
+              <tbody className="divide-y divide-ink/30">
+                {cover.rows.map(([k, v]) => (
+                  <tr key={k}>
+                    <th className="w-44 border-r border-ink/30 py-1.5 pr-3 font-semibold">{k}</th>
+                    <td className="py-1.5 pl-3">{v || ' '}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {aiWritten && <p className="mt-3 text-sm text-muted">Written by the AI, not edited by a person yet.</p>}
+          </header>
+        ) : (
+        <>
         {/* Letterhead */}
         <header className="flex flex-wrap items-start justify-between gap-4 border-b border-line pb-5">
           <div className="flex items-center gap-2.5">
@@ -200,6 +226,8 @@ export function Paper({ docTitle, projectName, version, date, aiWritten, status,
             )}
           </dl>
         </div>
+        </>
+        )}
 
         {/* The text */}
         <div className="mt-8 text-[1.0625rem] leading-relaxed [&_.md]:text-[1.0625rem]">{children}</div>

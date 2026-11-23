@@ -28,9 +28,10 @@ import { Reader, type Selection } from '../pages/document/Reader'
 import { AnnotateModal, CommentsPanel } from '../pages/document/CommentsPanel'
 import { ActionBar, NextStep, SimplePage, StatusLine, ToneIcon } from './parts'
 import { ApprovalBar, ChangesBody, Contents, Paper, useActiveSection, type RecordRow } from './DocumentParts'
-import { GrillMeButton } from '../components/GrillMe'
 import { SummaryView } from './SummaryView'
 import { DocSteps } from './DocSteps'
+import { coverFor, FORMAT_LABEL, type DocFormat } from '../rules/formats'
+import { fmtDate } from '../components/format'
 import { DocQuestions } from './IntakeChat'
 
 /** The document's formal name on its letterhead. */
@@ -99,6 +100,7 @@ export function SimpleDocumentPage() {
   const [docView, setDocView] = useState<'summary' | 'full' | null>(null)
   const [contentsOpen, setContentsOpen] = useState(false)
   const { data, isLoading, error } = useApi(['doc', pid, type, uid], () => api.documents.getDocument(pid, type as DocType))
+  const [format, setFormat] = useState<DocFormat | null>(null)
   const generate = useAction(api.documents.generate, { success: 'The AI is writing it section by section. Progress is shown at the top of the page.' })
   const decideScope = useAction(api.documents.decideScope, { success: 'Decision recorded.' })
   // The sections on screen (the Proposal & Charter shows one part at a time), for the contents list.
@@ -136,12 +138,23 @@ export function SimpleDocumentPage() {
         {data.perms.pmTeam && data.perms.generate.ok ? (
           <NextStep
             actions={
-              <Button variant="primary" size="lg" disabled={generate.pending} onClick={() => generate.run(pid, type as DocType)}>
+              <Button variant="primary" size="lg" disabled={generate.pending} onClick={() => generate.run(pid, type as DocType, (format ?? data.defaultFormat) as DocFormat | undefined)}>
                 Write it with AI
               </Button>
             }
           >
             The AI writes a first draft from the project facts{type !== 'PROPOSAL' ? ' and the earlier documents' : ''}. Then people read it, comment and approve it.
+            {data.formatChoices.length > 0 && (
+              <span className="mt-4 block">
+                <span className="mb-2 block text-base font-medium">Format</span>
+                <Segmented
+                  value={format ?? data.defaultFormat ?? ''}
+                  onChange={(x) => setFormat(x as DocFormat)}
+                  options={data.formatChoices.map((f) => ({ id: f, label: `${FORMAT_LABEL[f]}${f === data.defaultFormat ? ' (suggested)' : ''}` }))}
+                />
+                {type === 'SRS' && <span className="mt-2 block text-sm text-muted">Suggested from the project type: a new project gets the full SRS, an update to an existing app the Change Request SRS.</span>}
+              </span>
+            )}
           </NextStep>
         ) : (
           <StatusLine tone="todo">{data.perms.pmTeam ? data.perms.generate.reason : 'The PM team will write it when the earlier steps are done.'}</StatusLine>
@@ -307,7 +320,7 @@ export function SimpleDocumentPage() {
                 </Button>
                 {contentsOpen && (
                   <div className="glass-strong absolute top-full left-0 z-30 mt-2 max-h-[60vh] w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-2xl p-2">
-                    <Contents items={contentsItems} active={activeSection} onPick={() => setContentsOpen(false)} />
+                    <Contents items={contentsItems} active={activeSection} onPick={() => setContentsOpen(false)} ownNumbers={!!data.format} />
                   </div>
                 )}
               </div>
@@ -322,7 +335,6 @@ export function SimpleDocumentPage() {
               )}
               <span className="ml-auto" />
               {data.perms.comment.ok && !showChanges && <span className="hidden text-sm text-muted md:inline">To comment, select some text</span>}
-              {(data.type === 'PROPOSAL' || data.type === 'BRD' || data.type === 'SRS') && <GrillMeButton pid={pid} target={data.type} size="lg" />}
               {data.type !== 'SQA_SIGNOFF' && data.type !== 'UAT_SIGNOFF' && (
                 <Button size="lg" variant="ghost" onClick={() => setShowComments(!showComments)} aria-expanded={showComments}>
                   <MessageSquare className="h-5 w-5" /> {showComments ? 'Hide comments' : `Comments${openComments ? ` (${openComments})` : ''}`}
@@ -339,7 +351,7 @@ export function SimpleDocumentPage() {
             {!showComments && (
               <aside className="hidden lg:block">
                 <div className="sticky top-36 max-h-[calc(100vh-11rem)] overflow-y-auto pb-4">
-                  <Contents items={contentsItems} active={activeSection} />
+                  <Contents items={contentsItems} active={activeSection} ownNumbers={!!data.format} />
                 </div>
               </aside>
             )}
@@ -351,6 +363,7 @@ export function SimpleDocumentPage() {
               aiWritten={!current.authorId}
               status={data.status.key}
               record={record}
+              cover={data.format && !isPackage ? coverFor(data.format, { projectName: data.project.name, version: current.number, date: fmtDate(current.createdAt), createdBy: data.members.find((m) => m.team === 'PM')?.name, approvers: (round?.steps ?? []).map((st) => st.assigneeName) }) : undefined}
               signatures={data.signatures.filter((x) => x.versionId === current.id).map((x) => ({ name: x.signerName, at: x.signedAt, hash: x.docHash, note: x.onBehalf || undefined }))}
             >
               {showChanges && prev ? (
@@ -365,6 +378,7 @@ export function SimpleDocumentPage() {
                 <Reader
                   sections={shown}
                   numbered
+                  ownNumbers={!!data.format}
                   headingClass={HEADING}
                   regenerated={current.regeneratedSectionIds}
                   highlights={highlights}

@@ -98,7 +98,29 @@ export function requirementsFromText(project: Project, type: 'PROPOSAL' | 'BRD' 
   const prefix = type === 'PROPOSAL' ? 'OBJ' : type === 'BRD' ? 'BR' : 'SR' // objectives come from the Charter part
   const out: Requirement[] = []
   for (const s of sections) {
+    let heading = ''
     for (const line of s.content.split('\n')) {
+      // BRAC formats (rules/formats.ts): BRD table rows "| **FR-B-001** | … | … | details |",
+      // SRS blocks "### FR-01: Title" followed by "*Reference: FR-01 · Traces to: FR-B-001*"
+      const h = line.match(/^#{2,4}\s+(.+)$/)
+      if (h) heading = h[1].replace(/^(FR-\d+:|5\.\d+)\s*/, '').trim()
+      if (type === 'BRD') {
+        const row = line.match(/^\|\s*\*\*(FR-B-\d+)\*\*\s*\|/)
+        if (row) {
+          const cells = line.split('|').map((c) => c.trim())
+          const details = cells[4] ?? ''
+          const parent = details.match(/\*\(([^)]+)\)\*/)?.[1]
+          out.push({ id: row[1], projectId: project.id, docType: type, text: markdownToPlain(details.replace(/\*\([^)]+\)\*/, '')).trim(), parentId: parent?.split(',')[0].trim() })
+          continue
+        }
+      }
+      if (type === 'SRS') {
+        const ref = line.match(/^\*Reference:\s*(FR-\d+)(?:\s*·\s*Traces to:\s*([^*]+))?\*$/)
+        if (ref) {
+          out.push({ id: ref[1], projectId: project.id, docType: type, text: heading, parentId: ref[2]?.split(',')[0].trim() })
+          continue
+        }
+      }
       const m = line.match(new RegExp(`\\*\\*(${prefix}-\\d+):\\*\\*\\s*(.+?)(?:\\s*\\*\\((.+?)\\)\\*)?\\s*$`))
       if (m) out.push({ id: m[1], projectId: project.id, docType: type, text: markdownToPlain(m[2]), parentId: m[3]?.split(',')[0].trim() })
     }

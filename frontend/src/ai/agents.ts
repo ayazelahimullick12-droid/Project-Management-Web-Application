@@ -126,6 +126,38 @@ export async function draftSection(p: Project, docLabel: string, ts: TemplateSec
   return items.map((x, i) => `- **${pad(ts.numbered!, i + 1)}:** ${x.body}.${x.supports ? ` *(${x.supports})*` : ''}`).join('\n')
 }
 
+/**
+ * A short numbered list for the BRAC formats (BRD FR-B-001, NFR-001; SRS FR-01), each item linked to
+ * what it supports when the model names it. At most 3 items: the small model writes few well.
+ */
+export async function draftItems(p: Project, kind: 'FRB' | 'NFR' | 'FR', facts: Fact[], parents: { id: string; text: string }[], ids: (n: number) => string): Promise<{ id: string; text: string; supports?: string }[]> {
+  const text = await ask({ agent: 'docgen', title: `${kind === 'FR' ? 'SRS functions' : kind === 'NFR' ? 'Non-functional requirements' : 'Business requirements'}`, projectId: p.id, prompt: prompts.numbered(p, kind, facts, kind === 'NFR' ? [] : parents), maxTokens: LIMITS.list })
+  const lines = linesOf(text)
+  const ID = /\b(OBJ-\d+|BR-\d+|SR-\d+|FR-B-\d+|FR-\d+|NFR-\d+)\b/gi
+  const items = (bullets(lines).length ? bullets(lines) : lines)
+    .map((line) => {
+      const refs = (line.match(ID) ?? []).map((r) => r.toUpperCase())
+      const body = clean(markdownToPlain(line.replace(/[[(]\s*(OBJ|BR|SR|FR-B|FR|NFR)-\d+\s*[\])]\s*[:.-]?/gi, '').replace(/^(OBJ|BR|SR|FR-B|FR|NFR)-\d+\s*[:.-]\s*/i, ''))).replace(/[.;,:]$/, '')
+      const supports = parents.find((x) => refs.some((r) => r === x.id.toUpperCase() || r.replace(/-0*(\d+)$/, '-$1') === x.id.toUpperCase().replace(/-0*(\d+)$/, '-$1')))?.id
+      return { body, supports }
+    })
+    .filter((x) => x.body.length > 3)
+    .slice(0, 3)
+  if (!items.length) throw unusable()
+  return items.map((x, i) => ({ id: ids(i + 1), text: kind === 'FR' ? x.body.replace(/^the system shall\s*/i, '') : x.body, supports: x.supports }))
+}
+
+/** "The system shall …" lines for one SRS function (at most 3). */
+export async function draftShall(p: Project, frTitle: string, facts: Fact[]): Promise<string[]> {
+  const text = await ask({ agent: 'docgen', title: `SRS: ${frTitle}`, projectId: p.id, prompt: prompts.shall(p, frTitle, facts), maxTokens: LIMITS.list })
+  const lines = linesOf(text)
+  return (bullets(lines).length ? bullets(lines) : lines)
+    .map((l) => clean(markdownToPlain(l.replace(/^\d+[.)]\s*/, ''))))
+    .filter((l) => l.length > 8)
+    .slice(0, 3)
+    .map((l) => (/^the system (shall|must)/i.test(l) ? l : `The system shall ${l.charAt(0).toLowerCase()}${l.slice(1)}`).replace(/[^.]$/, (c) => `${c}.`))
+}
+
 /** "Rewrite with AI" on one section. */
 export async function rewriteSection(p: Project, docLabel: string, section: Section, instruction: string): Promise<string> {
   return tidy(await ask({ agent: 'regen', title: `Rewrite: ${section.title}`, projectId: p.id, prompt: prompts.rewrite(docLabel, section.title, section.content, instruction), maxTokens: LIMITS.rewrite }))

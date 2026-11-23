@@ -295,6 +295,9 @@ export interface Doc {
   title: string
   currentVersionId?: ID
   outOfSync?: { since: string; cause: string; suggestedSectionIds: ID[] }
+  // BRAC format the document was written in (November 2026; see rules/formats.ts). Missing: the
+  // older short template, for documents written before.
+  format?: 'BRD_A' | 'BRD_B' | 'SRS_FULL' | 'SRS_CR'
 }
 
 export interface Draft {

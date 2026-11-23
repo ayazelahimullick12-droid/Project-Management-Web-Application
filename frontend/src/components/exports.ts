@@ -4,6 +4,7 @@
  */
 import { brand } from '../theme/brand'
 import { PART_LABEL, sectionPart, type DocPart } from '../rules/pipeline'
+import { coverFor, signoffBlocks, type DocFormat } from '../rules/formats'
 
 const hex = (c: string) => c.replace('#', '')
 
@@ -89,7 +90,24 @@ export const printUrl = (versionId: string, kind: 'doc' | 'onepager' = 'doc', pa
  * The download choices for a document version. The Proposal & Charter can be downloaded as one
  * PDF, or each part on its own (PDF or Word), because they are often sent to different people.
  */
-export function downloadItems(doc: { project: { name: string }; label: string; status: { label: string } }, v: { id: string; number: number; sections: { key: string; title: string; content: string }[] }) {
+export function downloadItems(
+  doc: { project: { name: string }; label: string; status: { label: string }; format?: DocFormat; members?: { name: string; team: string }[]; chains?: { versionId?: string; status: string; steps: { assigneeName: string; roleLabel: string }[] }[] },
+  v: { id: string; number: number; createdAt?: string; sections: { key: string; title: string; content: string }[] },
+) {
+  // A document written in a BRAC format downloads in BRAC's Word layout (components/exportBrac.ts)
+  if (doc.format) {
+    const format = doc.format
+    const people = [...(doc.chains ?? [])].reverse().find((c) => c.versionId === v.id && c.status !== 'cancelled')?.steps.map((x) => ({ name: x.assigneeName, role: x.roleLabel })) ?? []
+    const author = doc.members?.find((m) => m.team === 'PM')?.name ?? '<author>'
+    const date = new Date(v.createdAt ?? Date.now()).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+    const word = async () => {
+      const { exportBracDocx } = await import('./exportBrac')
+      const sections = v.sections.map((x) => (x.key === 'signoff' && people.length ? { ...x, content: signoffBlocks(format, people) } : x))
+      const kind = format.startsWith('SRS') ? 'SRS' : 'BRD'
+      await exportBracDocx({ format, cover: coverFor(format, { projectName: doc.project.name, version: v.number, date, createdBy: author, approvers: people.map((x) => x.name) }), sections, date, author, fileName: `${safeName(doc.project.name)}_${kind}_v${v.number}.0.docx` })
+    }
+    return [{ label: 'Download PDF', href: printUrl(v.id) }, { label: 'Download Word (.docx), BRAC format', onClick: () => void word() }]
+  }
   const word = (title: string, sections: typeof v.sections) => () =>
     exportDocx({ project: doc.project.name, title, versionLabel: `Version ${v.number}`, status: doc.status.label, sections, fileName: `${safeName(doc.project.name)}-${safeName(title)}-v${v.number}.docx` })
   const isPackage = v.sections.some((s) => sectionPart(s.key) === 'charter')

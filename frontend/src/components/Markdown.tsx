@@ -5,8 +5,13 @@ import DOMPurify from 'dompurify'
 import { marked } from 'marked'
 import { useEffect, useMemo, useRef } from 'react'
 
+/**
+ * Placeholders such as <Module> or <reviewer full name> (BRAC formats) are text, not HTML tags:
+ * they are escaped so they show instead of being removed.
+ */
 export function mdToHtml(md: string): string {
-  return DOMPurify.sanitize(marked.parse(md ?? '', { async: false }) as string)
+  const text = (md ?? '').replace(/<(?!\/?(br|sup|sub)\b)(?=[^<>\n]{1,80}>)/gi, '&lt;')
+  return DOMPurify.sanitize(marked.parse(text, { async: false }) as string)
 }
 
 export interface Highlight {

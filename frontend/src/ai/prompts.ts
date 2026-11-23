@@ -53,8 +53,13 @@ ${factLines(facts)}
 Write the "${title}" section of the ${docLabel}. It should cover: ${guidance}
 Write at most 2 short sentences, or 3 lines starting with "- ". Under 50 words. No heading.`,
 
-  numbered: (p: Project, kind: 'OBJ' | 'BR' | 'SR', facts: Fact[], parents: { id: string; text: string }[]) => {
-    const what = kind === 'OBJ' ? 'objectives, each with how success is measured' : kind === 'BR' ? 'business requirements (what users must be able to do)' : 'software requirements (what the system must do)'
+  numbered: (p: Project, kind: 'OBJ' | 'BR' | 'SR' | 'FRB' | 'NFR' | 'FR', facts: Fact[], parents: { id: string; text: string }[]) => {
+    const what =
+      kind === 'OBJ' ? 'objectives, each with how success is measured'
+      : kind === 'BR' || kind === 'FRB' ? 'business requirements (what users must be able to do)'
+      : kind === 'NFR' ? 'non-functional requirements (speed, availability, security or devices), each with a number where known'
+      : kind === 'FR' ? 'software functions, each a short title naming the action and the system, e.g. "Approve leave requests in the ERP"'
+      : 'software requirements (what the system must do)'
     const link = parents.length ? `\nEach one must support one of these. End the line with its id in brackets, e.g. [${parents[0].id}]:\n${parents.map((x) => `- ${x.id}: ${x.text}`).join('\n')}` : ''
     return `Project: ${p.name}
 About the project: ${about(p)}
@@ -85,6 +90,15 @@ Then say which of these facts it is about, or none: ${keys.map((k) => k.key).joi
 Use exactly this layout:
 Question: <the question>
 Fact: <one key from the list, or none>`,
+
+  /** "The system shall …" lines for one SRS functional requirement. */
+  shall: (p: Project, frTitle: string, facts: Fact[]) =>
+    `Project: ${p.name}
+Known facts:
+${factLines(facts)}
+
+Software function: ${frTitle}
+Write 3 testable requirements for it. One per line, each starting with "The system shall". Each under 20 words.`,
 
   /** An approver asks about a document: answer only from its summary and text. */
   askDoc: (docLabel: string, projectName: string, summary: string, text: string, question: string) =>

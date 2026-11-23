@@ -4,20 +4,22 @@
  * Spec: SPEC.md "Document pipeline", "Approval and signing", "Editing, versions and change
  * requests" and "Comments and suggestions". The rules themselves live in src/rules.
  */
-import type { ApprovalChain, ApprovalStep, Comment, DemoState, Doc, DocType, DocVersion, ID, Project, Section, TemplateSection, User } from '../types'
+import type { ApprovalChain, ApprovalStep, Comment, DemoState, Doc, DocType, DocVersion, ID, Project, Section, Template, TemplateSection, User } from '../types'
 import { MAIN_DOCS } from '../types'
 import { now, nowIso } from '../demo/clock'
 import { newId } from '../demo/ids'
 import { runAiJob, runJob } from '../demo/jobs'
 import { getState, mutate } from '../demo/store'
 import { detectFactChanges, requirementsFromCanned, requirementsFromText, scopeCheck as simulateScopeCheck } from '../demo/ai/agents'
-import { answerAboutDocument, draftSection, rewriteSection as aiRewrite, scopeVerdict, summarize } from '../ai/agents'
+import { answerAboutDocument, draftItems, draftSection, draftShall, rewriteSection as aiRewrite, scopeVerdict, summarize } from '../ai/agents'
 import { missingPeople } from '../rules/people'
 import { approve as approveRule, canAct, chainNeeds, CHAIN_CONFIG, cancel, currentStep, minorCorrectionChain, newChain, requestChanges as requestChangesRule, pmChoosesApprovers, ROLE_LABEL, sendCheck, sign as signRule, stepTeam } from '../rules/approval'
 import { blockingCounts, canCheckPending, canComment, canTick, carryForward, commentTeam } from '../rules/comments'
 import { actAsHead, can, COVER_LABEL, headOf, headRecipient, inTeam, isOwner, isSqa, memberOf, onBehalfText, roleLabel, TEAM_LABEL, type Check } from '../rules/permissions'
 import { activeChain, canGenerate, chainsOf, DOC_LABEL, docStatus, factSheetConfirmed, isComplete, roundClosed, laterTypes, PART_LABEL, PIPELINE, previousComplete, sectionPart } from '../rules/pipeline'
 import { exitCriteria } from '../rules/testing'
+import { brdRequirements, CR_ANALYTICS, defaultFormat, FORMAT_SECTIONS, FORMATS_FOR, fixedSection, glossary, openQuestions, reqId, srsBlock, traceability, type DocFormat, type FormatCtx, type Item } from '../rules/formats'
+import { memberLabel } from '../rules/permissions'
 import { markdownToPlain, normalize } from '../rules/text'
 import { act, ApiError, ensure, fail, me, nameOf, pipelineCtx, projectOf, read } from './core'
 import { allMembers, audit, notify, teamMembers } from './effects'
@@ -170,6 +172,9 @@ export async function getDocument(pid: ID, type: DocType) {
       complete: isComplete(ctx, type),
       // The document's own steps (Simple view step bar): its questions are done when the facts are
       // confirmed (Proposal & Charter) or its question round is closed (BRD, SRS).
+      format: doc?.format,
+      formatChoices: FORMATS_FOR[type] ?? [],
+      defaultFormat: defaultFormat(type, p.intake.kind?.value),
       questionsDone: type === 'PROPOSAL' ? factSheetConfirmed(ctx) : type === 'BRD' ? roundClosed(ctx, 'brd_business') : type === 'SRS' ? roundClosed(ctx, 'srs_technical') : true,
       // Heads of the approval chain not added yet (shown with "Add"; the Owner or PM approves in their place).
       missing: pmChoosesApprovers(type) ? [] : missingPeople(p, chainNeeds(type)),
@@ -207,7 +212,7 @@ function minorCheck(s: DemoState, p: Project, doc: Doc | undefined, current: Doc
   if (!CHAIN_CONFIG[doc.type].comments) return { ok: false }
   const pm = actAsHead(p, 'PM', user.id, t)
   if (!pm.ok) return { ok: false, reason: 'Only the PM declares a minor correction.', requested: true }
-  const template = s.templates.find((x) => x.docType === doc.type && x.version === (p.templateVersions[doc.type] ?? 1))
+  const template = templateOf(s, p, doc.type)
   const sc = simulateScopeCheck(template, reviewed.sections, current.sections)
   if (sc.flagged) return { ok: false, reason: `Not possible: ${sc.reason} A minor correction cannot touch objectives, deliverables, budget or timeline, so the full chain must run.`, requested: true }
   const counts = blockingCounts(s.comments, doc.id)
@@ -217,7 +222,7 @@ function minorCheck(s: DemoState, p: Project, doc: Doc | undefined, current: Doc
 
 // ─── Generation ─────────────────────────────────────────────────────────
 
-export async function generate(pid: ID, type: DocType) {
+export async function generate(pid: ID, type: DocType, chosenFormat?: DocFormat) {
   const s0 = await read((s) => s)
   const user = me(s0)
   const p = projectOf(s0, pid)
@@ -226,14 +231,18 @@ export async function generate(pid: ID, type: DocType) {
   if (s0.docs.some((d) => d.projectId === pid && d.type === type && d.currentVersionId)) fail('This document already has a version. Edit it, or use “Rewrite with AI” on a section.')
   const template = s0.templates.find((x) => x.docType === type && x.version === (p.templateVersions[type] ?? 1))!
   const parents = parentsFor(s0, pid, type)
+  // BRD and SRS: BRAC's formats (the PM may pick the other one before it is written)
+  const format = chosenFormat && FORMATS_FOR[type]?.includes(chosenFormat) ? chosenFormat : defaultFormat(type, p.intake.kind?.value)
+  const ctx = formatCtx(s0, p)
   return runAiJob({
     agent: 'docgen',
     title: `Drafting the ${DOC_LABEL[type]}`,
     projectId: pid,
     byUserId: user.id,
     link: `/projects/${pid}/docs/${type}`,
-    steps: template.sections.map((x, i) => `Writing section ${i + 1} of ${template.sections.length}: ${x.title}`),
+    steps: (format ? FORMAT_SECTIONS[format] : template.sections).map((x, i, all) => `Writing section ${i + 1} of ${all.length}: ${x.title}`),
     work: async (step) => {
+      if (format) return writeFormatted(p, type, format, ctx, parents, step)
       const out: { key: string; title: string; content: string; factKeys: string[] }[] = []
       for (const [i, ts] of template.sections.entries()) {
         step(i)
@@ -250,6 +259,7 @@ export async function generate(pid: ID, type: DocType) {
         s.docs.push(doc)
         s.chats.push({ id: `${doc.id}-chat`, projectId: pid, kind: 'document', docId: doc.id, title: `${DOC_LABEL[type]} chat` })
       }
+      if (format) doc.format = format
       const fsNumber = s.factSheets.filter((f) => f.projectId === pid).length
       const v: DocVersion = {
         id: newId('ver'), docId: doc.id, projectId: pid, number: 1, authorId: null, message: `First draft generated by AI from Fact Sheet v${fsNumber}`, kind: 'ai_draft',
@@ -280,7 +290,69 @@ function parentsFor(s: DemoState, pid: ID, type: DocType) {
 }
 
 function templateSection(s: DemoState, p: Project, type: DocType, key: string): TemplateSection | undefined {
-  return s.templates.find((x) => x.docType === type && x.version === (p.templateVersions[type] ?? 1))?.sections.find((x) => x.key === key)
+  return templateOf(s, p, type)?.sections.find((x) => x.key === key)
+}
+
+/**
+ * The template a document follows. A document written in a BRAC format (rules/formats.ts) uses that
+ * format's sections (so the scope check and "Rewrite with AI" know them); others the project's template.
+ */
+function templateOf(s: DemoState, p: Project, type: DocType): Template | undefined {
+  const base = s.templates.find((x) => x.docType === type && x.version === (p.templateVersions[type] ?? 1))
+  const format = s.docs.find((d) => d.projectId === p.id && d.type === type)?.format
+  if (!format || !base) return base
+  return { ...base, sections: FORMAT_SECTIONS[format].map((x) => ({ key: x.key, title: x.title, guidance: x.guidance ?? x.title, factKeys: x.factKeys, scopeSensitive: x.scopeSensitive })) }
+}
+
+/** What the code-built parts of a BRAC format are made from: the project's own data, nothing invented. */
+function formatCtx(s: DemoState, p: Project): FormatCtx {
+  const seen = new Set<string>()
+  const people = p.members
+    .filter((m) => (seen.has(m.userId + m.team) ? false : (seen.add(m.userId + m.team), true)))
+    .map((m) => ({ name: nameOf(s, m.userId), unit: TEAM_LABEL[m.team], role: memberLabel(m) }))
+  return {
+    projectName: p.name,
+    facts: p.facts,
+    people,
+    files: s.uploads.filter((u) => u.projectId === p.id).map((u) => u.name),
+    kind: p.intake.kind?.value,
+    objectives: s.requirements.filter((x) => x.projectId === p.id && x.docType === 'PROPOSAL').map((x) => ({ id: x.id, text: x.text })),
+  }
+}
+
+/** Writes a BRD or SRS in a BRAC format: the AI writes the prose and the lists, the code the rest. */
+async function writeFormatted(p: Project, type: DocType, format: DocFormat, ctx: FormatCtx, parents: { id: string; text: string }[], step: (i: number) => void) {
+  const out: { key: string; title: string; content: string; factKeys: string[] }[] = []
+  const label = aiLabel(type, '')
+  let frb: Item[] = []
+  for (const [i, fs] of FORMAT_SECTIONS[format].entries()) {
+    step(i)
+    let content = ''
+    if (fs.make === 'ai') content = await draftSection(p, label, { key: fs.key, title: fs.title, guidance: fs.guidance ?? fs.title, factKeys: fs.factKeys }, p.facts, [])
+    else if (fs.make === 'fixed') content = fixedSection(format, fs.key, ctx)
+    else if (fs.make === 'reqs') {
+      const changes = await draftSection(p, label, { key: fs.key, title: 'Business Requirements', guidance: fs.guidance ?? '', factKeys: fs.factKeys }, p.facts, [])
+      frb = await draftItems(p, 'FRB', p.facts, ctx.objectives, (n) => reqId('FRB', n))
+      const nfr = await draftItems(p, 'NFR', p.facts, [], (n) => reqId('NFR', n)).catch(() => [])
+      content = brdRequirements(format, changes, frb, nfr)
+    } else if (fs.make === 'frs') {
+      const frs = await draftItems(p, 'FR', p.facts, parents, (n) => reqId('FR', n))
+      const blocks: string[] = []
+      for (const [n, fr] of frs.entries()) blocks.push(srsBlock(format, n + 1, fr, await draftShall(p, fr.text, p.facts).catch(() => [])))
+      if (format === 'SRS_CR') blocks.push(srsBlock(format, frs.length + 1, CR_ANALYTICS, []))
+      content = blocks.join('\n\n')
+    }
+    out.push({ key: fs.key, title: fs.title, content, factKeys: fs.factKeys })
+  }
+  // Built after the rest: they read what was written
+  const all = out.map((x) => x.content).join('\n')
+  for (const x of out) {
+    if (x.key === 'glossary') x.content = glossary(all, type === 'SRS' ? 'SRS' : 'BRD')
+    if (x.key === 'traceability') x.content = traceability(frb)
+  }
+  const oq = out.find((x) => x.key === 'open_questions')
+  if (oq) oq.content = openQuestions(out.map((x) => x.content).join('\n'))
+  return out
 }
 
 // ─── Summaries and slides (AI, made for each new version) ──────────────
@@ -570,7 +642,7 @@ export async function saveVersion(docId: ID, message: string, scopeDecision?: 'n
     if (d.proposals?.length) fail('Accept or reject the AI proposals first.')
     if (d.sections.every((x) => normalize(prev.sections.find((y) => y.id === x.id)?.content ?? '') === normalize(x.content))) fail('Nothing has changed since the last version.')
     if (!message.trim()) fail('Write a short message describing the change.')
-    const template = s.templates.find((x) => x.docType === doc.type && x.version === (p.templateVersions[doc.type] ?? 1))
+    const template = templateOf(s, p, doc.type)
     const rule = simulateScopeCheck(template, prev.sections, d.sections)
     const sc = rule.flagged && d.scopeCheck?.key === draftKey(d.sections) ? { ...rule, ...d.scopeCheck } : rule
     const pm = actAsHead(p, 'PM', user.id, t)

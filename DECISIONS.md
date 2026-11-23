@@ -300,3 +300,13 @@ The user asked to bring the "grill me" idea (a Claude Code skill by Matt Pocock:
 - **Questions & facts** holds only the first stage: the request, update or new, up to 3 questions, the Fact Sheet. Its questions are the Proposal & Charter's step 1.
 - The **BRD's and the SRS's questions** (up to 3 each) are asked in that document's own tab, before it is written; then "Write it with AI" opens. The summary and slides are made with every new version (as before).
 - The small model sometimes repeated an earlier question word for word; such a question is asked again, and as a last resort the question names the fact ("Could you tell me about this: approval steps?").
+
+## BRD and SRS in BRAC's formats (23 November 2026)
+
+- Source: "BRAC BRD & SRS Generator — Master Instructions" (kept outside this repo) and the magenta BRAC logo (`frontend/public/brac-logo.webp`).
+- New BRD and SRS drafts are written in a BRAC format; the PM picks it before the AI writes: **BRD Template A** (default) or **Template B**; **Full SRS** for a new project, **Change Request SRS** for an update (from the Update / New label), switchable. The format is saved on the document (`Doc.format`); documents written before keep the older short template. No saved data was converted.
+- The small model writes only short prose and short lists. Code builds everything with a fixed shape: the cover and control table, Document Resources (the project's members), Key Assumptions and Constraints (from the facts), the priority table word for word, the six requirement groups of 8.1, 9.0 use-case and report tables, glossary (BRAC terms used), traceability matrix, appendix (uploaded files), sign-off blocks, Change Effort Estimation and CR Accumulation. Unknown values stay `<placeholders>` and are listed under **Open Questions** at the end. Nothing is invented; signatures are never generated.
+- Requirement ids follow the instructions: BRD **FR-B-001** (linked to the Charter objectives), **NFR-001**; SRS **FR-01** with "Traces to" the BRD requirement. Traceability and test points read them back.
+- **Word export** of a BRAC-format document: A4, Calibri (BRD) / Segoe UI Light (SRS), logo on the cover and top-left in the header, the control table, Change history and a table of contents from real headings (Template A; Word updates it on opening), real tables, the BRAC footer with Page X of Y, and the sign-off blocks filled with the people the PM chose. File name `<Project>_BRD_v1.0.docx` / `_SRS_`.
+- The PDF (print view) still uses the app's own layout.
+- **Grill me** buttons removed (Fact Sheet and documents): the questions now happen in each document's own steps.
