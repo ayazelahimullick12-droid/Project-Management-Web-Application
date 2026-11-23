@@ -16,6 +16,7 @@ import { useSessionUserId } from './api/hooks'
 import { usePrefs, useTextSize, useThemeClass, useTransparencyClass } from './components/prefs'
 import { AppShell } from './components/Layout'
 import { ToastProvider } from './components/toast'
+import { CalendarReminders } from './pages/calendar/ChatMeeting'
 import { LoginPage } from './pages/LoginPage'
 import { DashboardPage, ArchivePage } from './pages/DashboardPage'
 import { NewProjectPage } from './pages/NewProjectPage'
@@ -105,6 +106,7 @@ export function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
+        <CalendarReminders />
         <BrowserRouter>
           <DataRefresh />
           <SaveProblem />

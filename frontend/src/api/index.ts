@@ -5,6 +5,7 @@
  * of the data; later each one becomes an HTTP call to FastAPI with the same name and shape.
  */
 import * as admin from './admin'
+import * as calendar from './calendar'
 import * as changes from './changes'
 import * as chat from './chat'
 import * as documents from './documents'
@@ -14,5 +15,5 @@ import * as notifications from './notifications'
 import * as projects from './projects'
 import * as testing from './testing'
 
-export const api = { admin, changes, chat, documents, grill, intake, notifications, projects, testing }
+export const api = { admin, calendar, changes, chat, documents, grill, intake, notifications, projects, testing }
 export { ApiError } from './core'

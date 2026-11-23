@@ -310,3 +310,14 @@ The user asked to bring the "grill me" idea (a Claude Code skill by Matt Pocock:
 - **Word export** of a BRAC-format document: A4, Calibri (BRD) / Segoe UI Light (SRS), logo on the cover and top-left in the header, the control table, Change history and a table of contents from real headings (Template A; Word updates it on opening), real tables, the BRAC footer with Page X of Y, and the sign-off blocks filled with the people the PM chose. File name `<Project>_BRD_v1.0.docx` / `_SRS_`.
 - The PDF (print view) still uses the app's own layout.
 - **Grill me** buttons removed (Fact Sheet and documents): the questions now happen in each document's own steps.
+
+## Meetings calendar in Messages (23 November 2026)
+
+- **Messages → Calendar** (switch at the top of Messages), and a **Schedule a meeting** button in every chat header. Built inside the app with the features of a Google Calendar API v3 event; no Google account is connected (decided with the user).
+- Event features: meeting / out of office / focus time / working location; title, all day, start and end with time zone; repeats (daily, weekly on days, every weekday Sun–Thu, monthly on a day or on the nth weekday, yearly, custom every N, ends never / on a date / after N times); guests from the app or by email, optional guests, replies Yes / No / Maybe with a note and "+N guests"; guest permissions (change, invite others, see the guest list); free/busy with clash warnings and **Find a time** (BRAC working hours, Sunday–Thursday 9–5); video call in the app (in the meeting's chat); location, description, attachments; calendar (My calendar or a project's), the 11 Google event colours, busy/free, visibility (private meetings show only "Busy" to others), tentative status; reminders (pop-up or email, up to 5, or the default 10-minute pop-up); "tell the guests" (sendUpdates). Out of office / focus time can decline invitations automatically.
+- Repeating meetings: change or delete this event, this and following, or all (Google's way: an exception, or a split series).
+- Views: Day, Week, Month, Schedule; quick add from a sentence ("Budget review Thursday at 2pm for 30 minutes"); calendars can be hidden.
+- A meeting scheduled from a chat posts a card there with Yes / No / Maybe. Guests get notifications; email guests get a message in the Mailbox. Pop-up reminders appear while the app is open.
+- Sharing out: **Add to Google Calendar** (opens Google Calendar with the meeting filled in; the person saves it) and **Download .ics**.
+- Saved data: `events` and `remindersShown` are optional, so older saved data needs no change.
+- Code: `src/rules/calendar.ts` (+ tests), `src/api/calendar.ts`, `src/pages/calendar/*`.

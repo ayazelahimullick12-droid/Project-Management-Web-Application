@@ -484,6 +484,7 @@ export interface Message {
   kind: 'text' | 'system' | 'transcript' | 'call'
   decisionId?: ID
   transcriptId?: ID
+  eventId?: ID // a meeting card (scheduled from this chat)
   reactions?: Record<string, ID[]> // emoji → who reacted
 }
 
@@ -721,6 +722,8 @@ export interface DemoState {
   chats: Chat[]
   messages: Message[]
   calls: Call[]
+  events?: CalendarEvent[] // calendar meetings (optional: older saved data has none)
+  remindersShown?: string[] // popup reminders already shown ('<userId>:<eventId>:<start>:<minutes>')
   transcripts: Transcript[]
   decisions: CandidateDecision[]
   notifications: Notification[]
@@ -737,4 +740,68 @@ export interface DemoState {
   testPoints: TestPoint[]
   productVersions: ProductVersion[]
   pointChecks: PointCheck[]
+}
+
+// ─── Calendar (Messages → Calendar, November 2026) ───────────────────────
+// A meeting with the fields of a Google Calendar API v3 Event, kept inside the app.
+
+export type Weekday = 'SU' | 'MO' | 'TU' | 'WE' | 'TH' | 'FR' | 'SA'
+
+export interface Recurrence {
+  freq: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY'
+  interval: number // every N days / weeks / months / years
+  byDay?: Weekday[] // weekly: on these days
+  monthlyBy?: 'monthday' | 'weekday' // monthly: on day 14, or on the 2nd Tuesday
+  count?: number // ends after N times
+  until?: string // ends on this date (yyyy-mm-dd)
+}
+
+export type Rsvp = 'needsAction' | 'accepted' | 'declined' | 'tentative'
+
+export interface EventAttendee {
+  userId?: ID // a person in the app (otherwise an email guest)
+  email: string
+  name: string
+  optional?: boolean
+  responseStatus: Rsvp
+  comment?: string // note with the reply
+  additionalGuests?: number // "+N guests"
+}
+
+export interface CalendarEvent {
+  id: ID
+  calendarId: string // 'user:<id>' (My calendar) or 'project:<id>' (the project's calendar)
+  projectId?: ID
+  chatId?: ID // the conversation it was scheduled from (its card is posted there)
+  eventType: 'default' | 'outOfOffice' | 'focusTime' | 'workingLocation'
+  summary: string
+  description?: string
+  location?: string
+  allDay: boolean
+  start: string // UTC ISO, or yyyy-mm-dd when all day
+  end: string // exclusive
+  timeZone: string // IANA, e.g. Asia/Dhaka
+  recurrence?: Recurrence
+  exdates?: string[] // occurrences removed or changed (their original start)
+  recurringEventId?: ID // this is one changed occurrence of that series…
+  originalStart?: string // …replacing this slot
+  organizerId: ID
+  attendees: EventAttendee[]
+  guestsCanModify: boolean
+  guestsCanInviteOthers: boolean
+  guestsCanSeeOtherGuests: boolean
+  reminders: { useDefault: boolean; overrides: { method: 'popup' | 'email'; minutes: number }[] }
+  conference?: { kind: 'inApp'; label: string } // video call in the app, in the event's chat
+  colorId?: string // '1'–'11'
+  transparency: 'opaque' | 'transparent' // shows as busy / free
+  visibility: 'default' | 'public' | 'private' | 'confidential'
+  status: 'confirmed' | 'tentative' | 'cancelled'
+  attachments: { title: string; fileName: string }[]
+  workingLocation?: { type: 'homeOffice' | 'officeLocation' | 'customLocation'; label?: string }
+  autoDecline?: { on: boolean; message?: string } // out of office / focus time: decline new invitations
+  focusChatStatus?: 'doNotDisturb' | 'available'
+  sequence: number // changes since it was created
+  createdAt: string
+  updatedAt: string
+  createdBy: ID
 }

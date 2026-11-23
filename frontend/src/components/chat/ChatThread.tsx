@@ -19,6 +19,7 @@ import { AiBadge } from '../ai'
 import { dayKey, fmtDateTime, fmtDay, fmtTime } from '../format'
 import { Avatar, Badge, Button } from '../ui'
 import { showCall, useDock } from './dock'
+import { MeetingCard } from '../../pages/calendar/ChatMeeting'
 
 export type ChatData = Awaited<ReturnType<typeof api.chat.getChat>>
 type Msg = ChatData['messages'][number]
@@ -278,6 +279,8 @@ function DecisionTag({ m }: { m: Msg }) {
 }
 
 function SystemLine({ m }: { m: Msg }) {
+  // A meeting scheduled from this chat: a card with Yes / No / Maybe
+  if (m.eventId) return <MeetingCard eventId={m.eventId} text={`${m.body.split(':')[0]} · ${fmtTime(m.createdAt)}`} />
   return (
     <div className="my-3 flex justify-center px-4">
       <span className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-ink/[0.05] px-3 py-1 text-center text-[11px] text-muted" title={fmtDateTime(m.createdAt)}>

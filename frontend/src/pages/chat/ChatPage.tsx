@@ -15,7 +15,9 @@ import { useApi, useSessionUserId } from '../../api/hooks'
 import { AiNote } from '../../components/ai'
 import { CallButtons, ChatThread, isDirect, useChat, type ChatData } from '../../components/chat/ChatThread'
 import { ChannelIcon, ConversationList, NewMessage } from '../../components/chat/ConversationList'
-import { Avatar, Badge, ErrorBox, ProjectIcon } from '../../components/ui'
+import { Avatar, Badge, ErrorBox, ProjectIcon, Segmented } from '../../components/ui'
+import { CalendarPage } from '../calendar/CalendarPage'
+import { ScheduleButton } from '../calendar/ChatMeeting'
 
 function Details({ data }: { data: ChatData }) {
   const direct = isDirect(data.chat.kind)
@@ -119,6 +121,7 @@ function Conversation({ chatId, onBack }: { chatId: string; onBack: () => void }
                 {direct ? (away ? 'Away' : data.other?.title) : `${data.project?.name} · ${data.members.length} people`}
               </div>
             </div>
+            {data.canPost && <ScheduleButton chatId={chatId} projectId={data.project?.id} kind={data.chat.kind} memberIds={data.members.map((m) => m.id)} />}
             <CallButtons chatId={chatId} data={data} />
             <button onClick={() => setDetails(!details)} className="hidden rounded-lg p-2 text-muted hover:bg-ink/5 hover:text-ink xl:block" title={details ? 'Hide details' : 'Show details'}>
               {details ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
@@ -143,6 +146,24 @@ export function MessagesPage() {
   const [composing, setComposing] = useState(false)
   const all = [...(lists?.channels ?? []), ...(lists?.direct ?? [])].sort((a, b) => (b.last?.createdAt ?? '').localeCompare(a.last?.createdAt ?? ''))
   const active = chatId ?? all[0]?.id
+  // Chats or Calendar (meetings), switched at the top of the page
+  const switcher = (
+    <Segmented
+      value={chatId === 'calendar' ? 'calendar' : 'chats'}
+      onChange={(x) => navigate(x === 'calendar' ? '/messages/calendar' : '/messages')}
+      options={[{ id: 'chats', label: 'Chats' }, { id: 'calendar', label: 'Calendar' }]}
+    />
+  )
+  if (chatId === 'calendar')
+    return (
+      <div className="flex h-full min-h-0 flex-col">
+        <div className="flex h-16 shrink-0 items-center gap-4 border-b border-line px-4">
+          <h1 className="page-title text-lg">Messages</h1>
+          {switcher}
+        </div>
+        <CalendarPage />
+      </div>
+    )
   const open = (id: string) => {
     setComposing(false)
     navigate(`/messages/${id}`)
@@ -152,6 +173,7 @@ export function MessagesPage() {
       <aside className={clsx('w-full shrink-0 flex-col border-r border-line md:flex md:w-80', chatId ? 'hidden' : 'flex')}>
         <div className="flex h-16 shrink-0 items-center justify-between border-b border-line px-4">
           <h1 className="page-title text-lg">Messages</h1>
+          {switcher}
           <button onClick={() => setComposing(true)} className="rounded-lg p-2 text-muted hover:bg-ink/5 hover:text-ink" title="New message">
             <SquarePen className="h-4 w-4" />
           </button>
