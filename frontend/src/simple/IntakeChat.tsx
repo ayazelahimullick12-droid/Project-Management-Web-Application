@@ -23,7 +23,6 @@ import { api } from '../api'
 import { useAction, useApi } from '../api/hooks'
 import { Avatar, Button, ErrorBox, LinkButton, Loading, Segmented, Textarea } from '../components/ui'
 import { FileButton } from '../components/FileButton'
-import { SimplePage } from './parts'
 
 type Data = Awaited<ReturnType<typeof api.intake.getIntake>>
 type Stage = 'intake' | 'brd_business' | 'srs_technical'
@@ -333,8 +332,10 @@ export function SimpleIntakePage() {
   )
 
   return (
-    <SimplePage title="Questions & facts" subtitle="Tell us what you need and answer a few questions. The AI turns it into the project facts every document is written from." wide>
-      <div className="mx-auto max-w-4xl space-y-4">
+    <div>
+      {/* No visible title: the tab bar already says where you are, and the chat gets the room */}
+      <h1 className="sr-only">Questions & facts</h1>
+      <div className="mx-auto max-w-5xl space-y-4">
         <Segmented
           value={tab}
           onChange={(x) => setParams(x === 'facts' ? { tab: 'facts' } : {}, { replace: true })}
@@ -345,7 +346,7 @@ export function SimpleIntakePage() {
         />
         {tab === 'chat' && (
         <section aria-label="Chat" className="min-w-0">
-          <div ref={chatBox} className="h-[calc(100dvh-22.5rem)] min-h-[24rem] space-y-6 overflow-y-auto overscroll-contain rounded-3xl bg-canvas/60 p-4 ring-1 ring-line sm:p-6">
+          <div ref={chatBox} className="h-[calc(100dvh-16rem)] min-h-[24rem] space-y-6 overflow-y-auto overscroll-contain rounded-3xl bg-canvas/60 p-4 ring-1 ring-line sm:p-6">
             {shown.map((st) => {
               const qs = chatQuestions(st.id)
               const done = stageDone(st.id)
@@ -414,7 +415,7 @@ export function SimpleIntakePage() {
 
         {tab === 'facts' && <FactPanel data={data} missingNow={missingNow.length} pid={pid} />}
       </div>
-    </SimplePage>
+    </div>
   )
 }
 
