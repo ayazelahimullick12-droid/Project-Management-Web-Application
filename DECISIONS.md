@@ -280,3 +280,7 @@ The user asked to bring the "grill me" idea (a Claude Code skill by Matt Pocock:
 
 - The small model often says "the document does not say" even when it does. Before asking, the lines that share the most words with the question are put first; if the model still says it does not know, those lines are shown as the answer ("The closest lines in the document: …"). Code: `askAboutDocument` and `closestLines` in `src/api/documents.ts`.
 - Nothing is saved except the AI log entry.
+
+## The Fact Sheet is confirmed in its own tab (23 November 2026)
+
+- Simple view, Questions & facts: the **Fact Sheet** tab shows the main Fact Sheet (the same one as the full view: edit, comments, Grill me, versions). It is sent for confirmation and confirmed **there only**. When the chat's questions are done, the chat says what happens next and has an "Open the Fact Sheet" button; it no longer has the send or confirm buttons.

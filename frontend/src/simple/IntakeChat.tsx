@@ -16,13 +16,14 @@
  * answerQuestion, requestConfirmation, confirmFactSheet).
  */
 import { clsx } from 'clsx'
-import { Check, ChevronRight, CircleHelp, FileText, Paperclip, Sparkles } from 'lucide-react'
+import { Check, ChevronRight, FileText, Paperclip, Sparkles } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../api'
 import { useAction, useApi } from '../api/hooks'
 import { Avatar, Button, ErrorBox, LinkButton, Loading, Segmented, Textarea } from '../components/ui'
 import { FileButton } from '../components/FileButton'
+import { FactsTab } from '../pages/intake/FactsTab'
 
 type Data = Awaited<ReturnType<typeof api.intake.getIntake>>
 type Stage = 'intake' | 'brd_business' | 'srs_technical'
@@ -175,8 +176,6 @@ export function SimpleIntakePage() {
   const save = useAction((text: string) => api.intake.saveDescription(pid, text), { success: 'Saved.', onDone: () => setEditing(false) })
   const upload = useAction((f: Parameters<typeof api.intake.upload>[1]) => api.intake.upload(pid, f), { success: 'Reading the file in the background…' })
   const analyse = useAction(() => api.intake.runAnalysis(pid), { success: 'The AI is reading it. Progress is shown at the top.' })
-  const request = useAction(() => api.intake.requestConfirmation(pid), { success: 'Sent to the stakeholder head to confirm.' })
-  const confirmFacts = useAction(() => api.intake.confirmFactSheet(pid), { success: 'Facts confirmed. The Proposal & Charter can be written now.' })
 
   /** Moves the chat on: the AI asks the next question (or closes the stage after 3). */
   const askNext = async () => {
@@ -210,7 +209,6 @@ export function SimpleIntakePage() {
   const current = data.chatStage
   const shown = STAGES.filter((st) => st.id === 'intake' || stageRounds(st.id).length > 0 || current === st.id)
   const kindLabel = data.kind?.value === 'update' ? 'an update to an existing application' : 'a new project'
-  const missingNow = data.facts.filter((f) => f.status === 'missing' && f.round === (current ?? 'intake'))
 
   const intakeBody = (
     <>
@@ -341,7 +339,7 @@ export function SimpleIntakePage() {
           onChange={(x) => setParams(x === 'facts' ? { tab: 'facts' } : {}, { replace: true })}
           options={[
             { id: 'chat', label: 'Chat' },
-            { id: 'facts', label: `Fact Sheet (${data.facts.filter((f) => f.status !== 'missing').length} of ${data.facts.filter((f) => f.round === 'intake' || f.status !== 'missing').length})` },
+            { id: 'facts', label: data.confirmed ? 'Fact Sheet · confirmed' : data.confirmRequested ? 'Fact Sheet · to confirm' : 'Fact Sheet' },
           ]}
         />
         {tab === 'chat' && (
@@ -398,7 +396,7 @@ export function SimpleIntakePage() {
                       ) : null}
                     </AiMessage>
                   )}
-                  {done && st.id === 'intake' && <ConfirmStep data={data} request={() => request.run()} confirm={() => confirmFacts.run()} busy={request.pending || confirmFacts.pending} />}
+                  {done && st.id === 'intake' && <ConfirmNote data={data} openFacts={() => setParams({ tab: 'facts' }, { replace: true })} />}
                   {done && (st.id !== 'intake' || data.confirmed) && (
                     <div className="flex justify-center">
                       <LinkButton to={`/projects/${pid}/${st.next.to}`} variant="primary" size="lg">
@@ -413,41 +411,34 @@ export function SimpleIntakePage() {
         </section>
         )}
 
-        {tab === 'facts' && <FactPanel data={data} missingNow={missingNow.length} pid={pid} />}
+        {tab === 'facts' && (
+          <div className="space-y-4">
+            {data.kind?.approvedBy && (
+              <p className="inline-flex rounded-md bg-ink/[0.05] px-2.5 py-1 text-sm font-medium">{data.kind.value === 'update' ? 'Update to an existing application' : 'New project'}</p>
+            )}
+            {/* The main Fact Sheet: edit, comments, sending it for confirmation and confirming it happen here only */}
+            <FactsTab data={data} />
+          </div>
+        )}
       </div>
     </div>
   )
 }
 
-/** The facts are sent to the stakeholder head, who confirms them. */
-function ConfirmStep({ data, request, confirm, busy }: { data: Data; request: () => void; confirm: () => void; busy: boolean }) {
+/** The facts are sent and confirmed in the Fact Sheet tab, not in the chat: the chat only points there. */
+function ConfirmNote({ data, openFacts }: { data: Data; openFacts: () => void }) {
   if (data.confirmed) return <StatusNote tone="done">The facts are confirmed. The documents are written from them.</StatusNote>
-  if (!data.confirmRequested)
-    return data.perms.pm ? (
-      <AiMessage
-        actions={
-          <Button variant="primary" disabled={busy} onClick={request}>
-            Send the facts to be confirmed
-          </Button>
-        }
-      >
-        Check the facts in the Fact Sheet tab. When they look right, send them to the stakeholder head to confirm.
-      </AiMessage>
-    ) : (
-      <StatusNote>Waiting for the Project Manager to send the facts to be confirmed.</StatusNote>
-    )
-  return data.perms.confirm ? (
-    <AiMessage
-      actions={
-        <Button variant="success" disabled={busy} onClick={confirm}>
-          <Check className="h-4 w-4" /> Confirm the facts
-        </Button>
-      }
-    >
-      Please check the facts in the Fact Sheet tab{data.perms.coveredAs ? ', in the stakeholder head’s place' : ''}. If something is wrong, open the full Fact Sheet to comment.
+  const text = !data.confirmRequested
+    ? data.perms.pm
+      ? 'Check the facts in the Fact Sheet tab, then send them to the stakeholder head to confirm.'
+      : 'The Project Manager will check the facts and send them to be confirmed.'
+    : data.perms.confirm
+      ? `Please check and confirm the facts in the Fact Sheet tab${data.perms.coveredAs ? ', in the stakeholder head’s place' : ''}.`
+      : 'Waiting for the stakeholder head to confirm the facts in the Fact Sheet tab.'
+  return (
+    <AiMessage actions={<Button variant="primary" onClick={openFacts}>Open the Fact Sheet</Button>}>
+      {text}
     </AiMessage>
-  ) : (
-    <StatusNote>Waiting for the stakeholder head to confirm the facts.</StatusNote>
   )
 }
 
@@ -464,38 +455,5 @@ function EarlierQuestions({ questions }: { questions: Data['questions'] }) {
         ))}
       </ul>
     </details>
-  )
-}
-
-function FactPanel({ data, missingNow, pid }: { data: Data; missingNow: number; pid: string }) {
-  const facts = data.facts.filter((f) => f.round === 'intake' || f.status !== 'missing')
-  const filled = facts.filter((f) => f.status !== 'missing')
-  return (
-    <div className="shadow-soft rounded-2xl p-5">
-      <div className="flex items-baseline justify-between gap-2">
-        <h2 className="text-lg font-semibold">Fact Sheet</h2>
-        <span className="text-sm text-muted">
-          {filled.length} of {facts.length}
-        </span>
-      </div>
-      <p className="mt-1 text-sm text-muted">{data.confirmed ? 'Confirmed by the stakeholder head.' : missingNow ? `${missingNow} still missing.` : 'Draft: not confirmed yet.'}</p>
-      {data.kind?.approvedBy && (
-        <p className="mt-2 inline-flex rounded-md bg-ink/[0.05] px-2 py-0.5 text-sm font-medium">{data.kind.value === 'update' ? 'Update to an existing application' : 'New project'}</p>
-      )}
-      <ul className="mt-4 grid gap-x-8 gap-y-4 sm:grid-cols-2">
-        {facts.map((f) => (
-          <li key={f.key} className="text-[0.9375rem] leading-snug">
-            <div className="flex items-center gap-1.5 text-sm text-muted">
-              <span className={clsx('h-2 w-2 shrink-0 rounded-full', f.status === 'filled' ? 'bg-leaf' : f.status === 'conflicting' ? 'bg-red-500' : f.status === 'assumed' ? 'bg-amber-500' : 'bg-ink/20')} aria-hidden />
-              {f.label}
-            </div>
-            <div className={clsx('mt-0.5', f.status === 'missing' && 'text-muted italic')}>{f.status === 'missing' ? 'Not known yet' : f.value}</div>
-          </li>
-        ))}
-      </ul>
-      <Link to={`/projects/${pid}/intake/details?tab=facts`} className="mt-5 inline-flex items-center gap-1.5 text-[0.9375rem] font-medium text-brand underline">
-        <CircleHelp className="h-4 w-4" /> Open the full Fact Sheet (edit, similar projects, history)
-      </Link>
-    </div>
   )
 }
