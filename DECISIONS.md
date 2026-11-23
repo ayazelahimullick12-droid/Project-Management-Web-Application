@@ -275,3 +275,8 @@ The user asked to bring the "grill me" idea (a Claude Code skill by Matt Pocock:
   - Fact Sheet already confirmed, grilling the Fact Sheet → recorded only (a confirmed Fact Sheet changes through a document edit or a change request).
 - **Not stored as a session:** the round lives on the screen; closing the panel ends it. This needed no change to the saved data.
 - Code: `src/ai/prompts.ts` (grill), `src/ai/agents.ts` (grillQuestion), `src/api/grill.ts`, `src/components/GrillMe.tsx`.
+
+## Asking the AI about a document (23 November 2026)
+
+- The small model often says "the document does not say" even when it does. Before asking, the lines that share the most words with the question are put first; if the model still says it does not know, those lines are shown as the answer ("The closest lines in the document: …"). Code: `askAboutDocument` and `closestLines` in `src/api/documents.ts`.
+- Nothing is saved except the AI log entry.

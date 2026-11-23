@@ -21,6 +21,7 @@ export const LIMITS = {
   question: 40, // one question for one missing fact
   grill: 70, // "Grill me": one pointed question and the fact it is about
   kind: 45, // update or new project, with a short reason
+  askDoc: 120, // an approver's question about a document, answered from its text
   chatQuestion: 55, // the next question in the intake chat
   rewrite: 120,
   scope: 50,
@@ -84,6 +85,15 @@ Then say which of these facts it is about, or none: ${keys.map((k) => k.key).joi
 Use exactly this layout:
 Question: <the question>
 Fact: <one key from the list, or none>`,
+
+  /** An approver asks about a document: answer only from its summary and text. */
+  askDoc: (docLabel: string, projectName: string, summary: string, text: string, question: string) =>
+    `This is the ${docLabel} of the project "${projectName}".
+${summary ? `Summary:\n${summary}\n\n` : ''}Document:
+${text}
+
+Question from a reviewer: ${question}
+Answer in plain words, in at most 3 short sentences, using only the summary and the document above. If they do not say, answer exactly: The document does not say.`,
 
   /** Update to an existing application, or a new one? */
   kind: (p: Project, text: string) =>

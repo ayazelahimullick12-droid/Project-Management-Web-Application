@@ -311,6 +311,16 @@ export async function findSimilarProjects(p: Project, past: PastProject[], topK:
   return { matches, suggestions: suggestions.slice(0, 6) }
 }
 
+// ─── Asking about a document ────────────────────────────────────────────
+
+/** An approver's question about a document, answered only from its summary and text. */
+export async function answerAboutDocument(p: Project, docLabel: string, summary: string, text: string, question: string): Promise<string> {
+  const out = await ask({ agent: 'askdoc', title: `Question about the ${docLabel}`, projectId: p.id, prompt: prompts.askDoc(docLabel, p.name, summary, text, question), maxTokens: LIMITS.askDoc })
+  const answer = tidy(out)
+  if (answer.length < 3) throw unusable()
+  return answer
+}
+
 // ─── Intake chat ────────────────────────────────────────────────────────
 
 /** Update to an existing application, or a new one, with the reason. */

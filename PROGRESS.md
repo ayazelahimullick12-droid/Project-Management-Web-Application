@@ -174,3 +174,9 @@ Then follow `frontend/DEMO.md`.
 
 - Grill me on the Fact Sheet and on the Proposal & Charter, BRD and SRS: one AI question at a time, up to 8, answers saved to the Fact Sheet or proposed as updates, all in the activity log, a summary at the end.
 - Checked: type-check and all tests pass (3 new tests for reading the AI's question). In the browser on separate test data: the button on the BRD (Simple view) and on Field Loan's Fact Sheet for the PM, hidden for a stakeholder; the start screen; with LM Studio off, a clear "not reachable" message and Try again. Not checked: real questions from the model (LM Studio was not running).
+
+## 23 November 2026 — intake as one chat; approvers see the summary first (supervisor's changes)
+
+- Questions & facts (Simple view) is one chat: the request and files, the AI reads them and says whether it looks like an update or a new project, the PM confirms, then at most 3 questions per stage (intake, BRD, SRS). Unknowns become assumptions. The Fact Sheet is in its own tab; the chat scrolls in its own box and opens at the latest message.
+- Approvers open a document on its Summary: short summary, key points, slides, a "Listen (coming soon)" button, and "Ask the AI" about the document. "Full document" is one click away.
+- Checked in the browser on separate test data with LM Studio: the whole intake chat on a new project; the BRD summary as the approver (made by the AI), a question answered from the document; the chat box fits the screen (no page scroll at laptop size). Type-check and 111 tests pass.

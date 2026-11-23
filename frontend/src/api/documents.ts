@@ -11,14 +11,14 @@ import { newId } from '../demo/ids'
 import { runAiJob, runJob } from '../demo/jobs'
 import { getState, mutate } from '../demo/store'
 import { detectFactChanges, requirementsFromCanned, requirementsFromText, scopeCheck as simulateScopeCheck } from '../demo/ai/agents'
-import { draftSection, rewriteSection as aiRewrite, scopeVerdict, summarize } from '../ai/agents'
+import { answerAboutDocument, draftSection, rewriteSection as aiRewrite, scopeVerdict, summarize } from '../ai/agents'
 import { missingPeople } from '../rules/people'
 import { approve as approveRule, canAct, chainNeeds, CHAIN_CONFIG, cancel, currentStep, minorCorrectionChain, newChain, requestChanges as requestChangesRule, ROLE_LABEL, ROLE_TEAM, sendCheck, sign as signRule } from '../rules/approval'
 import { blockingCounts, canCheckPending, canComment, canTick, carryForward, commentTeam } from '../rules/comments'
 import { actAsHead, can, COVER_LABEL, headOf, headRecipient, inTeam, isOwner, isSqa, memberOf, onBehalfText, TEAM_LABEL, type Check } from '../rules/permissions'
 import { activeChain, canGenerate, chainsOf, DOC_LABEL, docStatus, isComplete, laterTypes, PART_LABEL, PIPELINE, previousComplete, sectionPart } from '../rules/pipeline'
 import { exitCriteria } from '../rules/testing'
-import { normalize } from '../rules/text'
+import { markdownToPlain, normalize } from '../rules/text'
 import { act, ApiError, ensure, fail, me, nameOf, pipelineCtx, projectOf, read } from './core'
 import { allMembers, audit, notify, teamMembers } from './effects'
 import { canonicalDocument, sha256Hex, signaturePageText } from './fingerprint'
@@ -288,6 +288,48 @@ function summariesInBackground(docId: ID) {
 }
 
 /** "Make the summary and slides" (again) for the current version. */
+/**
+ * An approver (or anyone who can read the document) asks the AI about it. The answer comes only
+ * from the summary and the current version's text; nothing is saved except the AI log.
+ */
+export async function askAboutDocument(pid: ID, type: DocType, question: string) {
+  const s = await read((x) => x)
+  const user = me(s)
+  const p = projectOf(s, pid)
+  ensure(can.view(p, user))
+  if (!question.trim()) fail('Type a question first.')
+  const doc = s.docs.find((d) => d.projectId === pid && d.type === type)
+  const v = s.versions.find((x) => x.id === doc?.currentVersionId)
+  if (!v) fail('This document is not written yet.')
+  const sum = s.summaries[v.id]
+  const summary = sum ? `${sum.short}\n${sum.onePager}` : ''
+  // Kept short for the small local model: it reads a little well and a lot badly.
+  const lines = [...(sum ? [sum.short, ...sum.onePager.split('\n')] : []), ...v.sections.flatMap((x) => markdownToPlain(x.content).split(/(?<=[.!?])\s+|\n/))]
+  // The lines that share the most words with the question go first: the small model reads the
+  // first lines best, and they are the fallback answer when it says the document does not say.
+  const best = closestLines(lines, question, 4)
+  const text = [...best, ...v.sections.map((x) => `${x.title}: ${markdownToPlain(x.content)}`)].join('\n').slice(0, 2500)
+  const answer = await answerAboutDocument(p, DOC_LABEL[type], summary, text, question.trim())
+  if (/does not say/i.test(answer) && best.length) return { answer: `The closest lines in the document: ${best.slice(0, 2).join(' … ')}` }
+  return { answer }
+}
+
+const STOP = new Set('the a an of to in on for and or is are be it its what when how who which does do must will with by this that from at as can'.split(' '))
+const words = (t: string) => t.toLowerCase().match(/[a-z0-9]+/g)?.filter((w) => w.length > 2 && !STOP.has(w)).map((w) => w.replace(/(ing|ed|es|s)$/, '')) ?? []
+
+/** The lines that share the most words with the question (none when nothing matches). */
+export function closestLines(lines: string[], question: string, max: number): string[] {
+  const q = new Set(words(question))
+  return lines
+    .map((l) => l.replace(/^[-*\s]+/, '').trim())
+    .filter((l) => l.length > 8)
+    .map((l) => ({ l, n: new Set(words(l).filter((w) => q.has(w))).size }))
+    .filter((x) => x.n > 0)
+    .sort((a, b) => b.n - a.n)
+    .slice(0, max)
+    .map((x) => x.l)
+}
+
 export async function makeSummaries(pid: ID, type: DocType) {
   const s0 = await read((s) => s)
   const user = me(s0)

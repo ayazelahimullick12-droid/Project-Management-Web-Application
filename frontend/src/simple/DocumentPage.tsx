@@ -23,12 +23,13 @@ import { downloadItems } from '../components/exports'
 import { MissingPeople } from '../components/People'
 import { sectionPart } from '../rules/pipeline'
 import { SummariesTab } from '../pages/document/DocTabs'
-import { Button, ErrorBox, LinkButton, Loading } from '../components/ui'
+import { Button, ErrorBox, LinkButton, Loading, Segmented } from '../components/ui'
 import { Reader, type Selection } from '../pages/document/Reader'
 import { AnnotateModal, CommentsPanel } from '../pages/document/CommentsPanel'
 import { ActionBar, NextStep, SimplePage, StatusLine, ToneIcon } from './parts'
 import { ApprovalBar, ChangesBody, Contents, Paper, useActiveSection, type RecordRow } from './DocumentParts'
 import { GrillMeButton } from '../components/GrillMe'
+import { SummaryView } from './SummaryView'
 
 /** The document's formal name on its letterhead. */
 const FORMAL_NAME: Partial<Record<DocType, string>> = {
@@ -92,6 +93,8 @@ export function SimpleDocumentPage() {
   const [active, setActive] = useState<string | undefined>()
   const [tab, setTab] = useState<'proposal' | 'charter' | 'slides'>('proposal')
   const [showChanges, setShowChanges] = useState(false)
+  // Summary or full text. Approvers start on the summary (supervisor's request); everyone else on the text.
+  const [docView, setDocView] = useState<'summary' | 'full' | null>(null)
   const [contentsOpen, setContentsOpen] = useState(false)
   const { data, isLoading, error } = useApi(['doc', pid, type, uid], () => api.documents.getDocument(pid, type as DocType))
   const generate = useAction(api.documents.generate, { success: 'The AI is writing it section by section. Progress is shown at the top of the page.' })
@@ -139,6 +142,9 @@ export function SimpleDocumentPage() {
   const myTurn = !!chain && data.perms.act.ok && !data.perms.act.coveredAs
   // The Owner or PM may approve any step in the head's place; it is still that head's turn.
   const canCover = !!chain && data.perms.act.ok && !!data.perms.act.coveredAs
+  const hasSummary = data.type === 'PROPOSAL' || data.type === 'BRD' || data.type === 'SRS'
+  const approver = !!chain && (myTurn || canCover || chain.steps.some((st) => st.assigneeId === uid))
+  const view = !hasSummary ? 'full' : (docView ?? (approver ? 'summary' : 'full'))
   const canSend = !chain && data.perms.send.ok
   const minorReady = !chain && !!data.perms.minor.requested && data.perms.minor.ok
   const someoneElse = !!data.lock && !data.lock.mine
@@ -245,6 +251,23 @@ export function SimpleDocumentPage() {
         </div>
       )}
 
+      {hasSummary && (
+        <div className="flex flex-wrap items-center gap-3">
+          <Segmented
+            value={view}
+            onChange={(x) => setDocView(x as 'summary' | 'full')}
+            options={[
+              { id: 'summary', label: 'Summary' },
+              { id: 'full', label: 'Full document' },
+            ]}
+          />
+          {view === 'summary' && approver && <span className="text-sm text-muted">Start with the summary; open the full document whenever you want.</span>}
+        </div>
+      )}
+
+      {view === 'summary' && <SummaryView data={data} onReadFull={() => setDocView('full')} />}
+
+      {view === 'full' && (
       <div>
         {/* Tools above the sheet: part tabs, contents (narrow screens), changes, comments */}
         <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -345,6 +368,7 @@ export function SimpleDocumentPage() {
           </div>
         )}
       </div>
+      )}
 
       <ActionBar
         more={

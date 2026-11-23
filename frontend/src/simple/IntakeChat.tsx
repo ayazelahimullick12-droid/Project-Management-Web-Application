@@ -18,10 +18,10 @@
 import { clsx } from 'clsx'
 import { Check, ChevronRight, CircleHelp, FileText, Paperclip, Sparkles } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../api'
 import { useAction, useApi } from '../api/hooks'
-import { Avatar, Button, ErrorBox, LinkButton, Loading, Textarea } from '../components/ui'
+import { Avatar, Button, ErrorBox, LinkButton, Loading, Segmented, Textarea } from '../components/ui'
 import { FileButton } from '../components/FileButton'
 import { SimplePage } from './parts'
 
@@ -167,7 +167,11 @@ export function SimpleIntakePage() {
   const [editing, setEditing] = useState(false)
   const [asking, setAsking] = useState(false)
   const [askError, setAskError] = useState<string | null>(null)
-  const bottom = useRef<HTMLDivElement>(null)
+  // The chat scrolls inside its own box, so the history is there without scrolling the page
+  const chatBox = useRef<HTMLDivElement>(null)
+  // Two tabs: the chat (the main thing) and the Fact Sheet it fills in
+  const [params, setParams] = useSearchParams()
+  const tab = params.get('tab') === 'facts' ? 'facts' : 'chat'
 
   const save = useAction((text: string) => api.intake.saveDescription(pid, text), { success: 'Saved.', onDone: () => setEditing(false) })
   const upload = useAction((f: Parameters<typeof api.intake.upload>[1]) => api.intake.upload(pid, f), { success: 'Reading the file in the background…' })
@@ -190,9 +194,11 @@ export function SimpleIntakePage() {
   const approveKind = useAction((value: 'new' | 'update') => api.intake.approveKind(pid, value), { onDone: () => void askNext() })
 
   const turns = data?.questions.length ?? 0
+  const loaded = !!data
   useEffect(() => {
-    bottom.current?.scrollIntoView({ block: 'nearest' })
-  }, [turns, asking])
+    const box = chatBox.current
+    if (box) box.scrollTop = box.scrollHeight // start at the latest message
+  }, [turns, asking, tab, loaded])
 
   if (isLoading) return <Loading />
   if (error || !data) return <ErrorBox error={error} />
@@ -269,7 +275,7 @@ export function SimpleIntakePage() {
       {/* 3. Facts found, and: update or new? */}
       {p.intake.analysed && (
         <AiMessage>
-          I read it and filled in {data.facts.filter((f) => f.status === 'filled').length} facts (on the right).{' '}
+          I read it and filled in {data.facts.filter((f) => f.status === 'filled').length} facts (see the Fact Sheet tab).{' '}
           {data.intakeMissing ? `${data.intakeMissing} are still missing; I will ask about the most important ones, at most ${data.chatLimit} questions.` : 'Nothing important is missing.'}
         </AiMessage>
       )}
@@ -328,10 +334,18 @@ export function SimpleIntakePage() {
 
   return (
     <SimplePage title="Questions & facts" subtitle="Tell us what you need and answer a few questions. The AI turns it into the project facts every document is written from." wide>
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
-        {/* The chat: the main thing on the page */}
+      <div className="mx-auto max-w-4xl space-y-4">
+        <Segmented
+          value={tab}
+          onChange={(x) => setParams(x === 'facts' ? { tab: 'facts' } : {}, { replace: true })}
+          options={[
+            { id: 'chat', label: 'Chat' },
+            { id: 'facts', label: `Fact Sheet (${data.facts.filter((f) => f.status !== 'missing').length} of ${data.facts.filter((f) => f.round === 'intake' || f.status !== 'missing').length})` },
+          ]}
+        />
+        {tab === 'chat' && (
         <section aria-label="Chat" className="min-w-0">
-          <div className="space-y-6 rounded-3xl bg-canvas/60 p-4 ring-1 ring-line sm:p-6">
+          <div ref={chatBox} className="h-[calc(100dvh-22.5rem)] min-h-[24rem] space-y-6 overflow-y-auto overscroll-contain rounded-3xl bg-canvas/60 p-4 ring-1 ring-line sm:p-6">
             {shown.map((st) => {
               const qs = chatQuestions(st.id)
               const done = stageDone(st.id)
@@ -394,14 +408,11 @@ export function SimpleIntakePage() {
                 </div>
               )
             })}
-            <div ref={bottom} />
           </div>
         </section>
+        )}
 
-        {/* The Fact Sheet beside the chat */}
-        <aside className="min-w-0 space-y-4 lg:sticky lg:top-24 lg:self-start">
-          <FactPanel data={data} missingNow={missingNow.length} pid={pid} />
-        </aside>
+        {tab === 'facts' && <FactPanel data={data} missingNow={missingNow.length} pid={pid} />}
       </div>
     </SimplePage>
   )
@@ -419,7 +430,7 @@ function ConfirmStep({ data, request, confirm, busy }: { data: Data; request: ()
           </Button>
         }
       >
-        Check the facts on the right. When they look right, send them to the stakeholder head to confirm.
+        Check the facts in the Fact Sheet tab. When they look right, send them to the stakeholder head to confirm.
       </AiMessage>
     ) : (
       <StatusNote>Waiting for the Project Manager to send the facts to be confirmed.</StatusNote>
@@ -432,7 +443,7 @@ function ConfirmStep({ data, request, confirm, busy }: { data: Data; request: ()
         </Button>
       }
     >
-      Please check the facts on the right{data.perms.coveredAs ? ', in the stakeholder head’s place' : ''}. If something is wrong, open the full Fact Sheet to comment.
+      Please check the facts in the Fact Sheet tab{data.perms.coveredAs ? ', in the stakeholder head’s place' : ''}. If something is wrong, open the full Fact Sheet to comment.
     </AiMessage>
   ) : (
     <StatusNote>Waiting for the stakeholder head to confirm the facts.</StatusNote>
@@ -470,7 +481,7 @@ function FactPanel({ data, missingNow, pid }: { data: Data; missingNow: number; 
       {data.kind?.approvedBy && (
         <p className="mt-2 inline-flex rounded-md bg-ink/[0.05] px-2 py-0.5 text-sm font-medium">{data.kind.value === 'update' ? 'Update to an existing application' : 'New project'}</p>
       )}
-      <ul className="mt-4 space-y-3">
+      <ul className="mt-4 grid gap-x-8 gap-y-4 sm:grid-cols-2">
         {facts.map((f) => (
           <li key={f.key} className="text-[0.9375rem] leading-snug">
             <div className="flex items-center gap-1.5 text-sm text-muted">
