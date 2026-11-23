@@ -11,7 +11,9 @@ import type { ApprovalChain, DocType, Signature } from '../types'
 import { api } from '../api'
 import { useAction } from '../api/hooks'
 import { canonicalDocument, sha256Hex } from '../api/fingerprint'
-import { CHAIN_CONFIG, ROLE_LABEL } from '../rules/approval'
+import { CHAIN_CONFIG, pmChoosesApprovers, ROLE_LABEL } from '../rules/approval'
+import { ChooseApprovers } from './ChooseApprovers'
+import { DOC_LABEL } from '../rules/pipeline'
 import type { Check } from '../rules/permissions'
 import { StepStatusChip } from './status'
 import { OpenQuestion } from './OpenQuestion'
@@ -141,7 +143,11 @@ export function ApprovalActions(props: ApprovalProps & { layout?: 'row' | 'stack
   const [requesting, setRequesting] = useState(false)
   const [comment, setComment] = useState('')
   const [signing, setSigning] = useState(false)
-  const send = useAction(api.documents.sendForApproval, { success: 'Sent for approval. The first approver was notified.' })
+  const [choosing, setChoosing] = useState(false)
+  const send = useAction(api.documents.sendForApproval, { success: 'Sent for approval. The first approver was notified.', onDone: () => setChoosing(false) })
+  // The PM chooses who approves and signs (November 2026); the SQA sign-off keeps its fixed step
+  const chooses = pmChoosesApprovers(props.docType)
+  const startSend = () => (chooses ? setChoosing(true) : send.run(props.docId))
   const approve = useAction(api.documents.approve, { success: 'Approved. The next approver was notified.' })
   const request = useAction(api.documents.requestChanges, { success: 'Changes requested. The PM team was notified.', onDone: () => setRequesting(false) })
   const minor = useAction(api.documents.declareMinorCorrection, { success: 'Minor correction declared. The chain resumes at the person who asked for changes.' })
@@ -182,11 +188,11 @@ export function ApprovalActions(props: ApprovalProps & { layout?: 'row' | 'stack
     const label = props.outOfSync && props.frozen ? 'Send for re-approval' : 'Send for approval'
     buttons.push(
       row ? (
-        <Button key="send" size={size} variant={props.minor.requested && props.minor.ok ? 'secondary' : 'primary'} disabled={!props.send.ok} why={props.send.reason} onClick={() => send.run(props.docId)}>
+        <Button key="send" size={size} variant={props.minor.requested && props.minor.ok ? 'secondary' : 'primary'} disabled={!props.send.ok} why={props.send.reason} onClick={startSend}>
           <Send className="h-4 w-4" /> {label}
         </Button>
       ) : (
-        <Guarded key="send" variant="primary" check={props.send} onClick={() => send.run(props.docId)}>
+        <Guarded key="send" variant="primary" check={props.send} onClick={startSend}>
           <Send className="h-4 w-4" /> {label}
         </Guarded>
       ),
@@ -212,6 +218,7 @@ export function ApprovalActions(props: ApprovalProps & { layout?: 'row' | 'stack
         <Textarea rows={4} value={comment} onChange={(e) => setComment(e.target.value)} placeholder="What needs to change?" autoFocus />
       </Modal>
       {signing && <SignModal docId={props.docId} onClose={() => setSigning(false)} />}
+      {chooses && <ChooseApprovers docId={props.docId} label={DOC_LABEL[props.docType]} open={choosing} onClose={() => setChoosing(false)} busy={send.pending} onSend={(ids) => send.run(props.docId, ids)} />}
     </>
   )
 }
@@ -226,8 +233,14 @@ export function ApprovalTimeline(props: ApprovalProps) {
     <div>
       <div className="mb-3 flex items-center gap-2 text-xs text-muted">
         <ShieldCheck className="h-3.5 w-3.5" />
-        {cfg.steps.map((r) => (r === 'PM' ? 'PM' : ROLE_LABEL[r].replace(' head', ''))).join(' → ')}
-        {cfg.signs && ' · sponsor signs'}
+        {pmChoosesApprovers(props.docType) ? (
+          'The PM chooses who approves, in order · everyone signs'
+        ) : (
+          <>
+            {cfg.steps.map((r) => (r === 'PM' ? 'PM' : ROLE_LABEL[r].replace(' head', ''))).join(' → ')}
+            {cfg.signs && ' · sponsor signs'}
+          </>
+        )}
         {props.docType === 'UAT_SIGNOFF' && <OpenQuestion id="uat-chain" />}
         {props.docType === 'SQA_SIGNOFF' && <OpenQuestion id="sqa-approver" />}
       </div>

@@ -153,7 +153,7 @@ export function SimpleDocumentPage() {
   const since = data.status.since ? ` (for ${waited(data.status.since, now)})` : ''
   const statusText = myTurn
     ? `Waiting for your approval${data.perms.act.actingFor ? `, as deputy for ${nameOf(data.perms.act.actingFor)}, who is away` : ''}${since}.`
-    : `${docStatusText(data.status, nameOf)}${data.status.key === 'in_review' ? since : ''}.${canCover && step ? ` You can also ${step.sign ? 'approve and sign' : 'approve'} it in the ${step.roleLabel.toLowerCase()}'s place.` : ''}`
+    : `${docStatusText(data.status, nameOf).replace(/ to approve$/, step?.sign ? ' to approve and sign' : ' to approve')}${data.status.key === 'in_review' ? since : ''}.${canCover && step ? ` You can also ${step.sign ? 'approve and sign' : 'approve'} it in ${step.role === 'PERSON' ? `${step.assigneeName}’s` : `the ${step.roleLabel.toLowerCase()}'s`} place.` : ''}`
 
   // At most one notice: the most important one.
   let notice: { tone: Tone; text: ReactNode; actions?: ReactNode } | undefined

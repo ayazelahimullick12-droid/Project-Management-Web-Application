@@ -6,7 +6,7 @@
  * BUILD_PROMPT.md 3.3: anchor = section id + quoted text + a little text before and after.
  */
 import type { ApprovalChain, Comment, ID, Project, Section, Team } from '../types'
-import { ROLE_TEAM } from './approval'
+import { stepTeam } from './approval'
 import { isOwner, memberOf, no, yes, type Check, inTeam, membershipsOf } from './permissions'
 import { markdownToPlain, normalize } from './text'
 
@@ -56,7 +56,7 @@ export function canComment(p: Project, userId: ID | null, chainsForVersion: Appr
   if (!teams.length) return no('Only project members can comment.')
   if (teams.includes('PM')) return yes
   const approvedByHeadOf = (team: string) =>
-    chainsForVersion.some((ch) => ch.status !== 'cancelled' && ch.steps.some((s) => ROLE_TEAM[s.role] === team && (s.status === 'approved' || s.status === 'carried_over')))
+    chainsForVersion.some((ch) => ch.status !== 'cancelled' && ch.steps.some((s) => stepTeam(s) === team && (s.status === 'approved' || s.status === 'carried_over')))
   if (teams.every(approvedByHeadOf)) return no('Your team’s head has already approved this version, so your team can no longer comment on it. Your head can use Request changes if something needs action.')
   return yes
 }

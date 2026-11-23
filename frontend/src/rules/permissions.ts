@@ -152,6 +152,25 @@ export function actForHead(p: Project, team: Team, userId: ID | null | undefined
   return { ok: true, actingFor: headOf(p, team)?.userId, coveredAs }
 }
 
+/**
+ * Can this user give the approval of one chosen person (an approver the PM picked)?
+ * The person can, unless they are Away. While they are Away, the deputy of a team they head acts
+ * for them. The Project Owner and the Project Manager can always, in their place (master key).
+ */
+export function actForPerson(p: Project, personId: ID, userId: ID | null | undefined, now: Date): Check {
+  if (!userId) return no('Sign in first.')
+  const away = isAway(p, personId, now)
+  if (userId === personId && !away) return yes
+  if (away) {
+    const led = p.members.filter((m) => m.userId === personId && m.isHead).map((m) => m.team)
+    if (led.some((t) => deputyOf(p, t)?.userId === userId)) return { ok: true, actingFor: personId }
+  }
+  if (isOwner(p, userId)) return { ok: true, actingFor: personId === userId ? undefined : personId, coveredAs: 'OWNER' }
+  if (actAsHead(p, 'PM', userId, now).ok) return { ok: true, actingFor: personId, coveredAs: 'PM' }
+  if (userId === personId) return no('You are marked Away. End your Away period to approve yourself.')
+  return no('It is someone else’s turn. The Project Owner or the Project Manager can also act in their place.')
+}
+
 /** Who gets the work of a head the project does not have yet: the Owner and the PM. */
 export function coverers(p: Project): ID[] {
   return [...new Set([p.ownerId, headOf(p, 'PM')?.userId].filter(Boolean) as ID[])]

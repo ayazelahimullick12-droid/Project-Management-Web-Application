@@ -157,3 +157,44 @@ describe('the Project Owner and the PM can approve in a head\'s place', () => {
     expect(moved.steps[2].vacant).toBeUndefined()
   })
 })
+
+describe('approvers the PM chooses (November 2026)', () => {
+  const chosen = (approvers: string[], proj = p) => newChain({ id: 'c2', docId: 'd1', docType: 'BRD', projectId: 'p1', versionId: 'v1', project: proj, startedBy: 'pm', now: NOW, approvers })
+
+  it('goes to the chosen people in the chosen order, and everyone signs', () => {
+    let c = chosen(['st1', 'dev', 'sp'])
+    expect(c.steps.map((s) => [s.role, s.assigneeId, s.sign, s.team])).toEqual([
+      ['PERSON', 'st1', true, 'STAKEHOLDER'],
+      ['PERSON', 'dev', true, 'TECH'],
+      ['PERSON', 'sp', true, 'SPONSOR'],
+    ])
+    expect(() => approve(c, p, 'st1', NOW)).toThrow(/signature/)
+    expect(() => sign(c, p, 'dev', NOW)).toThrow(RuleError) // not their turn yet
+    const first = sign(c, p, 'st1', NOW)
+    expect(first.finished).toBe(false)
+    c = sign(first.chain, p, 'dev', NOW).chain
+    const last = sign(c, p, 'sp', NOW)
+    expect(last.finished).toBe(true)
+    expect(last.chain.status).toBe('signed')
+  })
+
+  it('lets the Project Owner and the PM act in a chosen person’s place, nobody else', () => {
+    const c = chosen(['st1'])
+    expect(sign(c, p, 'owner', NOW).coveredAs).toBe('OWNER')
+    expect(sign(c, p, 'pm', NOW).coveredAs).toBe('PM')
+    expect(() => sign(c, p, 'sh', NOW)).toThrow(RuleError)
+  })
+
+  it('refuses an empty list, the same person twice and people outside the project', () => {
+    expect(() => chosen([])).toThrow(/at least one/)
+    expect(() => chosen(['sh', 'sh'])).toThrow(/once/)
+    expect(() => chosen(['stranger'])).toThrow(/people in this project/)
+  })
+
+  it('keeps the same people after a minor correction, resuming at the person who asked for changes', () => {
+    const c = sign(chosen(['st1', 'sh']), p, 'st1', NOW).chain
+    const asked = requestChanges(c, p, 'sh', 'Fix the budget', NOW).chain
+    const m = minorCorrectionChain(asked, { id: 'c3', versionId: 'v2', project: p, startedBy: 'pm', now: NOW })
+    expect(m.steps.map((s) => [s.assigneeId, s.status])).toEqual([['st1', 'carried_over'], ['sh', 'pending']])
+  })
+})

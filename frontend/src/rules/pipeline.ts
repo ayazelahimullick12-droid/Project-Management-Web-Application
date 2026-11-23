@@ -146,11 +146,16 @@ export function docStatus(ctx: PipelineCtx, doc: Doc | undefined): DocStatus {
   const chain = activeChain(ctx, doc)
   if (chain?.status === 'in_progress') {
     const step = currentStep(chain)!
-    return { key: 'in_review', label: `Waiting on ${ROLE_LABEL[step.role].toLowerCase()}`, waitingOn: step.assigneeId, waitingRole: ROLE_LABEL[step.role], since: step.pendingSince }
+    return { key: 'in_review', label: step.role === 'PERSON' ? `Waiting on approver ${step_no(chain, step)}` : `Waiting on ${ROLE_LABEL[step.role].toLowerCase()}`, waitingOn: step.assigneeId, waitingRole: step.role === 'PERSON' ? 'Approver' : ROLE_LABEL[step.role], since: step.pendingSince }
   }
   if (doc.outOfSync) return { key: 'out_of_sync', label: 'Out of sync', since: doc.outOfSync.since }
   if (chain?.status === 'changes_requested') return { key: 'changes_requested', label: 'Changes requested', since: chain.endedAt }
   if (chain?.status === 'signed') return { key: 'signed', label: 'Signed (frozen)', since: chain.endedAt }
   if (chain?.status === 'approved') return { key: 'approved', label: CHAIN_CONFIG[doc.type].signs ? 'Approved, awaiting signature' : 'Approved (frozen)', since: chain.endedAt }
   return { key: 'draft', label: 'Draft' }
+}
+
+/** "2 of 3": where a chosen approver is in the order. */
+function step_no(chain: ApprovalChain, step: ApprovalChain['steps'][number]): string {
+  return `${chain.steps.indexOf(step) + 1} of ${chain.steps.length}`
 }

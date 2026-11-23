@@ -4,7 +4,7 @@
  * Spec: SPEC.md "Document pipeline", "Approval and signing", "Editing, versions and change
  * requests" and "Comments and suggestions". The rules themselves live in src/rules.
  */
-import type { ApprovalChain, Comment, DemoState, Doc, DocType, DocVersion, ID, Project, Section, TemplateSection, User } from '../types'
+import type { ApprovalChain, ApprovalStep, Comment, DemoState, Doc, DocType, DocVersion, ID, Project, Section, TemplateSection, User } from '../types'
 import { MAIN_DOCS } from '../types'
 import { now, nowIso } from '../demo/clock'
 import { newId } from '../demo/ids'
@@ -13,9 +13,9 @@ import { getState, mutate } from '../demo/store'
 import { detectFactChanges, requirementsFromCanned, requirementsFromText, scopeCheck as simulateScopeCheck } from '../demo/ai/agents'
 import { answerAboutDocument, draftSection, rewriteSection as aiRewrite, scopeVerdict, summarize } from '../ai/agents'
 import { missingPeople } from '../rules/people'
-import { approve as approveRule, canAct, chainNeeds, CHAIN_CONFIG, cancel, currentStep, minorCorrectionChain, newChain, requestChanges as requestChangesRule, ROLE_LABEL, ROLE_TEAM, sendCheck, sign as signRule } from '../rules/approval'
+import { approve as approveRule, canAct, chainNeeds, CHAIN_CONFIG, cancel, currentStep, minorCorrectionChain, newChain, requestChanges as requestChangesRule, pmChoosesApprovers, ROLE_LABEL, sendCheck, sign as signRule, stepTeam } from '../rules/approval'
 import { blockingCounts, canCheckPending, canComment, canTick, carryForward, commentTeam } from '../rules/comments'
-import { actAsHead, can, COVER_LABEL, headOf, headRecipient, inTeam, isOwner, isSqa, memberOf, onBehalfText, TEAM_LABEL, type Check } from '../rules/permissions'
+import { actAsHead, can, COVER_LABEL, headOf, headRecipient, inTeam, isOwner, isSqa, memberOf, onBehalfText, roleLabel, TEAM_LABEL, type Check } from '../rules/permissions'
 import { activeChain, canGenerate, chainsOf, DOC_LABEL, docStatus, isComplete, laterTypes, PART_LABEL, PIPELINE, previousComplete, sectionPart } from '../rules/pipeline'
 import { exitCriteria } from '../rules/testing'
 import { markdownToPlain, normalize } from '../rules/text'
@@ -43,6 +43,26 @@ function lockOf(s: DemoState, docId: ID, t: Date) {
 }
 
 // ─── Reading a document ─────────────────────────────────────────────────
+
+/** "Stakeholder head", "Developer", "Sponsor head"…: a chosen person's role, or the fixed step's head role. */
+function stepLabel(p: Project, st: Pick<ApprovalStep, 'role' | 'assigneeId'>): string {
+  return st.role === 'PERSON' ? roleLabel(p, st.assigneeId) : ROLE_LABEL[st.role]
+}
+
+/**
+ * Who the PM is offered when choosing approvers: everyone in the project (and the Owner), each once.
+ * Suggested: the people of the last round the PM chose for this document, otherwise the heads the
+ * old fixed order used (PM, tech, stakeholder and sponsor heads), as far as the project has them.
+ */
+function approverChoices(s: DemoState, p: Project, lastChains: ApprovalChain[], type: DocType) {
+  const ids = [...new Set([p.ownerId, ...p.members.map((m) => m.userId)])]
+  const people = ids.map((id) => ({ userId: id, name: nameOf(s, id), role: roleLabel(p, id) }))
+  const chosenBefore = [...lastChains].reverse().find((c) => c.steps.some((x) => x.role === 'PERSON'))
+  const suggested = chosenBefore
+    ? chosenBefore.steps.map((x) => x.assigneeId).filter((id) => ids.includes(id))
+    : [...new Set(CHAIN_CONFIG[type].steps.map((role) => headOf(p, ({ PM: 'PM', TECH_HEAD: 'TECH', STAKEHOLDER_HEAD: 'STAKEHOLDER', SPONSOR_HEAD: 'SPONSOR' } as const)[role])?.userId).filter(Boolean) as ID[])]
+  return { people, suggested }
+}
 
 export async function getDocument(pid: ID, type: DocType) {
   return read((s, t) => {
@@ -84,7 +104,7 @@ export async function getDocument(pid: ID, type: DocType) {
     const summarizing = summaryJobs[0]?.status === 'running'
     const summaryError = !derived && summaryJobs[0]?.status === 'failed' ? summaryJobs[0].resultNote : undefined
 
-    const signatures = doc ? s.signatures.filter((x) => x.docId === doc.id).map((x) => ({ ...x, signerName: nameOf(s, x.signerId), actingForName: x.actingFor ? nameOf(s, x.actingFor) : undefined, onBehalf: onBehalfText({ coveredAs: x.coveredAs, actingForName: x.actingFor ? nameOf(s, x.actingFor) : undefined, headLabel: ROLE_LABEL[x.role ?? 'SPONSOR_HEAD'] }) })) : []
+    const signatures = doc ? s.signatures.filter((x) => x.docId === doc.id).map((x) => ({ ...x, signerName: nameOf(s, x.signerId), actingForName: x.actingFor ? nameOf(s, x.actingFor) : undefined, onBehalf: onBehalfText({ coveredAs: x.coveredAs, actingForName: x.actingFor ? nameOf(s, x.actingFor) : undefined, headLabel: x.role === 'PERSON' ? 'approver' : ROLE_LABEL[x.role ?? 'SPONSOR_HEAD'] }), roleLabel: x.role === 'PERSON' ? roleLabel(p, x.actingFor ?? x.signerId) : ROLE_LABEL[x.role ?? 'SPONSOR_HEAD'] })) : []
     const named = (c: ApprovalChain) => ({
       ...c,
       steps: c.steps.map((st) => ({
@@ -92,8 +112,8 @@ export async function getDocument(pid: ID, type: DocType) {
         assigneeName: nameOf(s, st.assigneeId),
         actedByName: st.actedBy ? nameOf(s, st.actedBy) : undefined,
         actingForName: st.actingFor ? nameOf(s, st.actingFor) : undefined,
-        actedNote: onBehalfText({ coveredAs: st.coveredAs, actingForName: st.actingFor ? nameOf(s, st.actingFor) : undefined, headLabel: ROLE_LABEL[st.role] }),
-        roleLabel: ROLE_LABEL[st.role],
+        actedNote: onBehalfText({ coveredAs: st.coveredAs, actingForName: st.actingFor ? nameOf(s, st.actingFor) : undefined, headLabel: st.role === 'PERSON' ? 'approver' : ROLE_LABEL[st.role] }),
+        roleLabel: stepLabel(p, st),
         deputyCovering: st.status === 'pending' && !st.vacant ? headRecipient(p, st.assigneeId, t).forUserId && nameOf(s, headRecipient(p, st.assigneeId, t).to) : undefined,
       })),
       versionNumber: s.versions.find((v) => v.id === c.versionId)?.number,
@@ -149,8 +169,10 @@ export async function getDocument(pid: ID, type: DocType) {
       },
       complete: isComplete(ctx, type),
       // Heads of the approval chain not added yet (shown with "Add"; the Owner or PM approves in their place).
-      missing: missingPeople(p, chainNeeds(type)),
+      missing: pmChoosesApprovers(type) ? [] : missingPeople(p, chainNeeds(type)),
       canAddPeople: can.addPeople(p, user.id, t).ok,
+      // The PM chooses who approves and signs (November 2026)
+      choosesApprovers: pmChoosesApprovers(type),
     }
   })
 }
@@ -820,7 +842,18 @@ const NEXT_STEP: Partial<Record<DocType, string>> = {
   UAT_SIGNOFF: 'UAT is signed off. Documentation complete: the Owner may archive the project.',
 }
 
-export async function sendForApproval(docId: ID) {
+/** The people the PM can choose from when sending this document, and who is suggested. */
+export async function approverChoicesFor(docId: ID) {
+  return read((s) => {
+    const user = me(s)
+    const doc = docById(s, docId)
+    const p = projectOf(s, doc.projectId)
+    ensure(can.view(p, user))
+    return approverChoices(s, p, chainsOf(pipelineCtx(s, p.id), docId), doc.type)
+  })
+}
+
+export async function sendForApproval(docId: ID, approvers?: ID[]) {
   return act((s, t, at) => {
     const user = me(s)
     const doc = docById(s, docId)
@@ -838,11 +871,18 @@ export async function sendForApproval(docId: ID) {
         exitCriteria: doc.type.endsWith('SIGNOFF') ? criteriaCheck(s, p.id, doc.type === 'SQA_SIGNOFF' ? 'SQA' : 'UAT') : undefined,
       }),
     )
-    const chain = newChain({ id: newId('chain'), docId, docType: doc.type, projectId: p.id, versionId: v.id, project: p, startedBy: user.id, now: t, reapproval: v.frozen })
+    if (pmChoosesApprovers(doc.type) && !approvers?.length) fail('Choose who approves and signs first.')
+    let chain: ApprovalChain
+    try {
+      chain = newChain({ id: newId('chain'), docId, docType: doc.type, projectId: p.id, versionId: v.id, project: p, startedBy: user.id, now: t, reapproval: v.frozen, approvers: pmChoosesApprovers(doc.type) ? approvers : undefined })
+    } catch (e) {
+      fail(e instanceof Error ? e.message : 'Could not start the approval.')
+    }
     s.chains.push(chain)
     const first = chain.steps[0]
     notify(s, { to: [headRecipient(p, first.assigneeId, t)], type: 'approval', title: `Your turn to approve: ${DOC_LABEL[doc.type]} v${v.number}`, body: `${p.name}: ${user.name} sent the ${DOC_LABEL[doc.type]} for approval.`, link: docLink(doc), projectId: p.id, at, exclude: user.id })
-    audit(s, { projectId: p.id, actorId: user.id, action: 'Sent for approval', details: `${DOC_LABEL[doc.type]} v${v.number}${v.frozen ? ' (re-approval of the unchanged version)' : ''}`, at })
+    const who = chain.steps.some((x) => x.role === 'PERSON') ? ` to ${chain.steps.map((x) => nameOf(s, x.assigneeId)).join(' → ')}` : ''
+    audit(s, { projectId: p.id, actorId: user.id, action: 'Sent for approval', details: `${DOC_LABEL[doc.type]} v${v.number}${who}${v.frozen ? ' (re-approval of the unchanged version)' : ''}`, at })
   })
 }
 
@@ -860,7 +900,7 @@ export async function declareMinorCorrection(docId: ID) {
     const step = currentStep(chain)!
     const reviewed = s.versions.find((x) => x.id === last!.versionId)!
     notify(s, { to: [headRecipient(p, step.assigneeId, t)], type: 'minor', title: 'A minor correction is ready for you', body: `${p.name}: ${DOC_LABEL[doc.type]} v${v.number} fixes what you asked for in v${reviewed.number}. Earlier approvals carried over; compare the two versions and approve.`, link: `${docLink(doc)}?tab=compare&a=${reviewed.number}&b=${v.number}`, projectId: p.id, at })
-    audit(s, { projectId: p.id, actorId: user.id, action: 'Minor correction declared', details: `${DOC_LABEL[doc.type]} v${v.number} (chain resumes at the ${ROLE_LABEL[step.role].toLowerCase()})`, at })
+    audit(s, { projectId: p.id, actorId: user.id, action: 'Minor correction declared', details: `${DOC_LABEL[doc.type]} v${v.number} (chain resumes at ${step.role === 'PERSON' ? nameOf(s, step.assigneeId) : `the ${ROLE_LABEL[step.role].toLowerCase()}`})`, at })
   })
 }
 
@@ -893,11 +933,11 @@ export async function approve(docId: ID) {
     const r = approveRule(chain, p, user.id, t)
     s.chains = s.chains.map((c) => (c.id === chain.id ? r.chain : c))
     const step = r.chain.steps.find((x) => x.actedAt === at && x.actedBy === user.id)!
-    const how = onBehalfText({ coveredAs: step.coveredAs, actingForName: step.actingFor ? nameOf(s, step.actingFor) : undefined, headLabel: ROLE_LABEL[step.role] })
-    audit(s, { projectId: p.id, actorId: user.id, actingFor: step.actingFor, action: 'Approved', details: `${DOC_LABEL[doc.type]} as ${ROLE_LABEL[step.role].toLowerCase()}${how ? ` (${how})` : ''}`, at })
+    const how = onBehalfText({ coveredAs: step.coveredAs, actingForName: step.actingFor ? nameOf(s, step.actingFor) : undefined, headLabel: step.role === 'PERSON' ? 'approver' : ROLE_LABEL[step.role] })
+    audit(s, { projectId: p.id, actorId: user.id, actingFor: step.actingFor, action: 'Approved', details: `${DOC_LABEL[doc.type]} as ${stepLabel(p, step).toLowerCase()}${how ? ` (${how})` : ''}`, at })
     const v0 = s.versions.find((x) => x.id === chain.versionId)!
     if (step.coveredAs && step.actingFor && step.actingFor !== user.id)
-      notify(s, { to: [step.actingFor], type: 'approval', title: `${user.name} approved for you: ${DOC_LABEL[doc.type]} v${v0.number}`, body: `${p.name}: the ${COVER_LABEL[step.coveredAs]} approved this step in your place (as ${ROLE_LABEL[step.role].toLowerCase()}).`, link: docLink(doc), projectId: p.id, at, email: false })
+      notify(s, { to: [step.actingFor], type: 'approval', title: `${user.name} approved for you: ${DOC_LABEL[doc.type]} v${v0.number}`, body: `${p.name}: the ${COVER_LABEL[step.coveredAs]} approved this step in your place (as ${stepLabel(p, step).toLowerCase()}).`, link: docLink(doc), projectId: p.id, at, email: false })
     if (r.finished) afterChainFinished(s, doc, r.chain, at, user)
     else {
       const next = r.nextStep!
@@ -918,8 +958,8 @@ export async function requestChanges(docId: ID, comment: string) {
     s.chains = s.chains.map((c) => (c.id === chain.id ? r.chain : c))
     const step = r.chain.steps.find((x) => x.status === 'changes_requested')!
     if (CHAIN_CONFIG[doc.type].comments)
-      s.comments.push({ id: newId('cmt'), docId, projectId: p.id, createdOnVersionId: chain.versionId, versionId: chain.versionId, sectionId: null, quote: '', prefix: '', suffix: '', body: comment.trim(), authorId: user.id, authorTeam: ROLE_TEAM[step.role], mentions: [], status: 'open', reopenCount: 0, replies: [], createdAt: at, fromRequestChanges: true })
-    const how = onBehalfText({ coveredAs: r.coveredAs, actingForName: r.actingFor ? nameOf(s, r.actingFor) : undefined, headLabel: ROLE_LABEL[step.role] })
+      s.comments.push({ id: newId('cmt'), docId, projectId: p.id, createdOnVersionId: chain.versionId, versionId: chain.versionId, sectionId: null, quote: '', prefix: '', suffix: '', body: comment.trim(), authorId: user.id, authorTeam: stepTeam(step), mentions: [], status: 'open', reopenCount: 0, replies: [], createdAt: at, fromRequestChanges: true })
+    const how = onBehalfText({ coveredAs: r.coveredAs, actingForName: r.actingFor ? nameOf(s, r.actingFor) : undefined, headLabel: step.role === 'PERSON' ? 'approver' : ROLE_LABEL[step.role] })
     notify(s, { to: teamMembers(p, doc.type === 'SQA_SIGNOFF' ? 'TECH' : 'PM'), type: 'changes', title: `Changes requested: ${DOC_LABEL[doc.type]}`, body: `${p.name}: ${user.name}${how ? ` (${how})` : ''} asked for changes: “${comment.trim()}”`, link: docLink(doc), projectId: p.id, at, exclude: user.id })
     audit(s, { projectId: p.id, actorId: user.id, actingFor: r.actingFor, action: 'Changes requested', details: `${DOC_LABEL[doc.type]}: ${comment.trim().slice(0, 100)}`, at })
   })
@@ -958,7 +998,7 @@ export async function approveAndSign(docId: ID, method: 'password' | 'email_otp'
   const ip = '10.20.4.17'
   const docHash = await sha256Hex(canonicalDocument(snapshot))
   const pendingRole = currentStep(chain)!.role
-  const onBehalf = onBehalfText({ coveredAs: check.coveredAs, actingForName: check.actingFor ? nameOf(s0, check.actingFor) : undefined, headLabel: ROLE_LABEL[pendingRole] })
+  const onBehalf = onBehalfText({ coveredAs: check.coveredAs, actingForName: check.actingFor ? nameOf(s0, check.actingFor) : undefined, headLabel: pendingRole === 'PERSON' ? 'approver' : ROLE_LABEL[pendingRole] })
   const page = signaturePageText({ title: snapshot.title, versionNumber: v.number, signer: user.name, onBehalf: onBehalf || undefined, signedAt, ip, method, docHash })
   const finalHash = await sha256Hex(canonicalDocument(snapshot) + '\n\n' + page)
   return act((s, t2, at) => {
@@ -970,7 +1010,11 @@ export async function approveAndSign(docId: ID, method: 'password' | 'email_otp'
     audit(s, { projectId: p.id, actorId: user.id, actingFor: r.actingFor, action: 'Approved and signed', details: `${DOC_LABEL[doc.type]} v${v.number}${onBehalf ? ` (${onBehalf})` : ''} · SHA-256 ${docHash.slice(0, 16)}… · final ${finalHash.slice(0, 16)}… · ${method === 'password' ? 'password' : 'email code'}`, at })
     if (r.coveredAs && r.actingFor && r.actingFor !== user.id)
       notify(s, { to: [r.actingFor], type: 'approval', title: `${user.name} signed for you: ${DOC_LABEL[doc.type]} v${v.number}`, body: `${p.name}: the ${COVER_LABEL[r.coveredAs]} approved and signed in your place.`, link: docLink(doc), projectId: p.id, at, email: false })
-    afterChainFinished(s, docById(s, docId), r.chain, at, user)
+    if (r.finished) afterChainFinished(s, docById(s, docId), r.chain, at, user)
+    else {
+      const next = r.nextStep!
+      notify(s, { to: [headRecipient(p, next.assigneeId, t2)], type: 'approval', title: `Your turn to ${next.sign ? 'approve and sign' : 'approve'}: ${DOC_LABEL[doc.type]} v${v.number}`, body: `${p.name}: signed by ${user.name}. It is now your turn.`, link: docLink(doc), projectId: p.id, at })
+    }
     return { docHash, finalHash }
   })
 }

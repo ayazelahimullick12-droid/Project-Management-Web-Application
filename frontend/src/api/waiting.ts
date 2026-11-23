@@ -44,7 +44,7 @@ export function waitingItems(s: DemoState, now: Date): WaitingItem[] {
         type: 'approval',
         since: step.pendingSince ?? ch.startedAt,
         title: `Your turn to ${verb}: ${DOC_LABEL[doc.type]} v${v?.number ?? '?'}`,
-        body: `${p.name}: the ${DOC_LABEL[doc.type]} is waiting for the ${ROLE_LABEL[step.role].toLowerCase()} to ${verb}.${CHAIN_CONFIG[doc.type].signs && step.sign ? ' Signing needs your password or an email code.' : ''}`,
+        body: `${p.name}: the ${DOC_LABEL[doc.type]} is waiting for ${step.role === 'PERSON' ? 'you' : `the ${ROLE_LABEL[step.role].toLowerCase()}`} to ${verb}.${CHAIN_CONFIG[doc.type].signs && step.sign ? ' Signing needs your password or an email code.' : ''}`,
         link: doc.type.endsWith('SIGNOFF') ? `${base}/testing/${doc.type === 'SQA_SIGNOFF' ? 'SQA' : 'UAT'}?tab=signoff` : `${base}/docs/${doc.type}`,
         recipients: [headRecipient(p, step.assigneeId, now)],
         waitingOn: step.assigneeId,

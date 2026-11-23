@@ -284,3 +284,12 @@ The user asked to bring the "grill me" idea (a Claude Code skill by Matt Pocock:
 ## The Fact Sheet is confirmed in its own tab (23 November 2026)
 
 - Simple view, Questions & facts: the **Fact Sheet** tab shows the main Fact Sheet (the same one as the full view: edit, comments, Grill me, versions). It is sent for confirmation and confirmed **there only**. When the chat's questions are done, the chat says what happens next and has an "Open the Fact Sheet" button; it no longer has the send or confirm buttons.
+
+## The PM chooses who approves and signs (23 November 2026)
+
+- **Proposal & Charter, BRD, SRS and UAT sign-off:** when sending, the PM chooses the people, in order. They get it one after another, and **everyone chosen approves and signs** (password or email code). The list starts with the people chosen last time for that document, otherwise the project's heads; the PM can remove, add (anyone in the project, or the Owner) and reorder.
+- The person can act; while they are Away, the deputy of a team they head acts for them; the Project Owner and the PM can always act in their place (master key).
+- After "Ask for changes" and a minor correction, the same people continue from the person who asked.
+- **SQA sign-off** keeps its fixed step (the tech head), sent by SQA.
+- Approvals started before this change keep their fixed steps (PM → tech head → stakeholder head → sponsor head signs). Nothing in the saved data was converted: a chosen step is a new step kind (`role: 'PERSON'`, with the person's `team`).
+- Code: `newChain(… approvers)`, `sign` (hands over to the next person), `actForPerson` in `src/rules/permissions.ts`, `approverChoicesFor` and `sendForApproval(docId, approvers)` in `src/api/documents.ts`, `src/components/ChooseApprovers.tsx`.

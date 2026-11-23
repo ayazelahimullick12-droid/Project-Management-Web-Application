@@ -371,7 +371,9 @@ export interface Suggestion {
 
 // ─── Approval and signing ───────────────────────────────────────────────
 
-export type ApproverRole = 'PM' | 'TECH_HEAD' | 'STAKEHOLDER_HEAD' | 'SPONSOR_HEAD'
+// PERSON: a person the PM chose for this round (November 2026). The other four are the older
+// fixed steps, still used by the SQA sign-off and by approvals started before the change.
+export type ApproverRole = 'PM' | 'TECH_HEAD' | 'STAKEHOLDER_HEAD' | 'SPONSOR_HEAD' | 'PERSON'
 /** The Project Owner or the Project Manager, approving or confirming in a head's place. */
 export type CoverRole = 'OWNER' | 'PM'
 export type StepStatus = 'waiting' | 'pending' | 'approved' | 'changes_requested' | 'cancelled' | 'carried_over'
@@ -388,6 +390,7 @@ export interface ApprovalStep {
   coveredAs?: CoverRole // done by the Project Owner or PM in the head's place
   vacant?: boolean // nobody had this role when the step was created; the Owner or PM approves
   comment?: string
+  team?: Team // PERSON steps: the chosen person's team in the project when they were chosen
 }
 
 export interface ApprovalChain {
