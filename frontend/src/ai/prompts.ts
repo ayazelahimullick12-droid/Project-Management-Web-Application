@@ -20,6 +20,8 @@ export const LIMITS = {
   facts: 300, // facts pulled from a text, one line each
   question: 40, // one question for one missing fact
   grill: 70, // "Grill me": one pointed question and the fact it is about
+  kind: 45, // update or new project, with a short reason
+  chatQuestion: 55, // the next question in the intake chat
   rewrite: 120,
   scope: 50,
   summary: 100,
@@ -82,6 +84,23 @@ Then say which of these facts it is about, or none: ${keys.map((k) => k.key).joi
 Use exactly this layout:
 Question: <the question>
 Fact: <one key from the list, or none>`,
+
+  /** Update to an existing application, or a new one? */
+  kind: (p: Project, text: string) =>
+    `A team asked for this project: "${p.name}".
+Their request:
+${text.slice(0, 1500)}
+
+Is this an UPDATE to an application or system that already exists (changing, extending or replacing it), or a NEW one built from scratch?
+Use exactly this layout:
+Type: Update or New
+Reason: <one sentence under 20 words>`,
+
+  /** The next question in the intake chat: conversational, one at a time, like an interviewer. */
+  chatQuestion: (p: Project, field: { label: string; question?: string }, team: string, previous?: { q: string; a: string }) =>
+    `You are chatting with the ${team} of the project "${p.name}" to fill in a missing detail, like a friendly but sharp interviewer.
+${previous ? `Your last question was: "${previous.q}"\nThey answered: "${previous.a}"\n` : ''}Now ask ONE short, specific question about: ${field.label}.${field.question ? ` (For example: ${field.question})` : ''}
+${previous ? 'Start with a 2 to 5 word reaction to their answer, then the question. ' : ''}Only that, under 30 words.`,
 
   // One question per request: a small model mixes up several at once.
   question: (p: Project, field: { label: string; question?: string; team: string }) =>

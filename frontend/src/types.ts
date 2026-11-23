@@ -47,6 +47,8 @@ export interface IntakeState {
   confirmRequestedAt?: string // PM asked the stakeholder head to confirm the Fact Sheet
   feedback?: { by: ID; at: string; text: string }[] // stakeholder head's comments on the draft Fact Sheet
   gapsLogged?: { by: ID; at: string; factKeys: string[] }
+  /** Is this an update to an existing application, or a new one? The AI suggests, the PM approves. */
+  kind?: { value: 'new' | 'update'; reason: string; ai: boolean; approvedBy?: ID; approvedAt?: string }
 }
 
 export interface Project {
@@ -144,6 +146,8 @@ export interface QARound {
   startedAt: string
   closedAt?: string
   changeRequestId?: ID
+  /** A chat round ("grill me" style): questions are asked one at a time, at most 3 (CHAT_LIMIT). */
+  chat?: boolean
 }
 
 export interface Question {

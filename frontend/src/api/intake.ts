@@ -8,7 +8,7 @@ import { now, nowIso } from '../demo/clock'
 import { runAiJob, runJob } from '../demo/jobs'
 import { newId } from '../demo/ids'
 import { questionFor, readUpload } from '../demo/ai/agents'
-import { extractFacts, findSimilarProjects, writeQuestions, type PastProject } from '../ai/agents'
+import { chatQuestion, classifyKind, extractFacts, findSimilarProjects, writeQuestions, type PastProject } from '../ai/agents'
 import { actAsHead, actForHead, can, COVER_LABEL, coverers, deputyFor, headOf, inTeam, isOwner, membershipsOf, TEAM_LABEL } from '../rules/permissions'
 import { FACT_CONFIRMATION_NEEDS, missingPeople, peopleCheck, questionNeeds } from '../rules/people'
 import { factSheetConfirmed, isComplete, roundClosed } from '../rules/pipeline'
@@ -45,7 +45,7 @@ export async function getIntake(pid: ID) {
       .map((q) => {
         const mine = q.assigneeIds.includes(user.id) || q.assigneeIds.some((id) => membershipsOf(p, id).some((m) => m.isHead && deputyFor(p, m.team, user.id, t) === id))
         // canAnswer: also the Project Owner, who may answer any question in their project
-        return { ...q, teamLabel: TEAM_LABEL[q.team], assigneeNames: q.assigneeIds.map((id) => nameOf(s, id)), answeredByName: q.answeredBy ? nameOf(s, q.answeredBy) : undefined, mine, canAnswer: mine || isOwner(p, user.id) }
+        return { ...q, teamLabel: TEAM_LABEL[q.team], assigneeNames: q.assigneeIds.map((id) => nameOf(s, id)), answeredByName: q.answeredBy ? nameOf(s, q.answeredBy) : undefined, mine, canAnswer: mine || isOwner(p, user.id) || pm.ok }
       })
     const run = p.intake.ragRunId ? s.ragRuns.find((r) => r.id === p.intake.ragRunId) : undefined
     const rag = pmTeam && run
@@ -90,6 +90,10 @@ export async function getIntake(pid: ID) {
       nextExtra,
       feedback: (p.intake.feedback ?? []).map((f) => ({ ...f, byName: nameOf(s, f.by) })),
       confirmed: factSheetConfirmed(ctx),
+      chatStage: chatStage(s, pid),
+      chatLimit: CHAT_LIMIT,
+      kind: p.intake.kind ? { ...p.intake.kind, approvedByName: p.intake.kind.approvedBy ? nameOf(s, p.intake.kind.approvedBy) : undefined } : undefined,
+      confirmRequested: !!p.intake.confirmRequestedAt,
       // Who is missing before the next questions or the confirmation can go out (shown with "Add").
       missingForQuestions: missingPeople(p, questionNeeds([...new Set(missingFor(p.facts, s.factCatalog, nextExtra ?? 'intake').map(routeTeam))])),
       missingForConfirmation: missingPeople(p, FACT_CONFIRMATION_NEEDS),
@@ -154,7 +158,7 @@ export async function runAnalysis(pid: ID) {
   if (!p.intake.description.trim()) fail('The stakeholders have not written a description yet.')
   const uploads = s0.uploads.filter((u) => u.projectId === pid && u.context === 'intake').slice(0, 3)
   const catalog = s0.factCatalog.filter((d) => d.round === 'intake') // later rounds ask for the rest
-  const steps = ['Reading the stakeholder description', ...uploads.map((u) => `Reading ${u.name}`), 'Checking for conflicting answers']
+  const steps = ['Reading the stakeholder description', ...uploads.map((u) => `Reading ${u.name}`), 'Checking for conflicting answers', 'Deciding: an update or a new project?']
   return runAiJob({
     agent: 'qa_extract',
     title: 'Extracting facts from the stakeholders’ information',
@@ -176,10 +180,14 @@ export async function runAnalysis(pid: ID) {
           else if (numbersDiffer(had.value, f.value)) found.set(f.key, { ...had, status: 'conflicting', conflict: [...(had.conflict ?? [{ value: had.value, source: had.source! }]), { value: f.value, source }] })
         }
       }
+      step(steps.length - 2)
+      const facts = [...found.values()]
       step(steps.length - 1)
-      return [...found.values()]
+      // Update or new: asked once; the PM's decision is never overwritten.
+      const kind = p.intake.kind?.approvedBy ? undefined : await classifyKind(p, [p.intake.description, ...uploads.map((u) => u.extractedText.slice(0, 400))].join('\n'))
+      return { facts, kind }
     },
-    apply: (s, extracted) => {
+    apply: (s, { facts: extracted, kind }) => {
       const proj = projectOf(s, pid)
       const at = nowIso()
       for (const f of extracted) {
@@ -192,7 +200,12 @@ export async function runAnalysis(pid: ID) {
         else if (f.status !== 'conflicting' && numbersDiffer(old.value, f.value)) proj.facts[i] = mergeValue(old, f)
       }
       proj.intake.analysed = true
-      audit(s, { projectId: pid, actorId: null, action: 'AI generation', details: `Q/A agent extracted ${extracted.length} facts`, at })
+      if (kind && !proj.intake.kind?.approvedBy) {
+        proj.intake.kind = { ...kind, ai: true }
+        const pmHead = headOf(proj, 'PM')
+        if (pmHead) notify(s, { to: [pmHead.userId], type: 'qa', title: 'Is this an update or a new project?', body: `${proj.name}: the AI thinks it is ${kind.value === 'update' ? 'an update to an existing application' : 'a new project'}. Please approve or change it.`, link: `/projects/${pid}/intake`, projectId: pid, at })
+      }
+      audit(s, { projectId: pid, actorId: null, action: 'AI generation', details: `Q/A agent extracted ${extracted.length} facts${kind ? `; suggests ${kind.value === 'update' ? 'an update' : 'a new project'}` : ''}`, at })
       const nConflicts = proj.facts.filter((x) => x.status === 'conflicting').length
       if (nConflicts) notify(s, { to: teamMembers(proj, 'PM').filter((id) => headOf(proj, 'PM')?.userId === id), type: 'conflict', title: 'Conflicting answers need your decision', body: `${proj.name}: ${nConflicts} fact${nConflicts > 1 ? 's have' : ' has'} conflicting values.`, link: `/projects/${pid}/intake?tab=facts`, projectId: pid, at })
       return `${extracted.length} facts found${nConflicts ? `, ${nConflicts} conflicting` : ''}. Now searching similar past projects.`
@@ -383,6 +396,95 @@ export async function startRound(pid: ID, purpose: Exclude<RoundPurpose, 'change
   })
 }
 
+/** The PM (or the Owner) approves or changes "update or new". The chat questions start after this. */
+export async function approveKind(pid: ID, value: 'new' | 'update') {
+  return act((s, t, at) => {
+    const user = me(s)
+    const p = projectOf(s, pid)
+    ensure(can.change(p))
+    ensure(actAsHead(p, 'PM', user.id, t))
+    const old = p.intake.kind
+    const changed = !old || old.value !== value
+    p.intake.kind = { value, reason: changed ? `Set by ${user.name}` : old.reason, ai: !changed && !!old?.ai, approvedBy: user.id, approvedAt: at }
+    audit(s, { projectId: pid, actorId: user.id, action: 'Project type approved', details: value === 'update' ? 'Update to an existing application' : 'New project', at })
+  })
+}
+
+/** At most this many questions per stage in the chat ("grill me" style). */
+export const CHAT_LIMIT = 3
+
+/** The chat stage the project is at: intake (for the Proposal & Charter), then before the BRD, then before the SRS. */
+export function chatStage(s: DemoState, pid: ID): Exclude<RoundPurpose, 'change_request'> | undefined {
+  const ctx = pipelineCtx(s, pid)
+  if (!factSheetConfirmed(ctx)) return 'intake'
+  if (isComplete(ctx, 'PROPOSAL') && !roundClosed(ctx, 'brd_business')) return 'brd_business'
+  if (isComplete(ctx, 'BRD') && !roundClosed(ctx, 'srs_technical')) return 'srs_technical'
+  return undefined
+}
+
+/**
+ * The intake chat: asks the next question for the current stage, one at a time (like "grill me"),
+ * about the next missing fact that stage's documents need. After CHAT_LIMIT questions, or when
+ * nothing is missing, the stage's chat round closes; facts still missing become assumptions.
+ * Anyone in the project may move the chat on (it runs after each answer).
+ */
+export async function askNextChatQuestion(pid: ID) {
+  const s0 = await read((s) => s)
+  const user = me(s0)
+  const p = projectOf(s0, pid)
+  ensure(can.change(p))
+  ensure(can.memberOrOwner(p, user.id))
+  const purpose = chatStage(s0, pid)
+  if (!purpose) fail('There is nothing to ask at this step.')
+  if (purpose === 'intake') {
+    if (!p.intake.analysed) fail('The AI has not read the request yet.')
+    if (!p.intake.kind?.approvedBy) fail('The PM first approves whether this is an update or a new project.')
+  }
+  const open = s0.rounds.find((x) => x.projectId === pid && x.purpose === purpose && x.status === 'open')
+  if (open && !open.chat) fail('A question round is already open. Answer or close it first.')
+  const asked = open ? s0.questions.filter((q) => q.roundId === open.id) : []
+  if (asked.some((q) => !q.answeredAt)) return { status: 'waiting' as const }
+  const askedKeys = new Set(s0.questions.filter((q) => q.projectId === pid && s0.rounds.find((x) => x.id === q.roundId)?.purpose === purpose).map((q) => q.factKey))
+  const missing = missingFor(p.facts, s0.factCatalog, purpose).filter((d) => !askedKeys.has(d.key))
+
+  // Enough: close this stage's chat; what is still missing becomes an assumption.
+  if (asked.length >= CHAT_LIMIT || !missing.length) {
+    return act((s, _t, at) => {
+      const proj = projectOf(s, pid)
+      const round = open ? s.rounds.find((x) => x.id === open.id) : undefined
+      if (round && round.status === 'open') Object.assign(round, { status: 'closed', closedAt: at })
+      if (!round) s.rounds.push({ id: newId('round'), projectId: pid, purpose, number: roundsOf(s.rounds, pid, purpose).length + 1, status: 'closed', startedAt: at, closedAt: at, chat: true })
+      const still = missingFor(proj.facts, s.factCatalog, purpose)
+      if (purpose === 'intake' && still.length) proj.intake.gapsLogged = { by: user.id, at, factKeys: still.map((d) => d.key) }
+      if (purpose !== 'intake') s.factSheets.push({ id: newId('fs'), projectId: pid, number: s.factSheets.filter((x) => x.projectId === pid).length + 1, facts: structuredClone(proj.facts), createdAt: at, createdBy: user.id, note: `${ROUND_LABEL[purpose]}: chat finished` })
+      audit(s, { projectId: pid, actorId: user.id, action: 'Q/A round closed', details: `${ROUND_LABEL[purpose]} chat: ${asked.length} question${asked.length === 1 ? '' : 's'}${still.length ? `, ${still.length} left as assumptions` : ''}`, at })
+      return { status: 'done' as const, assumptions: still.map((d) => d.label) }
+    })
+  }
+
+  // The next question, about the most needed missing fact
+  const def = missing[0]
+  const team = routeTeam(def)
+  const teamName: Record<string, string> = { STAKEHOLDER: 'stakeholders', SPONSOR: 'sponsors', TECH: 'technical team' }
+  const last = [...asked].reverse().find((q) => q.answeredAt)
+  const text = await chatQuestion(p, def, teamName[team] ?? 'project team', last ? { q: last.text, a: last.answer ?? '' } : undefined)
+  return act((s, _t, at) => {
+    const proj = projectOf(s, pid)
+    let round = s.rounds.find((x) => x.projectId === pid && x.purpose === purpose && x.status === 'open' && x.chat)
+    if (!round) {
+      round = { id: newId('round'), projectId: pid, purpose, number: roundsOf(s.rounds, pid, purpose).length + 1, status: 'open', startedAt: at, chat: true }
+      s.rounds.push(round)
+    }
+    // Someone else asked meanwhile (two people in the chat): keep theirs.
+    if (s.questions.some((q) => q.roundId === round!.id && !q.answeredAt)) return { status: 'waiting' as const }
+    const assignees = proj.members.filter((m) => m.team === team && !m.isSqa).map((m) => m.userId)
+    s.questions.push({ id: newId('q'), projectId: pid, roundId: round.id, factKey: def.key, text, team, assigneeIds: [...new Set(assignees)], createdAt: at, sampleAnswer: def.sample, defaultValue: def.defaultIfUnknown })
+    if (assignees.length) notify(s, { to: [...new Set(assignees)], type: 'question', title: 'A question for you in the project chat', body: `${proj.name}: ${text}`, link: `/projects/${pid}/intake`, projectId: pid, at, exclude: user.id })
+    audit(s, { projectId: pid, actorId: null, action: 'Q/A question', details: `${ROUND_LABEL[purpose]} chat: ${def.label}`, at })
+    return { status: 'asked' as const }
+  })
+}
+
 export async function myQuestions() {
   return read((s, t) => {
     const user = me(s)
@@ -410,16 +512,17 @@ export async function answerQuestion(qid: ID, answer: { text: string; unknown: b
     const round = s.rounds.find((r) => r.id === q.roundId)
     if (round?.status !== 'open' || q.answeredAt) fail('This question is already closed.')
     let actingFor: ID | undefined
-    let coveredAs: 'OWNER' | undefined
+    let coveredAs: 'OWNER' | 'PM' | undefined
     if (!q.assigneeIds.includes(user.id)) {
       actingFor = q.assigneeIds.find((id) => membershipsOf(p, id).some((m) => m.isHead && deputyFor(p, m.team, user.id, t) === id))
       if (!actingFor && isOwner(p, user.id)) coveredAs = 'OWNER' // the Project Owner may answer any question
+      else if (!actingFor && actAsHead(p, 'PM', user.id, t).ok) coveredAs = 'PM' // and so may the PM
       else if (!actingFor) throw new ApiError(403, 'This question was routed to someone else.')
     }
     if (!answer.unknown && !answer.text.trim()) fail('Write an answer, or choose “Unknown”.')
     Object.assign(q, { answer: answer.unknown ? 'Unknown' : answer.text.trim(), unknown: answer.unknown, answeredBy: user.id, actingFor, coveredAs, answeredAt: at } satisfies Partial<Question>)
     const def = s.factCatalog.find((d) => d.key === q.factKey) ?? { key: q.factKey, label: q.factKey, category: 'other' as const }
-    const fact = factFromAnswer(def, { text: answer.text, unknown: answer.unknown, defaultValue: q.defaultValue ?? s.factCatalog.find((d) => d.key === q.factKey)?.defaultIfUnknown, source: { type: 'answer', ref: q.id, label: `Answer from ${user.name}${coveredAs ? ' (Project Owner)' : ''}` }, userName: user.name })
+    const fact = factFromAnswer(def, { text: answer.text, unknown: answer.unknown, defaultValue: q.defaultValue ?? s.factCatalog.find((d) => d.key === q.factKey)?.defaultIfUnknown, source: { type: 'answer', ref: q.id, label: `Answer from ${user.name}${coveredAs === 'OWNER' ? ' (Project Owner)' : coveredAs === 'PM' ? ' (Project Manager)' : ''}` }, userName: user.name })
     const i = p.facts.findIndex((f) => f.key === q.factKey)
     if (i === -1) p.facts.push(fact)
     // A change-request answer replaces the old value; other answers can create a conflict.

@@ -14,7 +14,7 @@ vi.mock('./client', () => ({
   cosine: vi.fn(() => 0.9),
 }))
 
-const { draftSection, draftTestPoints, grillQuestion, extractFacts, findSimilarProjects, rewriteTestPoint, scopeVerdict, summarize, tidy, updateForFacts, writeQuestions } = await import('./agents')
+const { chatQuestion, classifyKind, draftSection, draftTestPoints, grillQuestion, extractFacts, findSimilarProjects, rewriteTestPoint, scopeVerdict, summarize, tidy, updateForFacts, writeQuestions } = await import('./agents')
 
 const def = (key: string, label: string): FactDef => ({ key, label, category: 'scope', round: 'intake' }) as FactDef
 const p = project({ name: 'Branch Loan Approval App', intake: { description: 'Loan officers approve loans on paper.', analysed: false } })
@@ -195,5 +195,34 @@ describe('grillQuestion', () => {
     expect((await grillQuestion(p, '', [], keys)).question).toBe('Sure. Which 25 branches go first?')
     answer.text = 'OK'
     await expect(grillQuestion(p, '', [], keys)).rejects.toThrow()
+  })
+})
+
+describe('classifyKind', () => {
+  it('reads "Update" with its reason', async () => {
+    answer.text = 'Type: Update\nReason: They want to change the existing attendance app.'
+    expect(await classifyKind(p, 'text')).toEqual({ value: 'update', reason: 'They want to change the existing attendance app.' })
+  })
+  it('reads "New", and gives a reason when the model leaves it out', async () => {
+    answer.text = 'Type: New'
+    const r = await classifyKind(p, 'text')
+    expect(r.value).toBe('new')
+    expect(r.reason.length).toBeGreaterThan(10)
+  })
+})
+
+describe('chatQuestion', () => {
+  const field = { key: 'coverage', label: 'Branches and regions covered', category: 'scope', round: 'intake' } as FactDef
+
+  it('keeps a good conversational question', async () => {
+    answer.text = 'Thanks, that helps! Which branches go first?'
+    expect(await chatQuestion(p, field, 'stakeholders', { q: 'Who uses it?', a: 'Field officers' })).toBe('Thanks, that helps! Which branches go first?')
+  })
+
+  it('asks again with the plain prompt when the model refuses or leaves a placeholder', async () => {
+    const ask = (await import('./client')).ask as unknown as ReturnType<typeof vi.fn>
+    ask.mockResolvedValueOnce("Hi [Stakeholders], I'm sorry, but I can't assist with that request.")
+    ask.mockResolvedValueOnce('Which branches will use the app first?')
+    expect(await chatQuestion(p, field, 'stakeholders', { q: 'Who uses it?', a: 'Field officers' })).toBe('Thank you. Which branches will use the app first?')
   })
 })

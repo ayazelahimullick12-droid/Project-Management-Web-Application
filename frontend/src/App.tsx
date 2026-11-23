@@ -22,6 +22,7 @@ import { NewProjectPage } from './pages/NewProjectPage'
 import { ProjectHomePage } from './pages/ProjectHomePage'
 import { TeamPage } from './pages/TeamPage'
 import { IntakePage } from './pages/intake/IntakePage'
+import { SimpleIntakePage } from './simple/IntakeChat'
 import { MyWorkPage } from './pages/MyWorkPage'
 import { DocumentPage } from './pages/document/DocumentPage'
 import { ChangesPage } from './pages/ChangesPage'
@@ -121,7 +122,9 @@ export function App() {
               <Route path="/projects/new" element={<NewProjectPage />} />
               <Route path="/projects/:pid" element={<ByView simple={<SimpleProjectPage />} full={<ProjectHomePage />} />} />
               <Route path="/projects/:pid/team" element={<TeamPage />} />
-              <Route path="/projects/:pid/intake" element={<IntakePage />} />
+              <Route path="/projects/:pid/intake" element={<ByView simple={<SimpleIntakePage />} full={<IntakePage />} />} />
+              {/* The full intake tools (Fact Sheet table, similar projects, versions), also from the Simple view */}
+              <Route path="/projects/:pid/intake/details" element={<IntakePage />} />
               <Route path="/projects/:pid/docs/:type" element={<ByView simple={<SimpleDocumentPage />} full={<DocumentPage />} />} />
               <Route path="/projects/:pid/docs/:type/tools" element={<DocumentPage />} />
               <Route path="/projects/:pid/changes" element={<ChangesPage />} />

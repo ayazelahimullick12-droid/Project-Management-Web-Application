@@ -311,6 +311,38 @@ export async function findSimilarProjects(p: Project, past: PastProject[], topK:
   return { matches, suggestions: suggestions.slice(0, 6) }
 }
 
+// ─── Intake chat ────────────────────────────────────────────────────────
+
+/** Update to an existing application, or a new one, with the reason. */
+export async function classifyKind(p: Project, text: string): Promise<{ value: 'new' | 'update'; reason: string }> {
+  const out = await ask({ agent: 'kind', title: 'Update or new project?', projectId: p.id, prompt: prompts.kind(p, text), maxTokens: LIMITS.kind })
+  const lines = linesOf(out)
+  const typeLine = (lines.find((l) => /^type\s*:/i.test(l)) ?? out).toLowerCase()
+  const value = /update|existing|extend|replac/.test(typeLine) && !/^type\s*:\s*new/.test(typeLine) ? 'update' : 'new'
+  const reason = clean(markdownToPlain((lines.find((l) => /^reason\s*:/i.test(l)) ?? '').replace(/^reason\s*:\s*/i, '')))
+  return { value, reason: reason || (value === 'update' ? 'The request talks about changing an existing system.' : 'The request describes something that does not exist yet.') }
+}
+
+/** A reply the chat must not show: a refusal, an apology, or a template placeholder like "[Stakeholders]". */
+const badChatReply = (t: string) => t.length < 8 || /\b(sorry|apologi[sz]e|can'?t assist|cannot assist|unable to|as an ai|language model)\b|\[[^\]]*\]|\{[^}]*\}/i.test(t)
+
+/**
+ * The next question in the intake chat (a short reaction to the last answer, then the question).
+ * If the small model refuses or leaves a placeholder, it is asked again with the plain one-question
+ * prompt used by the regular Q/A, and the app adds a short "Thank you."
+ */
+export async function chatQuestion(p: Project, field: FactDef, team: string, previous?: { q: string; a: string }): Promise<string> {
+  const tidyQ = (raw: string) => {
+    const t = clean(markdownToPlain(linesOf(raw).join(' ').replace(/^(question|q)\s*:\s*/i, '')))
+    return /[?]$/.test(t) ? t : `${t.replace(/[.!]$/, '')}?`
+  }
+  const first = tidyQ(await ask({ agent: 'qa_questions', title: `Chat question about ${field.label.toLowerCase()}`, projectId: p.id, prompt: prompts.chatQuestion(p, field, team, previous), maxTokens: LIMITS.chatQuestion, temperature: 0.5 }))
+  if (!badChatReply(first)) return first
+  const plain = tidyQ(linesOf(await ask({ agent: 'qa_questions', title: `Question about ${field.label.toLowerCase()} (asked again)`, projectId: p.id, prompt: prompts.question(p, { ...field, team }), maxTokens: LIMITS.question }))[0] ?? '')
+  if (badChatReply(plain)) throw unusable()
+  return previous ? `Thank you. ${plain}` : plain
+}
+
 // ─── Grill me ───────────────────────────────────────────────────────────
 
 /** One "Grill me" question, and the fact it is about (when the model names a real one). */
