@@ -17,12 +17,12 @@
  * answerQuestion, requestConfirmation, confirmFactSheet).
  */
 import { clsx } from 'clsx'
-import { Check, ChevronRight, FileText, Paperclip, Sparkles } from 'lucide-react'
+import { ArrowUp, Check, ChevronRight, FileText, Paperclip, Sparkles } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../api'
 import { useAction, useApi } from '../api/hooks'
-import { Avatar, Button, ErrorBox, LinkButton, Loading, Segmented, Textarea } from '../components/ui'
+import { Avatar, Button, ErrorBox, LinkButton, Loading, Segmented } from '../components/ui'
 import { FileButton } from '../components/FileButton'
 import { FactsTab } from '../pages/intake/FactsTab'
 
@@ -93,25 +93,112 @@ function StatusNote({ tone = 'wait', children }: { tone?: 'wait' | 'done'; child
   )
 }
 
-function Composer({ placeholder, initial = '', submitLabel, onSubmit, extra, busy }: { placeholder: string; initial?: string; submitLabel: string; onSubmit: (text: string) => void; extra?: ReactNode; busy?: boolean }) {
-  const [text, setText] = useState(initial)
+/** The AI is typing: three dots in a bubble. */
+function Typing({ label }: { label: string }) {
   return (
-    <div className="rounded-2xl bg-paper p-3 ring-2 ring-brand/30">
-      <Textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder={placeholder} aria-label={placeholder} className="!border-0 !bg-transparent !shadow-none !ring-0" />
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <Button variant="primary" disabled={!text.trim() || busy} onClick={() => onSubmit(text)}>
-          {busy ? 'Sending…' : submitLabel}
-        </Button>
-        {extra}
+    <div className="flex items-start gap-3" role="status" aria-label={label}>
+      <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-soft text-brand" aria-hidden>
+        <Sparkles className="h-5 w-5" />
+      </span>
+      <div className="min-w-0">
+        <div className="text-sm font-medium text-muted">AI assistant</div>
+        <div className="mt-1 inline-flex items-center gap-1.5 rounded-2xl rounded-tl-md bg-paper px-4 py-3.5 ring-1 ring-line">
+          {[0, 1, 2].map((i) => <span key={i} className="h-2 w-2 animate-bounce rounded-full bg-muted/70" style={{ animationDelay: `${i * 150}ms` }} />)}
+          <span className="ml-2 text-sm text-muted">{label}</span>
+        </div>
       </div>
     </div>
   )
 }
 
+/**
+ * The message box at the bottom of the chat, as in ChatGPT or Claude: Enter sends, Shift+Enter is a
+ * new line, the round button sends. `chips` are quick replies shown above it; `attach` sits beside it.
+ * When nothing is waiting for this person, it shows why (disabled).
+ */
+function ChatInput({ placeholder, disabledReason, onSend, busy, chips, attach, initial = '', resetKey }: { placeholder?: string; disabledReason?: string; onSend?: (text: string) => void; busy?: boolean; chips?: ReactNode; attach?: ReactNode; initial?: string; resetKey?: string }) {
+  const [text, setText] = useState(initial)
+  const box = useRef<HTMLTextAreaElement>(null)
+  useEffect(() => setText(initial), [resetKey, initial])
+  const off = !!disabledReason
+  useEffect(() => {
+    const el = box.current
+    if (!el) return
+    el.style.height = 'auto'
+    if (text && !off) el.style.height = `${Math.min(el.scrollHeight, 200)}px`
+  }, [text, off])
+  const send = () => {
+    if (!text.trim() || busy || off || !onSend) return
+    onSend(text.trim())
+    setText('')
+  }
+  return (
+    <div className="shrink-0 border-t border-line bg-canvas/80 p-3 sm:p-4">
+      {chips && !off && <div className="mb-2 flex flex-wrap gap-2">{chips}</div>}
+      <div className={clsx('flex items-end gap-2 rounded-3xl bg-paper px-3 py-2 ring-1 transition', off ? 'ring-line' : 'ring-brand/40 focus-within:ring-2 focus-within:ring-brand')}>
+        {attach}
+        <textarea
+          ref={box}
+          rows={1}
+          value={off ? '' : text}
+          disabled={off}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
+              send()
+            }
+          }}
+          placeholder={off ? disabledReason : placeholder}
+          aria-label={off ? disabledReason : placeholder}
+          className="max-h-[200px] min-h-[2.75rem] flex-1 resize-none bg-transparent px-1 py-2.5 text-base outline-none placeholder:text-muted disabled:cursor-not-allowed"
+        />
+        <button type="button" onClick={send} disabled={off || busy || !text.trim()} aria-label="Send" className="mb-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand text-white transition hover:brightness-110 disabled:bg-ink/15 disabled:text-muted">
+          <ArrowUp className="h-5 w-5" />
+        </button>
+      </div>
+      {!off && <p className="mt-1.5 px-2 text-xs text-muted">Enter to send · Shift+Enter for a new line</p>}
+    </div>
+  )
+}
+
+const chip = 'rounded-full bg-paper px-3 py-1.5 text-sm ring-1 ring-line hover:bg-brand-soft disabled:opacity-50'
+
+/**
+ * What the message box is for right now: describing the need (no request yet, or editing it),
+ * answering the AI's open question, or nothing (with the reason).
+ */
+function useChatInput(data: Data | undefined, pid: string, stage: Stage, opts: { editing?: boolean; onDescribed?: () => void; onAnswered: () => void; busyReason?: string }) {
+  const save = useAction((text: string) => api.intake.saveDescription(pid, text), { onDone: () => opts.onDescribed?.() })
+  const answer = useAction(api.intake.answerQuestion, { onDone: opts.onAnswered })
+  if (!data) return null
+  const open = chatQuestions(data, stage).find((q) => !q.answeredAt)
+  const describing = stage === 'intake' && (!data.project.intake.description || opts.editing)
+  if (describing && data.perms.editDescription)
+    return { kind: 'describe' as const, placeholder: data.project.intake.description ? 'Change what you need, then send' : 'Describe what you need…', onSend: (t: string) => save.run(t), busy: save.pending, initial: opts.editing ? data.project.intake.description : '', resetKey: `d-${opts.editing}` }
+  if (opts.busyReason) return { kind: 'off' as const, disabledReason: opts.busyReason }
+  if (describing) return { kind: 'off' as const, disabledReason: 'Waiting for the stakeholders to describe what they need' }
+  if (open?.canAnswer)
+    return {
+      kind: 'answer' as const,
+      placeholder: 'Type your answer',
+      onSend: (t: string) => answer.run(open.id, { text: t, unknown: false }),
+      busy: answer.pending,
+      resetKey: open.id,
+      chips: (
+        <>
+          <button type="button" className={chip} disabled={answer.pending} onClick={() => answer.run(open.id, { text: '', unknown: true })}>I don't know</button>
+          {open.sampleAnswer && <button type="button" className={chip} disabled={answer.pending} onClick={() => answer.run(open.id, { text: open.sampleAnswer!, unknown: false })} title="Prototype only">Use a sample answer (demo)</button>}
+        </>
+      ),
+    }
+  if (open) return { kind: 'off' as const, disabledReason: `Waiting for ${open.assigneeNames.length ? open.assigneeNames.join(' or ') : open.teamLabel} to answer` }
+  return { kind: 'off' as const, disabledReason: stageDone(data, stage) ? 'This part of the chat is finished' : 'Nothing to answer right now' }
+}
+
 // ─── One question in the chat ───────────────────────────────────────────
 
-function QuestionTurn({ q, factLabel, onAnswered }: { q: Data['questions'][number]; factLabel?: string; onAnswered: () => void }) {
-  const answer = useAction(api.intake.answerQuestion, { onDone: onAnswered })
+function QuestionTurn({ q, factLabel }: { q: Data['questions'][number]; factLabel?: string }) {
   const waitingFor = q.assigneeNames.length ? q.assigneeNames.join(' or ') : q.teamLabel
   return (
     <>
@@ -133,27 +220,7 @@ function QuestionTurn({ q, factLabel, onAnswered }: { q: Data['questions'][numbe
             q.answer
           )}
         </PersonMessage>
-      ) : q.canAnswer ? (
-        <Composer
-          key={q.id}
-          placeholder="Your answer"
-          submitLabel="Send answer"
-          busy={answer.pending}
-          onSubmit={(text) => answer.run(q.id, { text, unknown: false })}
-          extra={
-            <>
-              <Button variant="ghost" disabled={answer.pending} onClick={() => answer.run(q.id, { text: '', unknown: true })}>
-                I don't know
-              </Button>
-              {q.sampleAnswer && (
-                <Button variant="ghost" disabled={answer.pending} onClick={() => answer.run(q.id, { text: q.sampleAnswer!, unknown: false })} title="Prototype only: answers with a sample">
-                  Use a sample answer (demo)
-                </Button>
-              )}
-            </>
-          }
-        />
-      ) : (
+      ) : q.canAnswer ? null : (
         <StatusNote>Waiting for {waitingFor} to answer.</StatusNote>
       )}
     </>
@@ -192,6 +259,15 @@ function StageBlock({ st, data, pid, chat, intakeBody, openFacts, showNext = tru
   const pending = qs.some((q) => !q.answeredAt)
   const canMoveOn = isCurrent && !done && !pending && (st.id !== 'intake' || !!data.kind?.approvedBy)
   const earlier = earlierQuestions(data, st.id)
+  // Like an AI assistant, it asks the next question by itself (once per step)
+  const asked = useRef('')
+  useEffect(() => {
+    const key = `${st.id}:${qs.length}`
+    if (canMoveOn && !chat.asking && !chat.error && asked.current !== key) {
+      asked.current = key
+      void chat.askNext()
+    }
+  }, [canMoveOn, chat, qs.length, st.id])
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3 text-sm font-semibold text-muted">
@@ -203,30 +279,18 @@ function StageBlock({ st, data, pid, chat, intakeBody, openFacts, showNext = tru
       {intakeBody}
       {st.id !== 'intake' && earlier.length > 0 && <EarlierQuestions questions={earlier} />}
       {qs.map((q) => (
-        <QuestionTurn key={q.id} q={q} factLabel={data.facts.find((f) => f.key === q.factKey)?.label} onAnswered={() => void chat.askNext()} />
+        <QuestionTurn key={q.id} q={q} factLabel={data.facts.find((f) => f.key === q.factKey)?.label} />
       ))}
 
       {/* Not this stage's turn yet */}
       {!isCurrent && !done && st.id !== 'intake' && <StatusNote>{st.id === 'brd_business' ? 'These questions start when the Proposal & Charter is signed.' : 'These questions start when the BRD is signed.'}</StatusNote>}
 
       {/* Moving on: the AI thinking, an error, or a button to continue */}
-      {isCurrent && chat.asking && (
-        <div className="flex items-center gap-3 text-base text-muted">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-soft text-brand">
-            <Sparkles className="h-5 w-5 animate-pulse" />
-          </span>
-          The AI is thinking of the next question… (a few seconds)
-        </div>
-      )}
+      {isCurrent && chat.asking && <Typing label={qs.length ? 'Thinking of the next question…' : 'Thinking of a question…'} />}
       {isCurrent && chat.error && !chat.asking && (
         <AiMessage actions={<Button onClick={() => void chat.askNext()}>Try again</Button>}>
           <span className="text-red-700">{chat.error}</span>
         </AiMessage>
-      )}
-      {canMoveOn && !chat.asking && !chat.error && (
-        <div className="flex justify-center">
-          <Button variant={qs.length ? 'secondary' : 'primary'} onClick={() => void chat.askNext()}>{qs.length ? 'Next question' : 'Start the questions'}</Button>
-        </div>
       )}
 
       {/* The stage is done */}
@@ -261,6 +325,7 @@ export function DocQuestions({ pid, stage }: { pid: string; stage: 'brd_business
   const chat = useAskNext(pid)
   const box = useRef<HTMLDivElement>(null)
   const turns = data?.questions.length ?? 0
+  const input = useChatInput(data, pid, stage, { onAnswered: () => void chat.askNext(), busyReason: chat.asking ? 'The AI is thinking…' : undefined })
   useEffect(() => {
     if (box.current) box.current.scrollTop = box.current.scrollHeight
   }, [turns, chat.asking])
@@ -268,8 +333,11 @@ export function DocQuestions({ pid, stage }: { pid: string; stage: 'brd_business
   if (error || !data) return <ErrorBox error={error} />
   const st = STAGES.find((x) => x.id === stage)!
   return (
-    <section aria-label="Questions" ref={box} className="max-h-[32rem] space-y-6 overflow-y-auto overscroll-contain rounded-3xl bg-canvas/60 p-4 ring-1 ring-line sm:p-6">
-      <StageBlock st={st} data={data} pid={pid} chat={chat} showNext={false} />
+    <section aria-label="Questions" className="flex max-h-[34rem] flex-col overflow-hidden rounded-3xl bg-canvas/60 ring-1 ring-line">
+      <div ref={box} className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain p-4 sm:p-6">
+        <StageBlock st={st} data={data} pid={pid} chat={chat} showNext={false} />
+      </div>
+      {input && (input.kind !== 'off' || data.chatStage === stage) && <ChatInput {...input} />}
     </section>
   )
 }
@@ -287,9 +355,18 @@ export function SimpleIntakePage() {
   const [params, setParams] = useSearchParams()
   const tab = params.get('tab') === 'facts' ? 'facts' : 'chat'
 
-  const save = useAction((text: string) => api.intake.saveDescription(pid, text), { success: 'Saved.', onDone: () => setEditing(false) })
-  const upload = useAction((f: Parameters<typeof api.intake.upload>[1]) => api.intake.upload(pid, f), { success: 'Reading the file in the background…' })
-  const analyse = useAction(() => api.intake.runAnalysis(pid), { success: 'The AI is reading it. Progress is shown at the top.' })
+  const upload = useAction((f: Parameters<typeof api.intake.upload>[1]) => api.intake.upload(pid, f), { success: 'File attached. The AI reads it with your message.' })
+  // As soon as the request is sent (or changed), the AI reads it: no button
+  const analyse = useAction(() => api.intake.runAnalysis(pid))
+  const input = useChatInput(data, pid, 'intake', {
+    editing,
+    onDescribed: () => {
+      setEditing(false)
+      analyse.run()
+    },
+    onAnswered: () => void chat.askNext(),
+    busyReason: data?.analysing ? 'The AI is reading your request…' : chat.asking ? 'The AI is thinking…' : undefined,
+  })
 
   const approveKind = useAction((value: 'new' | 'update') => api.intake.approveKind(pid, value), { onDone: () => void chat.askNext() })
 
@@ -298,7 +375,7 @@ export function SimpleIntakePage() {
   useEffect(() => {
     const box = chatBox.current
     if (box) box.scrollTop = box.scrollHeight // start at the latest message
-  }, [turns, chat.asking, tab, loaded])
+  }, [turns, chat.asking, tab, loaded, data?.analysing, data?.project.intake.analysed])
 
   if (isLoading) return <Loading />
   if (error || !data) return <ErrorBox error={error} />
@@ -311,7 +388,7 @@ export function SimpleIntakePage() {
     <>
       {/* 1. The request */}
       {p.intake.description && !editing ? (
-        <PersonMessage name={data.descriptionByName ?? 'Stakeholder'} note={data.perms.editDescription && <button className="font-medium text-brand underline" onClick={() => setEditing(true)}>Edit</button>}>
+        <PersonMessage name={data.descriptionByName ?? 'Stakeholder'} note={data.perms.editDescription && !data.analysing && <button className="font-medium text-brand underline" onClick={() => setEditing(true)}>Edit</button>}>
           {p.intake.description}
           {data.uploads.length > 0 && (
             <span className="mt-3 flex flex-wrap gap-2">
@@ -323,47 +400,19 @@ export function SimpleIntakePage() {
             </span>
           )}
         </PersonMessage>
-      ) : data.perms.editDescription ? (
-        <Composer
-          initial={p.intake.description}
-          placeholder="Describe what you need"
-          submitLabel={p.intake.description ? 'Save' : 'Send'}
-          busy={save.pending}
-          onSubmit={(text) => save.run(text)}
-          extra={
-            <>
-              {data.perms.upload && (
-                <FileButton onPick={(f) => upload.run(f)} accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.tif,.tiff,.txt,.md,.csv">
-                  <Paperclip className="h-4 w-4" /> Attach a file
-                </FileButton>
-              )}
-              {editing && (
-                <Button variant="ghost" onClick={() => setEditing(false)}>
-                  Cancel
-                </Button>
-              )}
-            </>
-          }
-        />
-      ) : (
+      ) : !data.perms.editDescription ? (
         <StatusNote>Waiting for the stakeholders to describe what they need.</StatusNote>
-      )}
+      ) : null}
 
-      {/* 2. The AI reads it */}
-      {p.intake.description && !p.intake.analysed && !editing && (
-        data.perms.pmTeam ? (
-          <AiMessage
-            actions={
-              <Button variant="primary" disabled={analyse.pending} onClick={() => analyse.run()}>
-                <Sparkles className="h-4 w-4" /> Let the AI read it
-              </Button>
-            }
-          >
-            Thank you. When you are ready, I will read the request{data.uploads.length ? ' and the files' : ''}, fill in the Fact Sheet and tell you whether this looks like an update or a new project.
-          </AiMessage>
-        ) : (
-          <StatusNote>Thank you. The PM will let the AI read it next.</StatusNote>
-        )
+      {/* 2. The AI reads it, by itself */}
+      {data.analysing && <Typing label={`Reading your request${data.uploads.length ? ' and the files' : ''}…`} />}
+      {!data.analysing && data.analyseError && p.intake.description && (
+        <AiMessage actions={<Button onClick={() => analyse.run()}>Try again</Button>}>
+          <span className="text-red-700">I could not read it just now (the AI did not answer).</span>
+        </AiMessage>
+      )}
+      {!data.analysing && !data.analyseError && p.intake.description && !p.intake.analysed && !editing && !analyse.pending && (
+        <AiMessage actions={<Button onClick={() => analyse.run()}>Read it now</Button>}>Your request is saved. I have not read it yet.</AiMessage>
       )}
 
       {/* 3. Facts found, and: update or new? */}
@@ -441,8 +490,26 @@ export function SimpleIntakePage() {
         />
         {tab === 'chat' && (
         <section aria-label="Chat" className="min-w-0">
-          <div ref={chatBox} className="h-[calc(100dvh-16rem)] min-h-[24rem] space-y-6 overflow-y-auto overscroll-contain rounded-3xl bg-canvas/60 p-4 ring-1 ring-line sm:p-6">
-            <StageBlock st={STAGES[0]} data={data} pid={pid} chat={chat} intakeBody={intakeBody} openFacts={() => setParams({ tab: 'facts' }, { replace: true })} />
+          <div className="flex h-[calc(100dvh-16rem)] min-h-[24rem] flex-col overflow-hidden rounded-3xl bg-canvas/60 ring-1 ring-line">
+            <div ref={chatBox} className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain p-4 sm:p-6">
+              <StageBlock st={STAGES[0]} data={data} pid={pid} chat={chat} intakeBody={intakeBody} openFacts={() => setParams({ tab: 'facts' }, { replace: true })} />
+            </div>
+            {input && (
+              <ChatInput
+                {...input}
+                attach={
+                  input.kind === 'describe' && data.perms.upload ? (
+                    <FileButton onPick={(file) => upload.run(file)} accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.tif,.tiff,.txt,.md,.csv" icon={{ label: 'Attach a file', node: <Paperclip className="h-5 w-5" /> }} />
+                  ) : undefined
+                }
+                chips={input.kind === 'describe' ? (
+                  <>
+                    {data.uploads.map((u) => <span key={u.id} className="inline-flex items-center gap-1.5 rounded-full bg-paper px-3 py-1 text-sm ring-1 ring-line"><FileText className="h-4 w-4 text-muted" /> {u.name}</span>)}
+                    {editing && <button type="button" className={chip} onClick={() => setEditing(false)}>Cancel the change</button>}
+                  </>
+                ) : 'chips' in input ? input.chips : undefined}
+              />
+            )}
           </div>
         </section>
         )}

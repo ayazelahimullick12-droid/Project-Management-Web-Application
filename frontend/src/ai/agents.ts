@@ -376,7 +376,13 @@ const badChatReply = (t: string) => t.length < 8 || /\b(sorry|apologi[sz]e|can'?
 export async function chatQuestion(p: Project, field: FactDef, team: string, previous?: { q: string; a: string }, asked: string[] = []): Promise<string> {
   // The small model sometimes repeats an earlier question word for word: that counts as unusable too
   const core = (t: string) => t.toLowerCase().replace(/^thank you[^.!?]*[.!?]\s*/, '').replace(/[^a-z0-9 ]/g, '').trim()
-  const repeats = (t: string) => asked.some((a) => core(a) === core(t) || (core(t).length > 12 && core(a).includes(core(t))))
+  const words = (t: string) => new Set(core(t).split(' ').filter((w) => w.length > 3 && !['what', 'which', 'this', 'that', 'project', 'have', 'mind', 'with', 'about', 'your', 'does', 'will'].includes(w)))
+  const similar = (a: string, b: string) => {
+    const x = words(a), y = words(b)
+    const shared = [...x].filter((w) => y.has(w)).length
+    return x.size > 0 && y.size > 0 && shared / Math.min(x.size, y.size) >= 0.6
+  }
+  const repeats = (t: string) => asked.some((a) => core(a) === core(t) || (core(t).length > 12 && core(a).includes(core(t))) || similar(a, t))
   const tidyQ = (raw: string) => {
     const t = clean(markdownToPlain(linesOf(raw).join(' ').replace(/^(question|q)\s*:\s*/i, '')))
     return /[?]$/.test(t) ? t : `${t.replace(/[.!]$/, '')}?`

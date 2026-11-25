@@ -94,6 +94,9 @@ export async function getIntake(pid: ID) {
       chatLimit: CHAT_LIMIT,
       kind: p.intake.kind ? { ...p.intake.kind, approvedByName: p.intake.kind.approvedBy ? nameOf(s, p.intake.kind.approvedBy) : undefined } : undefined,
       confirmRequested: !!p.intake.confirmRequestedAt,
+      // The AI is reading the request right now (the chat shows it typing), or its last try failed
+      analysing: s.jobs.some((j) => j.projectId === pid && j.agent === 'qa_extract' && j.status === 'running'),
+      analyseError: !p.intake.analysed ? s.jobs.find((j) => j.projectId === pid && j.agent === 'qa_extract')?.status === 'failed' : false,
       // Who is missing before the next questions or the confirmation can go out (shown with "Add").
       missingForQuestions: missingPeople(p, questionNeeds([...new Set(missingFor(p.facts, s.factCatalog, nextExtra ?? 'intake').map(routeTeam))])),
       missingForConfirmation: missingPeople(p, FACT_CONFIRMATION_NEEDS),
@@ -154,8 +157,12 @@ export async function runAnalysis(pid: ID) {
   const s0 = await read((s) => s)
   const user = me(s0)
   const p = projectOf(s0, pid)
-  ensure(can.pmTeam(p, user.id, 'run the intake analysis'))
+  // Runs by itself when someone sends the request (the chat works like an AI assistant): anyone who
+  // may write the request may start it. Only one reading at a time.
+  ensure(can.change(p))
+  if (!(inTeam(p, user.id, 'STAKEHOLDER') || isPmTeam(p, user.id))) throw new ApiError(403, 'Stakeholders (and the PM team) write the request.')
   if (!p.intake.description.trim()) fail('The stakeholders have not written a description yet.')
+  if (s0.jobs.some((j) => j.projectId === pid && j.agent === 'qa_extract' && j.status === 'running')) return
   const uploads = s0.uploads.filter((u) => u.projectId === pid && u.context === 'intake').slice(0, 3)
   const catalog = s0.factCatalog.filter((d) => d.round === 'intake') // later rounds ask for the rest
   const steps = ['Reading the stakeholder description', ...uploads.map((u) => `Reading ${u.name}`), 'Checking for conflicting answers', 'Deciding: an update or a new project?']

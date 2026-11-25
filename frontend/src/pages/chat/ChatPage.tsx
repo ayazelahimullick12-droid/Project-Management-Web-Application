@@ -158,7 +158,7 @@ export function MessagesPage() {
     return (
       <div className="flex h-full min-h-0 flex-col">
         <div className="flex h-16 shrink-0 items-center gap-4 border-b border-line px-4">
-          <h1 className="page-title text-lg">Messages</h1>
+          <h1 className="page-title text-lg"></h1>
           {switcher}
         </div>
         <CalendarPage />
@@ -172,7 +172,7 @@ export function MessagesPage() {
     <div className="flex h-full min-h-0">
       <aside className={clsx('w-full shrink-0 flex-col border-r border-line md:flex md:w-80', chatId ? 'hidden' : 'flex')}>
         <div className="flex h-16 shrink-0 items-center justify-between border-b border-line px-4">
-          <h1 className="page-title text-lg">Messages</h1>
+          <h1 className="page-title text-lg"></h1>
           {switcher}
           <button onClick={() => setComposing(true)} className="rounded-lg p-2 text-muted hover:bg-ink/5 hover:text-ink" title="New message">
             <SquarePen className="h-4 w-4" />

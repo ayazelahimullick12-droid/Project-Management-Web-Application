@@ -321,3 +321,11 @@ The user asked to bring the "grill me" idea (a Claude Code skill by Matt Pocock:
 - Sharing out: **Add to Google Calendar** (opens Google Calendar with the meeting filled in; the person saves it) and **Download .ics**.
 - Saved data: `events` and `remindersShown` are optional, so older saved data needs no change.
 - Code: `src/rules/calendar.ts` (+ tests), `src/api/calendar.ts`, `src/pages/calendar/*`.
+
+## Questions & facts works like an AI assistant (25 November 2026)
+
+- No "Let the AI read it" button: when the request is sent (or changed), the AI reads it by itself; typing dots show while it reads or thinks of a question. If the AI does not answer, a "Try again" appears in the chat.
+- One message box at the bottom of the chat (as in ChatGPT or Claude): Enter sends, Shift+Enter is a new line. It is for describing the need (with a paperclip to attach files) or answering the AI's current question ("I don't know" and the demo sample answer are quick chips above it). When nothing waits for this person, it says why ("Waiting for Rokeya to answer").
+- The questions start and continue by themselves (no "Start the questions" / "Next question"); the same in the BRD's and SRS's own questions.
+- Anyone who may write the request (stakeholders, the PM team) starts the reading by sending it; only one reading runs at a time.
+- A question that asks the same thing as an earlier one in other words is asked again (word overlap of 60% or more).

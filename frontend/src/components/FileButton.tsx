@@ -11,7 +11,7 @@ export interface PickedFile {
   text?: string // plain-text files (.txt, .md, .csv): their text, so the AI can really read them
 }
 
-export function FileButton({ onPick, accept, children, size = 'md', disabled }: { onPick: (f: PickedFile) => void; accept?: string; children?: ReactNode; size?: 'sm' | 'md'; disabled?: boolean }) {
+export function FileButton({ onPick, accept, children, size = 'md', disabled, icon }: { onPick: (f: PickedFile) => void; accept?: string; children?: ReactNode; size?: 'sm' | 'md'; disabled?: boolean; icon?: { label: string; node: ReactNode } }) {
   const ref = useRef<HTMLInputElement>(null)
   return (
     <>
@@ -33,9 +33,15 @@ export function FileButton({ onPick, accept, children, size = 'md', disabled }: 
           } else onPick({ name: file.name, size: file.size, type: file.type })
         }}
       />
-      <Button size={size} disabled={disabled} onClick={() => ref.current?.click()}>
-        <Upload className="h-4 w-4" /> {children ?? 'Upload a file'}
-      </Button>
+      {icon ? (
+        <button type="button" disabled={disabled} onClick={() => ref.current?.click()} title={icon.label} aria-label={icon.label} className="mb-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted hover:bg-ink/5 hover:text-ink disabled:opacity-40">
+          {icon.node}
+        </button>
+      ) : (
+        <Button size={size} disabled={disabled} onClick={() => ref.current?.click()}>
+          <Upload className="h-4 w-4" /> {children ?? 'Upload a file'}
+        </Button>
+      )}
     </>
   )
 }
