@@ -329,3 +329,8 @@ The user asked to bring the "grill me" idea (a Claude Code skill by Matt Pocock:
 - The questions start and continue by themselves (no "Start the questions" / "Next question"); the same in the BRD's and SRS's own questions.
 - Anyone who may write the request (stakeholders, the PM team) starts the reading by sending it; only one reading runs at a time.
 - A question that asks the same thing as an earlier one in other words is asked again (word overlap of 60% or more).
+
+## Overview fits one screen (26 November 2026)
+
+- Simple view Overview: progress as one row of the six steps (with "Now · …" underneath), then three columns: Your tasks · Recent activity (with "All" → activity log) · About (description, people, start date). On a laptop the page does not scroll; a long column scrolls inside itself. On a phone the columns stack and only the current step's name shows.
+- About shows the project type (Update / New project) once the PM confirmed it. The sponsor is no longer labelled "(signs)": the PM chooses who signs each document.
